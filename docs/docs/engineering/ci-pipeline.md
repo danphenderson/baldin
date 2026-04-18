@@ -5,7 +5,7 @@ title: See Merge Gates
 description: See merge gates, contract freshness checks, and candidate artifact builds.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-13 -->
 
 # See Merge Gates
 
@@ -20,9 +20,10 @@ Triggers on push to `main` and pull requests. Ignores changes to `*.md`, `docs/*
 ```mermaid
 flowchart TD
     accTitle: CI Pipeline Job Graph
-    accDescr: Shows five CI jobs that all depend on lint passing first — backend-tests (pytest with coverage), frontend-tests (vitest), frontend-typecheck (tsc), frontend-build (vite build), and schema-freshness (contract guard).
+    accDescr: Shows lint plus six downstream CI jobs — backend-tests (pytest with coverage), frontend-tests (vitest), frontend-theme-lint (theme drift guard), frontend-typecheck (tsc), frontend-build (vite build), and schema-freshness (contract guard).
     L["lint<br/>pre-commit hooks"] --> BT["backend-tests<br/>pytest + coverage"]
     L --> FT["frontend-tests<br/>vitest"]
+    L --> FTL["frontend-theme-lint<br/>npm run lint:theme"]
     L --> FC["frontend-typecheck<br/>tsc --noEmit"]
     L --> FB["frontend-build<br/>vite build"]
     L --> SF["schema-freshness<br/>contract guard"]
@@ -33,6 +34,7 @@ flowchart TD
 | **lint** | Runs pre-commit hooks | `ruff check --fix`, `ruff format` — Python 3.11.2 |
 | **backend-tests** | `pytest` with coverage gate | PostgreSQL 15 service, 60% minimum coverage on `app/` and `etl/` |
 | **frontend-tests** | `npm run test` | Vitest suite |
+| **frontend-theme-lint** | `npm run lint:theme` | Lightweight design-system drift guard for token/theme and legacy-folder rules |
 | **frontend-typecheck** | `npx tsc --noEmit` | Strict TypeScript validation |
 | **frontend-build** | `npm run build` | Production build with `VITE_API_URL=https://api.preview.invalid` |
 | **schema-freshness** | Contract regeneration guard | Regenerates `openapi.json` and `schema.d.ts`, fails if output differs from committed |
@@ -65,10 +67,10 @@ The frontend build uses `VITE_API_URL=https://api.preview.invalid` as a placehol
 `main` should use the branch-protection baseline documented in `.github/branch-protection.md`, but those rules still have to be configured in GitHub because repository code cannot enforce them by itself.
 
 - Requires at least 1 approving review.
-- All six CI jobs must pass, and branches should be up to date before merge.
+- All seven CI jobs must pass, and branches should be up to date before merge.
 - No force pushes or deletions allowed.
 
-Check names must match the CI job names exactly. See `.github/branch-protection.md` for the documented rules.
+Check names must match the CI job names exactly. See `.github/branch-protection.md` for the documented rules. The local `branch-protection-sync` pre-commit hook now fails when the documented required checks drift from `.github/workflows/ci.yml`.
 
 ## Why This Split Exists
 

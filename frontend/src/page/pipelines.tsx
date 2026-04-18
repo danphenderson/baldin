@@ -1,37 +1,90 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Box, Card, CardContent, Typography, Chip, Stack, Button, TextField,
-  useTheme, alpha, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-  Tooltip, Skeleton, Alert, Divider, Select, MenuItem, FormControl, InputLabel,
-  useMediaQuery, InputAdornment, Collapse, TablePagination,
-} from '@mui/material';
+  Box,
+  Typography,
+  Stack,
+  Button,
+  TextField,
+  useTheme,
+  alpha,
+  IconButton,
+  Tooltip,
+  Skeleton,
+  Alert,
+  Divider,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  useMediaQuery,
+  InputAdornment,
+  Collapse,
+  TablePagination,
+  } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
-  Hub as PipelineIcon, PlayArrow as RunIcon, Delete as DeleteIcon,
-  Add as AddIcon, Refresh as RefreshIcon, CheckCircle as SuccessIcon,
-  Error as ErrorIcon, HourglassEmpty as PendingIcon, Loop as RunningIcon,
-  Edit as EditIcon, Schedule as ScheduleIcon, DataObject as DefinitionIcon,
-  WarningAmber as WarningIcon, Search as SearchIcon,
-  FiberManualRecord as DotIcon, ExpandMore as ExpandMoreIcon,
-  KeyboardArrowRight as CollapseIcon, TrendingUp as TrendingIcon,
-} from '@mui/icons-material';
-import { AnimatePresence, motion } from 'motion/react';
+  Hub as PipelineIcon,
+  PlayArrow as RunIcon,
+  Delete as DeleteIcon,
+  Add as AddIcon,
+  Refresh as RefreshIcon,
+  CheckCircle as SuccessIcon,
+  Error as ErrorIcon,
+  HourglassEmpty as PendingIcon,
+  Loop as RunningIcon,
+  Edit as EditIcon,
+  Schedule as ScheduleIcon,
+  DataObject as DefinitionIcon,
+  WarningAmber as WarningIcon,
+  Search as SearchIcon,
+  FiberManualRecord as DotIcon,
+  ExpandMore as ExpandMoreIcon,
+  KeyboardArrowRight as CollapseIcon,
+  TrendingUp as TrendingIcon,
+  } from '@mui/icons-material';
+import { AnimatePresence,
+  motion } from 'motion/react';
 import { JSONTree } from 'react-json-tree';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
+import WorkflowFormDialog from '../component/workflow-form-dialog';
+import { AgentEnabledMultilineField } from '../component/agent-surface';
 import {
   type OrchestrationEventRead,
   type OrchestrationEventStatus,
   type OrchestrationPipelineRead,
   type OrchestrationEventPaginatedRead,
   type EventQueryParams,
-  getOrchestrationPipelines, createOrchestrationPipeline, deleteOrchestrationPipeline,
-  getOrchestrationPipeline, getOrchestrationEvents, createOrchestrationEvent,
-  updateOrchestrationPipeline, updateOrchestrationEvent,
+  getOrchestrationPipelines,
+  createOrchestrationPipeline,
+  deleteOrchestrationPipeline,
+  getOrchestrationPipeline,
+  getOrchestrationEvents,
+  createOrchestrationEvent,
+  updateOrchestrationPipeline,
+  updateOrchestrationEvent,
   retryOrchestrationEvent,
   formatURI,
-} from '../service/data-orchestration';
+  } from '../service/data-orchestration';
+import { radiusTokens,
+  toRadiusPx } from '../design-system/tokens/radius';
+import {
+  ALPHA_BORDER,
+  ALPHA_CHIP,
+  MetricStrip,
+  getStatusColors,
+  jsonTreeTheme,
+  monoFontFamily,
+  mutedGradient,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogActions as DialogActions,
+} from '../design-system';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -40,7 +93,6 @@ import {
 type PipelineFormState = { name: string; description: string; definition: string };
 type TriggerEventFormState = { message: string; payload: string; pipeline_id: string };
 
-const INITIAL_PIPELINE_FORM: PipelineFormState = { name: '', description: '', definition: '{}' };
 const INITIAL_TRIGGER_FORM: TriggerEventFormState = { message: '', payload: '{}', pipeline_id: '' };
 
 const getErrorMessage = (error: unknown): string =>
@@ -62,33 +114,18 @@ const formatRelativeTime = (iso: string): string => {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
-const STATUS_CONFIG: Record<OrchestrationEventStatus, { icon: React.ReactElement; color: string; label: string }> = {
-  success: { icon: <SuccessIcon fontSize="small" />, color: '#10b981', label: 'Success' },
-  failure: { icon: <ErrorIcon fontSize="small" />, color: '#f43f5e', label: 'Failed' },
-  pending: { icon: <PendingIcon fontSize="small" />, color: '#f59e0b', label: 'Pending' },
-  running: { icon: <RunningIcon fontSize="small" />, color: '#06b6d4', label: 'Running' },
-  pending_review: { icon: <PendingIcon fontSize="small" />, color: '#8b5cf6', label: 'Pending Review' },
+const getStatusConfigForTheme = (theme: import('@mui/material/styles').Theme) => {
+  const sc = getStatusColors(theme);
+  return {
+    success: { icon: <SuccessIcon fontSize="small" />, color: sc.success, label: 'Success' },
+    failure: { icon: <ErrorIcon fontSize="small" />, color: sc.failure, label: 'Failed' },
+    pending: { icon: <PendingIcon fontSize="small" />, color: sc.pending, label: 'Pending' },
+    running: { icon: <RunningIcon fontSize="small" />, color: sc.running, label: 'Running' },
+    pending_review: { icon: <PendingIcon fontSize="small" />, color: sc.pending_review, label: 'Pending Review' },
+  } as Record<OrchestrationEventStatus, { icon: React.ReactElement; color: string; label: string }>;
 };
 
-const JSON_TREE_THEME = {
-  scheme: 'baldin',
-  base00: 'transparent',
-  base01: '#1e293b',
-  base02: '#334155',
-  base03: '#64748b',
-  base04: '#94a3b8',
-  base05: '#cbd5e1',
-  base06: '#e2e8f0',
-  base07: '#f1f5f9',
-  base08: '#f43f5e',
-  base09: '#f59e0b',
-  base0A: '#fbbf24',
-  base0B: '#10b981',
-  base0C: '#06b6d4',
-  base0D: '#06b6d4',
-  base0E: '#8b5cf6',
-  base0F: '#f43f5e',
-};
+// JSON tree theme is adapted from the shared design-system theme helpers.
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -97,6 +134,8 @@ const JSON_TREE_THEME = {
 const MotionCard = motion.create(Card);
 
 const StatusDot: React.FC<{ status: OrchestrationEventStatus }> = ({ status }) => {
+  const theme = useTheme();
+  const STATUS_CONFIG = getStatusConfigForTheme(theme);
   const cfg = STATUS_CONFIG[status];
   return (
     <Tooltip title={cfg.label}>
@@ -106,6 +145,8 @@ const StatusDot: React.FC<{ status: OrchestrationEventStatus }> = ({ status }) =
 };
 
 const EventStatusChip: React.FC<{ status: OrchestrationEventStatus }> = ({ status }) => {
+  const theme = useTheme();
+  const STATUS_CONFIG = getStatusConfigForTheme(theme);
   const cfg = STATUS_CONFIG[status];
   return (
     <Chip
@@ -149,37 +190,19 @@ const OverviewStrip: React.FC<{ pipelines: OrchestrationPipelineRead[] }> = ({ p
     return { workflows: pipelines.length, totalRuns, totalFailures, recentRuns, lastSuccess };
   }, [pipelines]);
 
-  const items: { label: string; value: string | number; color?: string; icon: React.ReactElement }[] = [
-    { label: 'Workflows', value: stats.workflows, icon: <PipelineIcon fontSize="small" /> },
-    { label: 'Total runs', value: stats.totalRuns, icon: <TrendingIcon fontSize="small" /> },
-    { label: 'Failures', value: stats.totalFailures, color: stats.totalFailures > 0 ? '#f43f5e' : undefined, icon: <ErrorIcon fontSize="small" /> },
-    { label: 'Recent (24h)', value: stats.recentRuns, icon: <RunningIcon fontSize="small" /> },
-    { label: 'Last success', value: stats.lastSuccess ? formatRelativeTime(stats.lastSuccess) : '—', icon: <SuccessIcon fontSize="small" /> },
-  ];
-
   return (
-    <Card sx={{ mb: 3 }}>
-      <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
-        <Stack
-          direction="row"
-          divider={<Divider orientation="vertical" flexItem />}
-          spacing={3}
-          sx={{ justifyContent: 'space-around', flexWrap: 'wrap', rowGap: 1 }}
-        >
-          {items.map((item) => (
-            <Box key={item.label} sx={{ textAlign: 'center', minWidth: 80 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.25, color: item.color ?? theme.palette.text.secondary }}>
-                {item.icon}
-              </Box>
-              <Typography variant="h6" fontWeight={700} sx={{ color: item.color ?? 'text.primary', lineHeight: 1.2 }}>
-                {item.value}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">{item.label}</Typography>
-            </Box>
-          ))}
-        </Stack>
-      </CardContent>
-    </Card>
+    <Box sx={{ mb: 3 }}>
+      <MetricStrip
+        variant="card"
+        items={[
+          { label: 'Workflows', value: stats.workflows, icon: <PipelineIcon fontSize="small" /> },
+          { label: 'Total runs', value: stats.totalRuns, icon: <TrendingIcon fontSize="small" /> },
+          { label: 'Failures', value: stats.totalFailures, color: stats.totalFailures > 0 ? theme.palette.error.main : undefined, icon: <ErrorIcon fontSize="small" /> },
+          { label: 'Recent (24h)', value: stats.recentRuns, icon: <RunningIcon fontSize="small" /> },
+          { label: 'Last success', value: stats.lastSuccess ? formatRelativeTime(stats.lastSuccess) : '—', icon: <SuccessIcon fontSize="small" /> },
+        ]}
+      />
+    </Box>
   );
 };
 
@@ -196,6 +219,7 @@ const PipelineCard: React.FC<{
   index: number;
 }> = ({ pipe, onView, onEdit, onTrigger, onDelete, index }) => {
   const theme = useTheme();
+  const STATUS_CONFIG = getStatusConfigForTheme(theme);
   const lastStatusKey = (pipe.last_run_status as OrchestrationEventStatus) ?? null;
   const lastCfg = lastStatusKey ? STATUS_CONFIG[lastStatusKey] : null;
 
@@ -225,12 +249,12 @@ const PipelineCard: React.FC<{
               sx={{
                 width: 34,
                 height: 34,
-                borderRadius: '10px',
+                borderRadius: toRadiusPx(radiusTokens.md),
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
-                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.14)}, ${alpha(theme.palette.secondary.main, 0.10)})`,
+                background: mutedGradient(theme),
               }}
             >
               <PipelineIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
@@ -285,7 +309,7 @@ const PipelineCard: React.FC<{
           <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
             {srcLabel && (
               <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <DotIcon sx={{ fontSize: 6, color: '#06b6d4' }} /> {srcLabel}
+                <DotIcon sx={{ fontSize: 6, color: theme.palette.primary.main }} /> {srcLabel}
               </Typography>
             )}
             {srcLabel && dstLabel && (
@@ -293,7 +317,7 @@ const PipelineCard: React.FC<{
             )}
             {dstLabel && (
               <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <DotIcon sx={{ fontSize: 6, color: '#8b5cf6' }} /> {dstLabel}
+                <DotIcon sx={{ fontSize: 6, color: theme.palette.secondary.main }} /> {dstLabel}
               </Typography>
             )}
           </Stack>
@@ -325,7 +349,7 @@ const PipelineCard: React.FC<{
           <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
             {pipe.run_count} run{pipe.run_count !== 1 ? 's' : ''}
             {pipe.failure_count > 0 && (
-              <Typography component="span" variant="caption" sx={{ color: '#f43f5e', ml: 0.5 }}>
+              <Typography component="span" variant="caption" sx={{ color: theme.palette.error.main, ml: 0.5 }}>
                 ({pipe.failure_count} failed)
               </Typography>
             )}
@@ -348,6 +372,7 @@ const EventRow: React.FC<{
   index: number;
 }> = ({ evt, pipelineName, onStatusChange, onRetry, index }) => {
   const theme = useTheme();
+  const STATUS_CONFIG = getStatusConfigForTheme(theme);
   const statusKey = evt.status ?? 'pending';
   const cfg = STATUS_CONFIG[statusKey];
 
@@ -364,7 +389,7 @@ const EventRow: React.FC<{
           gap: 1.5,
           px: 2,
           py: 1.25,
-          borderRadius: 2,
+          borderRadius: toRadiusPx(radiusTokens.sm),
           border: `1px solid ${theme.palette.divider}`,
           transition: 'border-color 0.15s',
           '&:hover': { borderColor: alpha(cfg.color, 0.3) },
@@ -375,7 +400,7 @@ const EventRow: React.FC<{
           sx={{
             width: 32,
             height: 32,
-            borderRadius: '8px',
+            borderRadius: toRadiusPx(radiusTokens.sm),
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -453,6 +478,7 @@ const EventRow: React.FC<{
 
 const PipelinesPage: React.FC = () => {
   const theme = useTheme();
+  const STATUS_CONFIG = getStatusConfigForTheme(theme);
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { token } = useContext(UserContext);
 
@@ -476,7 +502,6 @@ const PipelinesPage: React.FC = () => {
   const [selectedPipeline, setSelectedPipeline] = useState<OrchestrationPipelineRead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [newPipeline, setNewPipeline] = useState<PipelineFormState>(INITIAL_PIPELINE_FORM);
   const [triggerOpen, setTriggerOpen] = useState(false);
   const [triggerForm, setTriggerForm] = useState<TriggerEventFormState>(INITIAL_TRIGGER_FORM);
   const [editPipeOpen, setEditPipeOpen] = useState(false);
@@ -543,23 +568,6 @@ const PipelinesPage: React.FC = () => {
   // ---------------------------------------------------------------------------
   // Handlers
   // ---------------------------------------------------------------------------
-
-  const handleCreate = async () => {
-    if (!token) return;
-    if (!isValidJson(newPipeline.definition)) {
-      setError('Workflow definition must be valid JSON');
-      return;
-    }
-    try {
-      await createOrchestrationPipeline(token, {
-        ...newPipeline,
-        definition: JSON.parse(newPipeline.definition),
-      });
-      setCreateOpen(false);
-      setNewPipeline(INITIAL_PIPELINE_FORM);
-      refresh();
-    } catch (e: unknown) { setError(getErrorMessage(e)); }
-  };
 
   const handleConfirmDelete = async () => {
     if (!token || !deleteTarget) return;
@@ -628,7 +636,7 @@ const PipelinesPage: React.FC = () => {
     } catch (e: unknown) { setError(getErrorMessage(e)); }
   };
 
-  usePageToolbarHeader('Workflows', `${pipelines.length} workflow${pipelines.length !== 1 ? 's' : ''}`);
+  usePageToolbarHeader('Workflows', `${pipelines.length} pipelines`);
 
   // ---------------------------------------------------------------------------
   // Render
@@ -656,7 +664,7 @@ const PipelinesPage: React.FC = () => {
             <IconButton
               onClick={refresh}
               aria-label="Refresh workflows"
-              sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: '10px' }}
+              sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: toRadiusPx(radiusTokens.md) }}
             >
               <RefreshIcon />
             </IconButton>
@@ -740,13 +748,13 @@ const PipelinesPage: React.FC = () => {
             <Skeleton variant="text" width={80} height={20} sx={{ mb: 2 }} />
             <Stack spacing={2}>
               {[1, 2, 3].map((i) => (
-                <Skeleton key={i} variant="rounded" height={100} sx={{ borderRadius: 3 }} />
+                <Skeleton key={i} variant="rounded" height={100} sx={{ borderRadius: '12px' }} />
               ))}
             </Stack>
           </Grid>
           <Grid size={{ xs: 12, md: 7 }}>
             <Skeleton variant="text" width={120} height={20} sx={{ mb: 2 }} />
-            <Skeleton variant="rounded" height={280} sx={{ borderRadius: 3 }} />
+            <Skeleton variant="rounded" height={280} sx={{ borderRadius: '12px' }} />
           </Grid>
         </Grid>
       ) : (
@@ -764,13 +772,13 @@ const PipelinesPage: React.FC = () => {
                     sx={{
                       width: 56,
                       height: 56,
-                      borderRadius: '16px',
+                      borderRadius: toRadiusPx(radiusTokens.xl),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       mx: 'auto',
                       mb: 2,
-                      background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.12)}, ${alpha(theme.palette.secondary.main, 0.08)})`,
+                      background: mutedGradient(theme, 0.12),
                     }}
                   >
                     <PipelineIcon sx={{ fontSize: 28, color: alpha(theme.palette.primary.main, 0.5) }} />
@@ -834,7 +842,7 @@ const PipelinesPage: React.FC = () => {
             {eventsLoading ? (
               <Stack spacing={1}>
                 {[1, 2, 3, 4].map((i) => (
-                  <Skeleton key={i} variant="rounded" height={56} sx={{ borderRadius: 2 }} />
+                  <Skeleton key={i} variant="rounded" height={56} sx={{ borderRadius: '8px' }} />
                 ))}
               </Stack>
             ) : eventsPage.items.length === 0 ? (
@@ -844,13 +852,13 @@ const PipelinesPage: React.FC = () => {
                     sx={{
                       width: 56,
                       height: 56,
-                      borderRadius: '16px',
+                      borderRadius: toRadiusPx(radiusTokens.xl),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       mx: 'auto',
                       mb: 2,
-                      background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.12)}, ${alpha(theme.palette.secondary.main, 0.08)})`,
+                      background: mutedGradient(theme, 0.12),
                     }}
                   >
                     <ScheduleIcon sx={{ fontSize: 28, color: alpha(theme.palette.primary.main, 0.5) }} />
@@ -901,60 +909,23 @@ const PipelinesPage: React.FC = () => {
       {/* Dialogs                                                            */}
       {/* ================================================================== */}
 
-      {/* ---- Create Pipeline ---- */}
-      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth aria-labelledby="create-pipeline-title">
-        <DialogTitle id="create-pipeline-title" fontWeight={700}>Create Workflow</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2.5} sx={{ mt: 1 }}>
-            <TextField
-              fullWidth
-              label="Name"
-              autoFocus
-              placeholder="e.g. LinkedIn Lead Enrichment"
-              value={newPipeline.name}
-              onChange={(e) => setNewPipeline((p) => ({ ...p, name: e.target.value }))}
-            />
-            <TextField
-              fullWidth
-              label="Description"
-              placeholder="What does this workflow do?"
-              multiline
-              minRows={2}
-              value={newPipeline.description}
-              onChange={(e) => setNewPipeline((p) => ({ ...p, description: e.target.value }))}
-            />
-            <TextField
-              fullWidth
-              label="Definition (JSON)"
-              multiline
-              rows={5}
-              value={newPipeline.definition}
-              onChange={(e) => setNewPipeline((p) => ({ ...p, definition: e.target.value }))}
-              error={newPipeline.definition.length > 0 && !isValidJson(newPipeline.definition)}
-              helperText={
-                newPipeline.definition.length > 0 && !isValidJson(newPipeline.definition)
-                  ? 'Invalid JSON'
-                  : ' '
-              }
-              slotProps={{
-                input: {
-                  sx: { fontFamily: 'monospace', fontSize: '0.85rem' },
-                },
-              }}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setCreateOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleCreate}
-            disabled={!newPipeline.name.trim() || !isValidJson(newPipeline.definition)}
-          >
-            Create Workflow
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <WorkflowFormDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSave={async (data) => {
+          if (!token) {
+            return;
+          }
+
+          try {
+            await createOrchestrationPipeline(token, data);
+            await refresh();
+          } catch (error) {
+            setError(getErrorMessage(error));
+            throw error;
+          }
+        }}
+      />
 
       {/* ---- Trigger Event ---- */}
       <Dialog open={triggerOpen} onClose={() => setTriggerOpen(false)} maxWidth="sm" fullWidth aria-labelledby="trigger-event-title">
@@ -985,13 +956,16 @@ const PipelinesPage: React.FC = () => {
               value={triggerForm.message}
               onChange={(e) => setTriggerForm((p) => ({ ...p, message: e.target.value }))}
             />
-            <TextField
+            <AgentEnabledMultilineField
               fullWidth
               label="Payload (JSON)"
               multiline
               rows={4}
+              surfaceId={triggerForm.pipeline_id || 'pipeline-trigger-dialog'}
+              fieldKey="pipeline_trigger_payload"
+              entityRefs={triggerForm.pipeline_id ? [{ kind: 'pipeline', id: triggerForm.pipeline_id, label: 'Pipeline trigger' }] : []}
               value={triggerForm.payload}
-              onChange={(e) => setTriggerForm((p) => ({ ...p, payload: e.target.value }))}
+              onChange={(nextValue) => setTriggerForm((p) => ({ ...p, payload: nextValue }))}
               error={triggerForm.payload.length > 0 && !isValidJson(triggerForm.payload)}
               helperText={
                 triggerForm.payload.length > 0 && !isValidJson(triggerForm.payload)
@@ -1000,7 +974,7 @@ const PipelinesPage: React.FC = () => {
               }
               slotProps={{
                 input: {
-                  sx: { fontFamily: 'monospace', fontSize: '0.85rem' },
+                  sx: { fontFamily: monoFontFamily, fontSize: '0.85rem' },
                 },
               }}
             />
@@ -1031,21 +1005,27 @@ const PipelinesPage: React.FC = () => {
               value={editPipeForm?.name || ''}
               onChange={(e) => setEditPipeForm((p) => p ? ({ ...p, name: e.target.value }) : p)}
             />
-            <TextField
+            <AgentEnabledMultilineField
               fullWidth
               label="Description"
               multiline
               minRows={2}
+              surfaceId={editPipeForm?.id ?? 'pipeline-edit-dialog'}
+              fieldKey="pipeline_description"
+              entityRefs={editPipeForm?.id ? [{ kind: 'pipeline', id: editPipeForm.id, label: editPipeForm.name || 'Pipeline' }] : []}
               value={editPipeForm?.description || ''}
-              onChange={(e) => setEditPipeForm((p) => p ? ({ ...p, description: e.target.value }) : p)}
+              onChange={(nextValue) => setEditPipeForm((p) => p ? ({ ...p, description: nextValue }) : p)}
             />
-            <TextField
+            <AgentEnabledMultilineField
               fullWidth
               label="Definition (JSON)"
               multiline
               rows={5}
+              surfaceId={editPipeForm?.id ?? 'pipeline-edit-dialog'}
+              fieldKey="pipeline_definition"
+              entityRefs={editPipeForm?.id ? [{ kind: 'pipeline', id: editPipeForm.id, label: editPipeForm.name || 'Pipeline' }] : []}
               value={editPipeForm?.definition || '{}'}
-              onChange={(e) => setEditPipeForm((p) => p ? ({ ...p, definition: e.target.value }) : p)}
+              onChange={(nextValue) => setEditPipeForm((p) => p ? ({ ...p, definition: nextValue }) : p)}
               error={!!(editPipeForm?.definition && !isValidJson(editPipeForm.definition))}
               helperText={
                 editPipeForm?.definition && !isValidJson(editPipeForm.definition)
@@ -1054,7 +1034,7 @@ const PipelinesPage: React.FC = () => {
               }
               slotProps={{
                 input: {
-                  sx: { fontFamily: 'monospace', fontSize: '0.85rem' },
+                  sx: { fontFamily: monoFontFamily, fontSize: '0.85rem' },
                 },
               }}
             />
@@ -1110,7 +1090,7 @@ const PipelinesPage: React.FC = () => {
             sx={{
               width: 40,
               height: 40,
-              borderRadius: '12px',
+              borderRadius: toRadiusPx(radiusTokens.lg),
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1153,6 +1133,7 @@ const PipelineDetailContent: React.FC<{
   onTrigger: () => void;
 }> = ({ pipeline, onClose, onEdit, onTrigger }) => {
   const theme = useTheme();
+  const STATUS_CONFIG = getStatusConfigForTheme(theme);
   const [definitionOpen, setDefinitionOpen] = useState(false);
   const [eventsOpen, setEventsOpen] = useState(true);
 
@@ -1169,11 +1150,11 @@ const PipelineDetailContent: React.FC<{
             sx={{
               width: 40,
               height: 40,
-              borderRadius: '12px',
+              borderRadius: toRadiusPx(radiusTokens.lg),
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.14)}, ${alpha(theme.palette.secondary.main, 0.10)})`,
+              background: mutedGradient(theme),
             }}
           >
             <PipelineIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
@@ -1202,7 +1183,7 @@ const PipelineDetailContent: React.FC<{
               {pipeline.run_count} run{pipeline.run_count !== 1 ? 's' : ''}
             </Typography>
             {pipeline.failure_count > 0 && (
-              <Typography variant="caption" sx={{ color: '#f43f5e' }}>
+              <Typography variant="caption" sx={{ color: theme.palette.error.main }}>
                 {pipeline.failure_count} failed
               </Typography>
             )}
@@ -1230,17 +1211,17 @@ const PipelineDetailContent: React.FC<{
 
           {/* Source / Destination display */}
           {(srcLabel || dstLabel) && (
-            <Box sx={{ p: 1.5, borderRadius: 2, border: `1px solid ${theme.palette.divider}` }}>
+            <Box sx={{ p: 1.5, borderRadius: toRadiusPx(radiusTokens.sm), border: `1px solid ${theme.palette.divider}` }}>
               <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
                 {srcLabel && (
                   <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <DotIcon sx={{ fontSize: 8, color: '#06b6d4' }} /> Source: {srcLabel}
+                    <DotIcon sx={{ fontSize: 8, color: theme.palette.primary.main }} /> Source: {srcLabel}
                   </Typography>
                 )}
                 {srcLabel && dstLabel && <Typography variant="body2" color="text.disabled">&rarr;</Typography>}
                 {dstLabel && (
                   <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <DotIcon sx={{ fontSize: 8, color: '#8b5cf6' }} /> Dest: {dstLabel}
+                    <DotIcon sx={{ fontSize: 8, color: theme.palette.secondary.main }} /> Dest: {dstLabel}
                   </Typography>
                 )}
               </Stack>
@@ -1265,7 +1246,7 @@ const PipelineDetailContent: React.FC<{
               <Box
                 sx={{
                   p: 2,
-                  borderRadius: 2,
+                  borderRadius: toRadiusPx(radiusTokens.sm),
                   background: alpha(theme.palette.text.primary, 0.03),
                   border: `1px solid ${theme.palette.divider}`,
                   overflow: 'auto',
@@ -1275,7 +1256,7 @@ const PipelineDetailContent: React.FC<{
               >
                 <JSONTree
                   data={pipeline.definition ?? {}}
-                  theme={JSON_TREE_THEME}
+                  theme={jsonTreeTheme(theme)}
                   invertTheme={theme.palette.mode === 'light'}
                   hideRoot
                   shouldExpandNodeInitially={() => true}
@@ -1309,7 +1290,7 @@ const PipelineDetailContent: React.FC<{
                           alignItems: 'center',
                           gap: 1.5,
                           p: 1.5,
-                          borderRadius: 2,
+                          borderRadius: toRadiusPx(radiusTokens.sm),
                           border: `1px solid ${theme.palette.divider}`,
                         }}
                       >
@@ -1317,7 +1298,7 @@ const PipelineDetailContent: React.FC<{
                           sx={{
                             width: 28,
                             height: 28,
-                            borderRadius: '8px',
+                            borderRadius: toRadiusPx(radiusTokens.sm),
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',

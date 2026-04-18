@@ -8,13 +8,13 @@ tools: [search/codebase, search/textSearch, search/fileSearch, search/listDirect
 ---
 You are running a deep-thinking epic planning session. Slow down. Reason carefully and thoroughly before producing output. Prioritize correctness and completeness of the plan over speed.
 
-Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md), [System Overview](../../docs/docs/architecture/system-overview.md), and the active plan sources under [plans/](../../plans) for repo context.
+Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md), [System Overview](../../docs/docs/architecture/system-overview.md), and the active plan sources listed in [plans/README.md](../../plans/README.md) for repo context.
 
 ## Input
 
 The user will provide one or more of:
 - A feature theme or goal description
-- A plan file from `plans/`
+- A tracked plan file from `plans/` or a repo-root `*-epic.md` / `*-spike.md` planning doc
 - One or more GitHub issues
 - A rough feature idea or whiteboard sketch
 

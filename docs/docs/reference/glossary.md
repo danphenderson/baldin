@@ -5,7 +5,7 @@ title: Decode Baldin Terms
 description: Decode Baldin-specific terms that recur across architecture and engineering docs.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-17 -->
 
 # Decode Baldin Terms
 
@@ -19,9 +19,13 @@ JSONB history stored on `applications.status_history`. It records status transit
 
 Short-lived lease used by the collaboration backend to ensure only one client seeds a Yjs document from saved TipTap JSON when no persisted `yjs_state` exists yet.
 
+## Career control plane
+
+README shorthand for Baldin's operator-commanded decision layer. Today that means a private workspace for applications, leads, documents, automation, and network context; over time it is meant to help users decide where effort is worth spending.
+
 ## Dashboard
 
-The frontend dashboard at `/` backed by the activity-feed summary endpoint.
+The authenticated frontend dashboard at `/dashboard` backed by the activity-feed summary endpoint. It is a personal workspace surface; the public marketing home lives at `/`.
 
 ## Content format
 
@@ -49,15 +53,27 @@ Per-user association to a lead indicating interest or participation in that lead
 
 ## Local-first
 
-The current repo posture: Docker Compose and persisted local data are the primary supported workflow, and production automation is still being rebuilt.
+Both a product and repo posture. User-owned data and private workflow come first, the supported stack is local Docker Compose with persisted local data, and any broader sharing remains opt-in rather than public by default.
+
+## Listing observability
+
+The target product direction for applicant-side signals about whether a listing seems active, crowded, responsive, trustworthy, or stale. This is future-facing README posture, not a currently shipped runtime surface in the local stack.
 
 ## Placement status
 
 Lifecycle field on `users` that tracks states such as active or graduated and is surfaced in the settings area.
 
+## Signal quality tiers
+
+README language for ranking shared-signal confidence. The intended tiers distinguish self-reported signals, multi-user corroboration, privacy-preserved local evidence, and stale or low-confidence data.
+
 ## Subscription tier
 
 Capability level stored on `users.subscription_tier`. Current docs and guards refer to `free`, `starter`, and `pro`.
+
+## Trust model
+
+The README posture for how Baldin should handle sharing and observability: minimal sharing by default, opt-in discoverability, detachment from public identity, coarse bands instead of exact counts, aggressive time decay, and visibility only after enough independent signal exists.
 
 ## Versioned document model
 

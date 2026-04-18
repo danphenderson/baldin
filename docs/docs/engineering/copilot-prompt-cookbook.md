@@ -1,15 +1,15 @@
 ---
 sidebar_position: 4
-slug: /engineering/copilot-prompt-cookbook
+slug: /engineering/agentic-workflow-cookbook
 title: Prompt The Right Agent
-description: Choose the right agent, scope prompts cleanly, and require consistent handbacks.
+description: Choose the right Baldin agent surface, scope prompts cleanly, and require consistent handbacks.
 ---
 
-<!-- last-verified: 2026-04-09 -->
+<!-- last-verified: 2026-04-16 -->
 
 # Prompt The Right Agent
 
-Use this page when prompting Baldin's workspace agents. The goal is to start with the smallest correct owner, keep scope explicit, and make handoffs obvious when work crosses backend, frontend, contracts, docs, CI, or deployment boundaries.
+Use this page when prompting Baldin's agentic coding surfaces. The goal is to start with the smallest correct owner, keep scope explicit, and make handoffs obvious when work crosses backend, frontend, contracts, docs, CI, or deployment boundaries.
 
 Need concrete before-and-after wording examples? See [Rewrite Weak Prompts](./copilot-prompt-examples.md).
 
@@ -23,27 +23,50 @@ Assume the local `docker-compose.yml` stack is the default development environme
 
 - Backend-only and already clear: start with `Backend Runtime Slice`.
 - Frontend-only and already clear: start with `Frontend Product Slice`.
+- Archived-design reference work, browser-harness capture, or `.figma.ts` mapping maintenance: start with Baldin Design Lead Agent directly.
 - Small cross-stack, contract, compose, or local integration fix: start with `Local Preview Integration Fix` or the Baldin Lead Full-Stack Architect directly.
 - Use `Issue Dispatch Kickoff`, `Plan Slice Kickoff`, or Baldin Project Manager only when the owner, scope, or sequencing is not already obvious.
 - Ask for the lightest useful smoke check first. Add broader type, build, docs, or full-suite validation only when the touched surface or handoff needs it.
 
+## Tool Surfaces
+
+Baldin currently supports two repo-scoped agentic surfaces:
+
+- **Copilot in VS Code** uses `.github/copilot-instructions.md`, `.github/prompts/*.prompt.md`, `.github/agents/*.agent.md`, and `.github/skills/*/SKILL.md`.
+- **Codex** uses root/scoped `AGENTS.md`, `.codex/config.toml`, and `.codex/agents/*.toml`.
+
+Use the same owner model in both. Root/scoped `AGENTS.md` files are the canonical shared instruction tree. Copilot prompt files are convenience entry points, not the canonical repo rules.
+
+| Need | Copilot path | Codex path |
+|------|--------------|------------|
+| Backend-only implementation | `Backend Runtime Slice` or Baldin Backend Agent | Ask Codex to use `baldin_backend` |
+| Frontend-only implementation | `Frontend Product Slice` or Baldin Frontend Agent | Ask Codex to use `baldin_frontend` |
+| Archived-design reference work | Baldin Design Lead Agent | Ask Codex to use `baldin_design_lead` |
+| Cross-stack implementation | `Local Preview Integration Fix`, `API Contract Change Orchestrator`, or Baldin Lead Full-Stack Architect | Ask Codex to use `baldin_full_stack_architect` |
+| Unclear ownership or sequencing | `Issue Dispatch Kickoff`, `Plan Slice Kickoff`, or Baldin Project Manager | Start with `/plan` or ask Codex to use `baldin_project_manager` |
+| Read-only scouting | Explore | Use the built-in `explorer` agent or ask for read-only scouting |
+
 ## Instruction Layers
 
-Keep Baldin's Copilot guidance layered so repo policy does not get duplicated across every prompt and agent.
+Keep Baldin's shared guidance layered so repo policy does not get duplicated across every prompt, custom agent, or workflow doc.
 
 | Layer | File | Purpose |
 |-------|------|---------|
-| Always-on baseline | `.github/copilot-instructions.md` | Repo posture, boundaries, generated artifacts, and default validation expectations |
+| Root shared baseline | `AGENTS.md` | Repo posture, directory instruction map, generated artifacts, default validation expectations, and the common owner model |
+| Scoped shared instructions | `**/AGENTS.md` | Local-delta rules for the nearest owning directory; unlisted children inherit the nearest scoped file |
+| Copilot compatibility baseline | `.github/copilot-instructions.md` | Copilot-specific always-on wrapper around root `AGENTS.md`, the applicable scoped `AGENTS.md` chain, and matching `.github/instructions/**` files |
 | Product and delivery edits | `.github/instructions/baldin-project.instructions.md` | Edit-time guardrails for backend, frontend, docs, scripts, workflows, contracts, and deployment files |
-| Copilot asset edits | `.github/instructions/baldin-agent-customization.instructions.md` | Rules for prompts, agents, skills, instructions, and Copilot workflow docs |
+| Agentic asset edits | `.github/instructions/baldin-agent-customization.instructions.md` | Rules for prompts, agents, skills, instructions, root/scoped `AGENTS.md`, Codex custom agents, and workflow docs |
 
 Prompts and agents should link back to these layers and to the docs below instead of re-embedding the same repo policy in every file.
+
+For Codex and compatible tooling, apply root `AGENTS.md` plus the relevant scoped chain for the current working path or target files. Do not load every scoped `AGENTS.md` file globally for every task. Tracked `AGENTS.override.md` files are outside Baldin's current instruction model and should be rejected unless a future override policy is explicitly documented and validated.
 
 | Workflow | When to prefer it | Baldin guidance |
 |----------|-------------------|-----------------|
 | Local-first workspace agents | Day-to-day features, fixes, and investigations | Default path. If ownership is obvious, start with the specialist directly. Use Baldin Project Manager only when ownership or sequencing is unclear. |
 | Async issue or PR agent work | Well-scoped backlog items or long-running tasks | Good for bounded follow-up work, but keep the prompt explicit and review the resulting branch or PR like any other change. |
-| Copilot code review | Pull-request review and missed-routine-issue detection | Recommended as a second reviewer, not a replacement for human approval. |
+| Automated code review | Pull-request review and missed-routine-issue detection | Copilot review or Codex review can help as a second reviewer, not as a replacement for human approval. |
 | Explore scouting | Read-only repository discovery before implementation | Use it to reduce search overhead and confirm ownership, not to make edits. |
 
 ### Suggested team loop
@@ -53,7 +76,7 @@ Prompts and agents should link back to these layers and to the docs below instea
 3. Ask for implementation plus validation, not just code.
 4. Review diffs, generated artifacts, and test results.
 5. Open or update the pull request.
-6. Optionally request Copilot review as a secondary reviewer.
+6. Optionally request Copilot review or Codex review as a secondary reviewer.
 7. Keep human approval as the final merge decision.
 
 ## Start Here
@@ -62,6 +85,7 @@ Prompts and agents should link back to these layers and to the docs below instea
 |------|---------------------|
 | Backend-only routes, models, auth, ETL, or tests | Baldin Backend Agent |
 | Frontend-only UI, accessibility, routing, state handling, or typed service consumption | Baldin Frontend Agent |
+| Archived-design reference work, design-system mapping, or browser-harness capture | Baldin Design Lead Agent |
 | Backend and frontend together, API contracts, schema regeneration, scripts, CI, docs, or docker-compose | Baldin Lead Full-Stack Architect |
 | Unclear ownership, multi-stream work, or sequencing and handoffs | Baldin Project Manager |
 | Read-only scouting before assigning a real owner | Explore |
@@ -198,7 +222,7 @@ Return:
 - Recommended next owner, if any.
 ```
 
-Baldin Project Manager should require this schema in handoff packets, and the backend, frontend, and architect agents should return it verbatim.
+Baldin Project Manager should require this schema in handoff packets, and the backend, frontend, design lead, and architect agents should return it verbatim.
 
 ## Baldin Project Manager
 
@@ -321,6 +345,58 @@ Best for:
 - loading, empty, and error states
 - frontend state or service integration bugs when the API contract already exists
 
+## Baldin Design Lead Agent
+
+Use when the task is operator-design reference work, browser-harness review, repo-backed `.figma.ts` mapping maintenance, or historical design-to-code comparison.
+
+```text
+Lead this as archived-design reference work.
+
+Objective:
+[archived design comparison or mapping outcome]
+
+Context:
+[route family, shared surface, historical evidence need, or mapping goal]
+
+Start from `docs/docs/reference/operator-design-forward-path.md` and use archived redesign material only if it adds necessary context.
+
+Allowed paths:
+- ./operator-design/**
+- ./frontend/figma.config.json
+- ./frontend/browser-harness/**
+- ./frontend/src/browser-harness/**
+- ./frontend/src/design-system/**/*.figma.ts
+- ./frontend/src/design-system/**/*stories.tsx
+- ./docs/docs/reference/operator-design-forward-path.md
+- ./docs/docs/architecture/frontend-design-system.md
+- ./docs/docs/engineering/local-development.md
+- ./plans/v2.1/**
+
+Out of scope:
+- backend API design
+- broad frontend product implementation
+- invented design states that are not backed by repo or harness evidence
+
+Validation:
+- inspect the relevant archived design evidence or browser-harness state
+- run npm --prefix docs run build when docs changed
+- run the smallest useful frontend test or typecheck only if shared React implementation changed
+- widen to the frontend build only if shipped React behavior changed
+
+Return:
+- use the Standard Handback schema from this cookbook.
+
+Stop and hand off if the task becomes general frontend implementation or cross-stack delivery.
+```
+
+Best for:
+
+- `operator-design` maintenance
+- browser-harness capture and historical design inspection
+- `.figma.ts` mapping maintenance and operator-design contract alignment
+- shared-surface promotion review before code implementation
+- archived Figma comparison when it adds useful context
+
 ## Baldin Lead Full-Stack Architect
 
 Use when the task genuinely spans backend, frontend, generated contracts, scripts, CI, docs, or local integration.
@@ -437,6 +513,36 @@ Validation:
 Stop and hand off if the needed state is not available from the current API contract.
 ```
 
+### Archived design reference work
+
+Start with Baldin Design Lead Agent.
+
+```text
+Lead this as archived-design reference work.
+
+Objective:
+Compare the current route or shared surface against archived design evidence and update any optional mapping metadata the team still wants to keep.
+
+Context:
+Use `docs/docs/reference/operator-design-forward-path.md` as the active source of truth. Archived redesign material is reference-only and must not block implementation.
+
+Allowed paths:
+- ./operator-design/**
+- ./docs/docs/reference/operator-design-forward-path.md
+- ./docs/docs/architecture/frontend-design-system.md
+- ./docs/docs/engineering/local-development.md
+- ./frontend/src/design-system/**/*.figma.ts
+- ./frontend/src/design-system/**/*stories.tsx
+- ./plans/v2.1/**
+
+Validation:
+- inspect the relevant archived design evidence
+- run the smallest useful frontend check only if shared React code changed
+- run `npm --prefix docs run build` if design docs changed
+
+Stop and hand off if the task becomes broad frontend implementation or needs backend or contract work.
+```
+
 ### New field end to end
 
 Start with Baldin Lead Full-Stack Architect.
@@ -492,7 +598,7 @@ Do not implement yet unless this is obviously a tiny single-owner fix.
 - Keep prompts concrete. Vague one-shot requests are the fastest way to get low-signal changes and unnecessary scope creep.
 - Never merge AI-generated code without human review.
 - Treat tests, type checks, builds, and generated-artifact status as part of the deliverable, not optional cleanup.
-- If you use Copilot CLI outside VS Code, prefer safe mode or a sandboxed environment rather than broad unattended tool access.
+- If you use Copilot CLI or Codex CLI outside an IDE, prefer safe mode or a sandboxed environment rather than broad unattended tool access.
 - Keep custom agent boundaries tight. Overlapping owners are an anti-pattern for Baldin's stack.
 - Do not let agent speed replace normal engineering process: keep issues, PR descriptions, architecture discussion, and docs updates in the loop.
 
@@ -500,6 +606,7 @@ Do not implement yet unless this is obviously a tiny single-owner fix.
 
 - Do not ask Baldin Project Manager to be the default implementation owner for real code changes.
 - Do not ask Baldin Frontend Agent to own backend-driven contract regeneration unless you want a deliberate cross-stack assignment.
+- Do not ask Baldin Frontend Agent to own archived-design reference work or mapping maintenance when the task is still primarily design review.
 - Do not ask Baldin Backend Agent to patch frontend, docs, or CI as a hidden side quest.
 - Do not use Baldin Lead Full-Stack Architect for a plainly backend-only or frontend-only task when a smaller owner would do.
 - Do not give any agent a fuzzy “just handle everything automatically” prompt without a stop condition, validation expectations, and a named owner.

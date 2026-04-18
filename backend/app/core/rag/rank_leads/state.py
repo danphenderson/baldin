@@ -24,6 +24,7 @@ class RankedLeadEntry(BaseSchema):
     title: str = Field(..., min_length=1, max_length=200)
     relevance_score: int = Field(..., ge=1, le=10)
     explanation: str = Field(..., min_length=20, max_length=400)
+    aspiration_alignment: str | None = Field(None, min_length=5, max_length=240)
 
     @field_validator("title")
     @classmethod
@@ -34,6 +35,14 @@ class RankedLeadEntry(BaseSchema):
     @classmethod
     def trim_explanation(cls, value: str) -> str:
         return " ".join(value.split())
+
+    @field_validator("aspiration_alignment")
+    @classmethod
+    def trim_alignment(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = " ".join(value.split())
+        return normalized or None
 
 
 class LeadRankingDraft(BaseSchema):
@@ -74,6 +83,16 @@ def validate_lead_ranking_draft(
             "lead_index values must be within the input leads range; "
             f"received {joined_indices} for {lead_count} leads"
         )
+    present_indices = {entry.lead_index for entry in draft.ranked_leads}
+    missing_indices = [
+        index for index in range(1, lead_count + 1) if index not in present_indices
+    ]
+    if missing_indices:
+        joined_indices = ", ".join(str(index) for index in missing_indices[:5])
+        raise ValueError(
+            "ranked_leads must include every input lead exactly once; "
+            f"missing {joined_indices}"
+        )
     return draft
 
 
@@ -84,6 +103,7 @@ class LeadRankingState(TypedDict, total=False):
     workflow_name: str
     model_name: str
     leads: list[dict]
+    aspirations: list[dict[str, Any]]
     combined_query: str
     combined_query_chars: int
     requested_k: int
@@ -124,6 +144,8 @@ def render_lead_ranking(draft: LeadRankingDraft) -> str:
     for rank, entry in enumerate(sorted_leads, 1):
         lines.append(f"{rank}. {entry.title} (Score: {entry.relevance_score}/10)")
         lines.append(f"   {entry.explanation}")
+        if entry.aspiration_alignment:
+            lines.append(f"   Aspiration fit: {entry.aspiration_alignment}")
         lines.append("")
     # Strip trailing blank line
     while lines and lines[-1] == "":
@@ -149,6 +171,7 @@ def build_ranking_orchestration_payload(state: LeadRankingState) -> dict[str, An
         "requested_k": state.get("requested_k"),
         "model_name": state.get("model_name"),
         "lead_count": len(state.get("leads", [])),
+        "aspiration_count": len(state.get("aspirations", [])),
         "combined_query_chars": state.get("combined_query_chars", 0),
         "combined_query_preview": safe_preview(state.get("combined_query", "")),
     }

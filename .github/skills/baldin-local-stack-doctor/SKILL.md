@@ -6,7 +6,7 @@ argument-hint: "Optional: current symptom, failing service, command output, or w
 
 # Baldin Local Stack Doctor
 
-Use this skill to triage Baldin's local Docker Compose workflow, identify the smallest repair step, and explain exactly what remains unverified.
+Use this skill to triage Baldin's local Docker Compose and Compose Watch workflow, identify the smallest repair step, and explain exactly what remains unverified.
 
 ## Scope
 
@@ -22,15 +22,17 @@ Use this skill to triage Baldin's local Docker Compose workflow, identify the sm
 - `docs/docs/getting-started/contributing.md`
 - `README.md`
 - `docker-compose.yml`
-- `backend/.env.example`
+- `backend/.env`
+- `frontend/.env`
 - `scripts/reset_local_db.sh`
 - `scripts/repair_local_db_collation.sh`
 
 ## Default Assumptions
 
-- Baldin is local-first. `docker-compose up --build` is the default supported developer path.
-- The local stack includes four services: `db`, `test_db`, `web`, and `frontend`.
-- Local Postgres data lives under `backend/public/db` and `backend/public/test_db`.
+- Baldin is local-first. `docker-compose up --build --watch` is the default supported developer path and Compose Watch is the supported live-edit loop.
+- Repo-tracked `backend/.env` and `frontend/.env` provide safe local defaults in every worktree. For Compose-backed local work, prefer ignored `.env.local` overrides; use process env only when you intentionally want a one-off override at launch time.
+- The local stack includes nine long-running services: `db`, `test_db`, `redis`, `etl-service`, `web`, `crawler-worker`, `frontend`, `operator-design`, and `docs`, plus the on-demand `backend-test` service.
+- Local Postgres data lives in the Compose-managed `db-data` and `test-db-data` volumes. Legacy `backend/public/db` and `backend/public/test_db` directories may still exist from older setups.
 - Host-run backend tests use `TEST_DATABASE_HOSTNAME=127.0.0.1` and `TEST_DATABASE_PORT=5431`.
 - Container-to-container backend runtime uses the Compose service names from `backend/.env`, including `db` and `test_db`.
 - `./scripts/reset_local_db.sh` is destructive for local Postgres data and should be reserved for schema drift or disposable-data recovery.
@@ -42,7 +44,8 @@ Use this skill to triage Baldin's local Docker Compose workflow, identify the sm
    - Is the failure in Docker Compose startup, backend startup, frontend startup, backend tests, or database health?
    - Determine whether the user is running inside the Compose stack or outside containers.
 2. Check the minimum environment assumptions.
-   - Confirm `backend/.env` exists or can be derived from `backend/.env.example`.
+   - Confirm repo-tracked `backend/.env` and `frontend/.env` exist in the worktree.
+   - Confirm whether optional secrets such as `OPENAI_API_KEY` are present where needed, using ignored `.env.local` overrides as the normal persistent source and process env only for one-off launches.
    - Confirm the expected local ports: frontend 5173, API 8004, db 5432, test_db 5431.
    - Confirm whether the user needs to preserve local database contents.
 3. Choose the smallest recovery path.
@@ -84,7 +87,7 @@ Use this skill to triage Baldin's local Docker Compose workflow, identify the sm
 
 ## Common Failure Modes To Handle
 
-- `docker-compose up --build` fails because one of the Compose services is unhealthy.
+- `docker-compose up --build --watch` fails because one of the Compose services is unhealthy.
 - Backend tests from the host cannot connect because `test_db` should be reached at `127.0.0.1:5431`, not the container hostname.
 - The backend inside Compose uses `db` or `test_db` hostnames, but the user copied those values into a host-run test or app command.
 - PostgreSQL emits `collation version mismatch` warnings after a Docker image or base-OS update.

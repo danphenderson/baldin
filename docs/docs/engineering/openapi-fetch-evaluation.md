@@ -5,7 +5,7 @@ title: "Evaluation: openapi-fetch as Typed API Client"
 description: Trade-off analysis and migration plan for adopting openapi-fetch across the frontend service layer.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-12 -->
 
 # Evaluation: openapi-fetch as Typed API Client
 
@@ -76,36 +76,20 @@ isolation because every file re-exports the same public API.
 - [x] Migrate `leads.tsx` as proof-of-concept
 - [x] Update tests, verify TypeScript and all 23 tests pass
 
-### Phase 2 — Simple CRUD services
+### Phase 2 — Simple CRUD services (mostly complete)
 
-Migrate services that only use JSON request/response (no file uploads or blob
-downloads).  Each migration is a single PR.
+19 of 23 service files now use `createApiClient`. The remaining four are:
 
-| Service | Endpoints | Complexity |
-| --- | --- | --- |
-| `skills.tsx` | 3 | low |
-| `education.tsx` | 3 | low |
-| `experiences.tsx` | 3 | low |
-| `certificates.tsx` | 3 | low |
-| `connections.tsx` | 4 | low |
-| `contacts.tsx` | 3 | low |
-| `companies.tsx` | 3 | low |
-| `cover-letters.tsx` | 4 | low |
-| `applications.tsx` | 6 | medium |
-| `messages.tsx` | 5 | medium |
-| `action-items.tsx` | 6 | medium |
-| `activity-feed.tsx` | 2 | low |
-| `crawlers.tsx` | 5 | medium |
-| `data-orchestration.tsx` | 3 | low |
-| `db-management.tsx` | 2 | low |
-| `directory.tsx` | 3 | low |
-| `extractor.tsx` | 3 | low |
-| `review.tsx` | 3 | low |
-| `resumes.tsx` | 3 | low |
+| Service | Reason pending |
+| --- | --- |
+| `auth.tsx` | Uses `application/x-www-form-urlencoded`; needs custom `bodySerializer` (Phase 4) |
+| `connections.tsx` | Not yet migrated |
+| `directory.tsx` | Not yet migrated |
+| `messages.tsx` | Not yet migrated |
 
-### Phase 3 — Upload / download services
+### Phase 3 — Upload / download services (complete)
 
-Migrate services with `FormData` or blob handling, using `openapi-fetch`'s
+Services with `FormData` or blob handling have been migrated using `openapi-fetch`'s
 `parseAs: 'blob'` and raw body overrides.
 
 | Service | Special handling |
@@ -113,11 +97,11 @@ Migrate services with `FormData` or blob handling, using `openapi-fetch`'s
 | `documents.tsx` | file upload, PDF download, blob download |
 | `users.tsx` | multi-source profile extraction with FormData |
 
-### Phase 4 — Auth service
+### Phase 4 — Auth service (pending)
 
 `auth.tsx` uses `application/x-www-form-urlencoded` for the OAuth2 login
 endpoint.  This requires a custom `bodySerializer` in the client options.
-Migrate last because the auth flow is the most sensitive.
+Planned as the final migration because the auth flow is the most sensitive.
 
 ### Phase 5 — Cleanup
 
@@ -142,5 +126,5 @@ leads migration demonstrates that:
 4. Bundle cost is minimal (~7 kB gzip) and there are no transitive runtime
    dependencies.
 
-Proceed with Phase 2 (simple CRUD services) as a follow-up epic, batching
-2–3 services per PR.
+Proceed with the remaining four services (`connections.tsx`, `directory.tsx`,
+`messages.tsx`, and `auth.tsx`) to complete the migration.

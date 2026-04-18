@@ -8,23 +8,21 @@ A single user session is shared across most tests to stay under the
 10/minute auth rate-limit configured for ``/auth/jwt/login``.
 """
 
+import asyncio
 from contextlib import asynccontextmanager
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 
 from app import models
-from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
-from app.main import app
+from app.conftest import create_user, login_and_get_headers
+from app.core.db import session_context
 from app.tests import utils
 
 pytestmark = pytest.mark.asyncio(loop_scope="module")
 
-password_helper = PasswordHelper()
-_db_ready = False
+_client = None
 
 # Module-level cached auth state (populated by first test that calls _get_auth).
 _cached_user: tuple[str, UUID, str] | None = None  # (email, uid, password)
@@ -36,53 +34,16 @@ _cached_headers: dict[str, str] | None = None
 # ---------------------------------------------------------------------------
 
 
-@asynccontextmanager
-async def _client():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
+@pytest.fixture(autouse=True)
+def _use_shared_client(client: AsyncClient) -> None:
+    """Bridge existing `_client()` call sites onto the shared client fixture."""
+    global _client
+
+    @asynccontextmanager
+    async def _ctx():
         yield client
 
-
-async def _ensure_db_ready() -> None:
-    global _db_ready
-    if _db_ready:
-        return
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
-
-
-async def _create_user(
-    password: str, *, is_superuser: bool = False
-) -> tuple[str, UUID]:
-    email = utils.random_email()
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash(password),
-            session,
-            is_superuser=is_superuser,
-        )
-        await session.commit()
-    return email, user.id
-
-
-async def _auth_headers(
-    client: AsyncClient, email: str, password: str
-) -> dict[str, str]:
-    app.state.limiter.reset()
-    response = await client.post(
-        "/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200, response.text
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    _client = _ctx
 
 
 async def _get_auth(client: AsyncClient) -> tuple[UUID, dict[str, str]]:
@@ -91,8 +52,8 @@ async def _get_auth(client: AsyncClient) -> tuple[UUID, dict[str, str]]:
     if _cached_headers is not None and _cached_user is not None:
         return _cached_user[1], _cached_headers
     password = "AppRouteTest1!"
-    email, uid = await _create_user(password)
-    headers = await _auth_headers(client, email, password)
+    email, uid = await create_user(password)
+    headers = await login_and_get_headers(client, email, password)
     _cached_user = (email, uid, password)
     _cached_headers = headers
     return uid, headers
@@ -173,11 +134,11 @@ async def _create_application_via_api(
     headers: dict[str, str],
     lead_id: UUID,
     *,
-    status: str = "applied",
+    stage: str = "applied",
 ) -> dict[str, object]:
     response = await client.post(
-        "/applications/",
-        json={"lead_id": str(lead_id), "status": status},
+        "/api/v1/applications/",
+        json={"lead_id": str(lead_id), "stage": stage},
         headers=headers,
     )
     assert response.status_code == 201, response.text
@@ -191,14 +152,13 @@ async def _create_application_via_api(
 
 async def test_create_application_happy_path() -> None:
     """POST /applications/ with valid payload returns 201 and expected fields."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
 
         response = await client.post(
-            "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            "/api/v1/applications/",
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
 
@@ -206,11 +166,11 @@ async def test_create_application_happy_path() -> None:
     body = response.json()
     assert body["lead_id"] == str(lead_id)
     assert body["user_id"] == str(uid)
-    assert body["status"] == "applied"
+    assert body["stage"] == "applied"
     # status_history should contain the initial entry
     assert isinstance(body.get("status_history"), list)
     assert len(body["status_history"]) >= 1
-    assert body["status_history"][0]["to"] == "applied"
+    assert body["status_history"][0]["stage"] == "applied"
     _assert_document_metadata(
         body,
         total_count=0,
@@ -221,7 +181,6 @@ async def test_create_application_happy_path() -> None:
 
 
 async def test_create_application_with_document_ids_returns_document_metadata() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -231,10 +190,10 @@ async def test_create_application_with_document_ids_returns_document_metadata() 
         ]
 
         response = await client.post(
-            "/applications/",
+            "/api/v1/applications/",
             json={
                 "lead_id": str(lead_id),
-                "status": "applied",
+                "stage": "applied",
                 "document_ids": [str(document_id) for document_id in document_ids],
             },
             headers=headers,
@@ -253,21 +212,20 @@ async def test_create_application_with_document_ids_returns_document_metadata() 
 
 async def test_create_application_duplicate_lead_returns_400() -> None:
     """Creating two applications for the same lead returns 400."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
 
         first = await client.post(
-            "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            "/api/v1/applications/",
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         assert first.status_code == 201
 
         second = await client.post(
-            "/applications/",
-            json={"lead_id": str(lead_id), "status": "screening"},
+            "/api/v1/applications/",
+            json={"lead_id": str(lead_id), "stage": "screening"},
             headers=headers,
         )
 
@@ -277,13 +235,12 @@ async def test_create_application_duplicate_lead_returns_400() -> None:
 
 async def test_create_application_validation_error() -> None:
     """POST /applications/ with missing required fields returns 422."""
-    await _ensure_db_ready()
     async with _client() as client:
         _, headers = await _get_auth(client)
 
         # Missing lead_id and status
         response = await client.post(
-            "/applications/",
+            "/api/v1/applications/",
             json={"notes": "just notes"},
             headers=headers,
         )
@@ -297,35 +254,56 @@ async def test_create_application_validation_error() -> None:
 
 
 async def test_list_applications() -> None:
-    """GET /applications/ returns a list with the expected shape."""
-    await _ensure_db_ready()
+    """GET /applications/ returns a paginated list with the expected shape."""
     async with _client() as client:
         _, headers = await _get_auth(client)
 
-        response = await client.get("/applications/", headers=headers)
+        response = await client.get("/api/v1/applications/", headers=headers)
 
     assert response.status_code == 200
     body = response.json()
-    assert isinstance(body, list)
+    assert isinstance(body["items"], list)
     # Previous tests created at least one application
-    assert len(body) >= 1
-    assert "lead_id" in body[0]
-    assert "status" in body[0]
-    assert "user_id" in body[0]
-    assert "document_metadata" in body[0]
+    assert len(body["items"]) >= 1
+    assert body["total"] >= 1
+    assert body["page"] == 1
+    assert body["page_size"] == 20
+    assert "lead_id" in body["items"][0]
+    assert "stage" in body["items"][0]
+    assert "user_id" in body["items"][0]
+    assert "document_metadata" in body["items"][0]
+
+
+async def test_list_applications_orders_newest_first() -> None:
+    async with _client() as client:
+        _, headers = await _get_auth(client)
+        first_lead_id = await _create_lead()
+        first_app = await _create_application_via_api(client, headers, first_lead_id)
+        await asyncio.sleep(0.01)
+        second_lead_id = await _create_lead()
+        second_app = await _create_application_via_api(client, headers, second_lead_id)
+
+        response = await client.get(
+            "/api/v1/applications/",
+            params={"page": 1, "page_size": 100},
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    ids = [item["id"] for item in response.json()["items"]]
+    assert ids.index(second_app["id"]) < ids.index(first_app["id"])
 
 
 async def test_application_responses_include_accessible_document_metadata() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         viewer_id, viewer_headers = await _get_auth(client)
-        _, shared_owner_id = await _create_user("SharedCountOwnerPass1!")
-        _, hidden_owner_id = await _create_user("HiddenCountOwnerPass1!")
+        _, shared_owner_id = await create_user("SharedCountOwnerPass1!")
+        _, hidden_owner_id = await create_user("HiddenCountOwnerPass1!")
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            "/api/v1/applications/",
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=viewer_headers,
         )
         assert create_resp.status_code == 201, create_resp.text
@@ -366,25 +344,27 @@ async def test_application_responses_include_accessible_document_metadata() -> N
 
         for document_id in (owned_doc_id, shared_doc_id):
             attach_resp = await client.post(
-                f"/applications/{app_id}/documents",
+                f"/api/v1/applications/{app_id}/documents",
                 json={"document_id": str(document_id)},
                 headers=viewer_headers,
             )
             assert attach_resp.status_code == 201, attach_resp.text
 
-        list_resp = await client.get("/applications/", headers=viewer_headers)
+        list_resp = await client.get("/api/v1/applications/", headers=viewer_headers)
         detail_resp = await client.get(
-            f"/applications/{app_id}", headers=viewer_headers
+            f"/api/v1/applications/{app_id}", headers=viewer_headers
         )
         update_resp = await client.patch(
-            f"/applications/{app_id}",
+            f"/api/v1/applications/{app_id}",
             json={"notes": "Count should stay in sync"},
             headers=viewer_headers,
         )
 
     assert list_resp.status_code == 200
     list_body = next(
-        application for application in list_resp.json() if application["id"] == app_id
+        application
+        for application in list_resp.json()["items"]
+        if application["id"] == app_id
     )
     _assert_document_metadata(
         list_body,
@@ -415,16 +395,20 @@ async def test_application_responses_include_accessible_document_metadata() -> N
 
 async def test_list_applications_empty_for_new_user() -> None:
     """GET /applications/ returns empty list when user has no applications."""
-    await _ensure_db_ready()
     async with _client() as client:
         # Need a fresh user — costs one login
-        email, _ = await _create_user("app-empty-pass1!")
-        headers = await _auth_headers(client, email, "app-empty-pass1!")
+        email, _ = await create_user("app-empty-pass1!")
+        headers = await login_and_get_headers(client, email, "app-empty-pass1!")
 
-        response = await client.get("/applications/", headers=headers)
+        response = await client.get("/api/v1/applications/", headers=headers)
 
     assert response.status_code == 200
-    assert response.json() == []
+    assert response.json() == {
+        "items": [],
+        "total": 0,
+        "page": 1,
+        "page_size": 20,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -434,19 +418,18 @@ async def test_list_applications_empty_for_new_user() -> None:
 
 async def test_get_application_by_id() -> None:
     """GET /applications/{id} returns 200 with the correct application."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            "/api/v1/applications/",
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
 
-        response = await client.get(f"/applications/{app_id}", headers=headers)
+        response = await client.get(f"/api/v1/applications/{app_id}", headers=headers)
 
     assert response.status_code == 200
     body = response.json()
@@ -456,11 +439,10 @@ async def test_get_application_by_id() -> None:
 
 async def test_get_application_not_found() -> None:
     """GET /applications/{id} with a non-existent id returns 404."""
-    await _ensure_db_ready()
     async with _client() as client:
         _, headers = await _get_auth(client)
 
-        response = await client.get(f"/applications/{uuid4()}", headers=headers)
+        response = await client.get(f"/api/v1/applications/{uuid4()}", headers=headers)
 
     assert response.status_code == 404
 
@@ -472,20 +454,19 @@ async def test_get_application_not_found() -> None:
 
 async def test_update_application_happy_path() -> None:
     """PATCH /applications/{id} updates fields and returns 200."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            "/api/v1/applications/",
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
 
         response = await client.patch(
-            f"/applications/{app_id}",
+            f"/api/v1/applications/{app_id}",
             json={"notes": "Updated notes", "next_step": "Follow up"},
             headers=headers,
         )
@@ -496,49 +477,47 @@ async def test_update_application_happy_path() -> None:
     assert body["next_step"] == "Follow up"
 
 
-async def test_update_application_status_appends_history() -> None:
-    """PATCH that changes status appends to status_history."""
-    await _ensure_db_ready()
+async def test_update_application_stage_appends_history() -> None:
+    """PATCH that changes stage appends to status_history."""
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            "/api/v1/applications/",
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
 
         response = await client.patch(
-            f"/applications/{app_id}",
-            json={"status": "screening"},
+            f"/api/v1/applications/{app_id}",
+            json={"stage": "screening"},
             headers=headers,
         )
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "screening"
+    assert body["stage"] == "screening"
     history = body.get("status_history", [])
     assert len(history) >= 2
-    # Last entry should reflect the transition
+    # Last entry should reflect the new stage
     last = history[-1]
-    assert last["from"] == "applied"
-    assert last["to"] == "screening"
+    assert last["stage"] == "screening"
+    assert last["outcome"] is None
 
 
 @pytest.mark.parametrize(
-    ("terminal_status", "outcome_reason"),
+    ("terminal_outcome", "outcome_reason"),
     [
         ("rejected", "Role closed internally"),
         ("withdrawn", "Accepted another offer"),
     ],
 )
-async def test_update_application_sets_outcome_reason_for_terminal_status(
-    terminal_status: str,
+async def test_update_application_sets_outcome_reason_for_terminal_outcome(
+    terminal_outcome: str,
     outcome_reason: str,
 ) -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -547,30 +526,28 @@ async def test_update_application_sets_outcome_reason_for_terminal_status(
         app_id = created["id"]
 
         response = await client.patch(
-            f"/applications/{app_id}",
-            json={"status": terminal_status, "outcome_reason": outcome_reason},
+            f"/api/v1/applications/{app_id}",
+            json={"outcome": terminal_outcome, "outcome_reason": outcome_reason},
             headers=headers,
         )
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == terminal_status
-    assert body["outcome"] == terminal_status
+    assert body["outcome"] == terminal_outcome
     assert body["outcome_reason"] == outcome_reason
 
 
 @pytest.mark.parametrize(
-    ("terminal_status", "outcome_reason"),
+    ("terminal_outcome", "outcome_reason"),
     [
         ("rejected", "Need a hybrid schedule"),
         ("withdrawn", "Accepted another offer"),
     ],
 )
-async def test_update_application_allows_outcome_reason_on_closed_application_without_status_change(
-    terminal_status: str,
+async def test_update_application_allows_outcome_reason_on_closed_application_without_outcome_change(
+    terminal_outcome: str,
     outcome_reason: str,
 ) -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -579,28 +556,27 @@ async def test_update_application_allows_outcome_reason_on_closed_application_wi
         app_id = created["id"]
 
         close_response = await client.patch(
-            f"/applications/{app_id}",
-            json={"status": terminal_status},
+            f"/api/v1/applications/{app_id}",
+            json={"outcome": terminal_outcome},
             headers=headers,
         )
         assert close_response.status_code == 200, close_response.text
 
         response = await client.patch(
-            f"/applications/{app_id}",
+            f"/api/v1/applications/{app_id}",
             json={"outcome_reason": outcome_reason},
             headers=headers,
         )
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == terminal_status
+    assert body["outcome"] == terminal_outcome
     assert body["outcome_reason"] == outcome_reason
 
 
 async def test_update_application_rejects_outcome_reason_for_active_application() -> (
     None
 ):
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -609,7 +585,7 @@ async def test_update_application_rejects_outcome_reason_for_active_application(
         app_id = created["id"]
 
         response = await client.patch(
-            f"/applications/{app_id}",
+            f"/api/v1/applications/{app_id}",
             json={"outcome_reason": "No longer interested"},
             headers=headers,
         )
@@ -618,12 +594,11 @@ async def test_update_application_rejects_outcome_reason_for_active_application(
     assert "outcome_reason" in response.json()["detail"]
 
 
-@pytest.mark.parametrize("terminal_status", ["rejected", "withdrawn"])
-async def test_update_application_rejects_implicit_reopen_from_terminal_status(
-    terminal_status: str,
+@pytest.mark.parametrize("terminal_outcome", ["rejected", "withdrawn"])
+async def test_update_application_rejects_implicit_reopen_from_terminal_outcome(
+    terminal_outcome: str,
 ) -> None:
     """Closed applications cannot move back to an active stage without reopen=true."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -632,38 +607,37 @@ async def test_update_application_rejects_implicit_reopen_from_terminal_status(
         app_id = created["id"]
 
         close_response = await client.patch(
-            f"/applications/{app_id}",
-            json={"status": terminal_status},
+            f"/api/v1/applications/{app_id}",
+            json={"outcome": terminal_outcome},
             headers=headers,
         )
         assert close_response.status_code == 200, close_response.text
 
         response = await client.patch(
-            f"/applications/{app_id}",
+            f"/api/v1/applications/{app_id}",
             json={"stage": "screening"},
             headers=headers,
         )
         assert response.status_code == 400
         assert "reopen=true" in response.json()["detail"]
 
-        get_response = await client.get(f"/applications/{app_id}", headers=headers)
+        get_response = await client.get(
+            f"/api/v1/applications/{app_id}", headers=headers
+        )
 
     assert get_response.status_code == 200
     body = get_response.json()
-    assert body["status"] == terminal_status
-    assert body["outcome"] == terminal_status
+    assert body["outcome"] == terminal_outcome
     history = body.get("status_history", [])
     assert len(history) == 2
-    assert history[-1]["from"] == "applied"
-    assert history[-1]["to"] == terminal_status
+    assert history[-1]["outcome"] == terminal_outcome
 
 
-@pytest.mark.parametrize("terminal_status", ["rejected", "withdrawn"])
-async def test_update_application_reopens_terminal_status_when_reopen_true(
-    terminal_status: str,
+@pytest.mark.parametrize("terminal_outcome", ["rejected", "withdrawn"])
+async def test_update_application_reopens_terminal_outcome_when_reopen_true(
+    terminal_outcome: str,
 ) -> None:
     """reopen=true allows a terminal application to move back into an active stage."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -672,9 +646,9 @@ async def test_update_application_reopens_terminal_status_when_reopen_true(
         app_id = created["id"]
 
         close_response = await client.patch(
-            f"/applications/{app_id}",
+            f"/api/v1/applications/{app_id}",
             json={
-                "status": terminal_status,
+                "outcome": terminal_outcome,
                 "outcome_reason": "Team paused hiring",
             },
             headers=headers,
@@ -682,31 +656,30 @@ async def test_update_application_reopens_terminal_status_when_reopen_true(
         assert close_response.status_code == 200, close_response.text
 
         response = await client.patch(
-            f"/applications/{app_id}",
+            f"/api/v1/applications/{app_id}",
             json={"stage": "screening", "reopen": True},
             headers=headers,
         )
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "screening"
     assert body["stage"] == "screening"
     assert body["outcome"] is None
     assert body["outcome_reason"] is None
     history = body.get("status_history", [])
     assert len(history) == 3
-    assert history[-1]["from"] == terminal_status
-    assert history[-1]["to"] == "screening"
+    # Last entry reflects the reopen to screening
+    assert history[-1]["stage"] == "screening"
+    assert history[-1]["outcome"] is None
 
 
 async def test_update_application_not_found() -> None:
     """PATCH /applications/{id} with non-existent id returns 404."""
-    await _ensure_db_ready()
     async with _client() as client:
         _, headers = await _get_auth(client)
 
         response = await client.patch(
-            f"/applications/{uuid4()}",
+            f"/api/v1/applications/{uuid4()}",
             json={"notes": "nope"},
             headers=headers,
         )
@@ -721,34 +694,36 @@ async def test_update_application_not_found() -> None:
 
 async def test_delete_application_happy_path() -> None:
     """DELETE /applications/{id} returns 204 and the resource is gone."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            "/api/v1/applications/",
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
 
-        del_resp = await client.delete(f"/applications/{app_id}", headers=headers)
+        del_resp = await client.delete(
+            f"/api/v1/applications/{app_id}", headers=headers
+        )
         assert del_resp.status_code == 204
 
         # Confirm it is gone
-        get_resp = await client.get(f"/applications/{app_id}", headers=headers)
+        get_resp = await client.get(f"/api/v1/applications/{app_id}", headers=headers)
 
     assert get_resp.status_code == 404
 
 
 async def test_delete_application_not_found() -> None:
     """DELETE /applications/{id} with non-existent id returns 404."""
-    await _ensure_db_ready()
     async with _client() as client:
         _, headers = await _get_auth(client)
 
-        response = await client.delete(f"/applications/{uuid4()}", headers=headers)
+        response = await client.delete(
+            f"/api/v1/applications/{uuid4()}", headers=headers
+        )
 
     assert response.status_code == 404
 
@@ -760,20 +735,19 @@ async def test_delete_application_not_found() -> None:
 
 async def test_get_application_documents_empty() -> None:
     """GET /applications/{id}/documents returns empty list when none attached."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            "/api/v1/applications/",
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
 
         response = await client.get(
-            f"/applications/{app_id}/documents", headers=headers
+            f"/api/v1/applications/{app_id}/documents", headers=headers
         )
 
     assert response.status_code == 200
@@ -788,14 +762,13 @@ async def test_get_application_documents_empty() -> None:
 
 async def test_attach_and_detach_document() -> None:
     """POST then DELETE on the document-attachment sub-route works end-to-end."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            "/api/v1/applications/",
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
@@ -804,7 +777,7 @@ async def test_attach_and_detach_document() -> None:
 
         # Attach
         attach_resp = await client.post(
-            f"/applications/{app_id}/documents",
+            f"/api/v1/applications/{app_id}/documents",
             json={"document_id": str(doc_id)},
             headers=headers,
         )
@@ -813,34 +786,33 @@ async def test_attach_and_detach_document() -> None:
 
         # List should include the document
         list_resp = await client.get(
-            f"/applications/{app_id}/documents", headers=headers
+            f"/api/v1/applications/{app_id}/documents", headers=headers
         )
         assert list_resp.status_code == 200
         assert any(d["id"] == str(doc_id) for d in list_resp.json())
 
         # Detach
         detach_resp = await client.delete(
-            f"/applications/{app_id}/documents/{doc_id}", headers=headers
+            f"/api/v1/applications/{app_id}/documents/{doc_id}", headers=headers
         )
         assert detach_resp.status_code == 204
 
         # Confirm gone
         list_resp2 = await client.get(
-            f"/applications/{app_id}/documents", headers=headers
+            f"/api/v1/applications/{app_id}/documents", headers=headers
         )
         assert not any(d["id"] == str(doc_id) for d in list_resp2.json())
 
 
 async def test_attach_duplicate_document_returns_400() -> None:
     """Attaching the same document twice returns 400."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            "/api/v1/applications/",
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
@@ -848,14 +820,14 @@ async def test_attach_duplicate_document_returns_400() -> None:
         doc_id = await _create_document_via_db(uid)
 
         first = await client.post(
-            f"/applications/{app_id}/documents",
+            f"/api/v1/applications/{app_id}/documents",
             json={"document_id": str(doc_id)},
             headers=headers,
         )
         assert first.status_code == 201
 
         second = await client.post(
-            f"/applications/{app_id}/documents",
+            f"/api/v1/applications/{app_id}/documents",
             json={"document_id": str(doc_id)},
             headers=headers,
         )
@@ -866,15 +838,14 @@ async def test_attach_duplicate_document_returns_400() -> None:
 
 async def test_application_documents_include_shared_attachments() -> None:
     """GET /applications/{id}/documents includes shared documents attached by the caller."""
-    await _ensure_db_ready()
     async with _client() as client:
         viewer_id, viewer_headers = await _get_auth(client)
-        _, owner_id = await _create_user("SharedDocOwnerPass1!")
+        _, owner_id = await create_user("SharedDocOwnerPass1!")
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            "/api/v1/applications/",
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=viewer_headers,
         )
         app_id = create_resp.json()["id"]
@@ -897,14 +868,14 @@ async def test_application_documents_include_shared_attachments() -> None:
             await session.commit()
 
         attach_resp = await client.post(
-            f"/applications/{app_id}/documents",
+            f"/api/v1/applications/{app_id}/documents",
             json={"document_id": str(shared_doc_id)},
             headers=viewer_headers,
         )
         assert attach_resp.status_code == 201
 
         list_resp = await client.get(
-            f"/applications/{app_id}/documents", headers=viewer_headers
+            f"/api/v1/applications/{app_id}/documents", headers=viewer_headers
         )
 
     assert list_resp.status_code == 200
@@ -916,15 +887,14 @@ async def test_application_documents_exclude_inaccessible_other_user_attachments
     None
 ):
     """GET /applications/{id}/documents excludes attached documents the caller cannot access."""
-    await _ensure_db_ready()
     async with _client() as client:
         owner_id, headers = await _get_auth(client)
-        _, other_user_id = await _create_user("OtherOwnerPass1!")
+        _, other_user_id = await create_user("OtherOwnerPass1!")
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            "/api/v1/applications/",
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
@@ -933,7 +903,7 @@ async def test_application_documents_exclude_inaccessible_other_user_attachments
         other_doc_id = await _create_document_via_db(other_user_id)
 
         attach_resp = await client.post(
-            f"/applications/{app_id}/documents",
+            f"/api/v1/applications/{app_id}/documents",
             json={"document_id": str(owner_doc_id)},
             headers=headers,
         )
@@ -949,7 +919,7 @@ async def test_application_documents_exclude_inaccessible_other_user_attachments
             await session.commit()
 
         list_resp = await client.get(
-            f"/applications/{app_id}/documents", headers=headers
+            f"/api/v1/applications/{app_id}/documents", headers=headers
         )
 
     assert list_resp.status_code == 200
@@ -960,15 +930,14 @@ async def test_application_documents_exclude_inaccessible_other_user_attachments
 
 async def test_application_export_includes_shared_attached_documents() -> None:
     """GET /applications/{id}/export includes attached shared documents the caller can access."""
-    await _ensure_db_ready()
     async with _client() as client:
         viewer_id, viewer_headers = await _get_auth(client)
-        _, owner_id = await _create_user("SharedExportOwnerPass1!")
+        _, owner_id = await create_user("SharedExportOwnerPass1!")
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            "/api/v1/applications/",
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=viewer_headers,
         )
         app_id = create_resp.json()["id"]
@@ -991,14 +960,14 @@ async def test_application_export_includes_shared_attached_documents() -> None:
             await session.commit()
 
         attach_resp = await client.post(
-            f"/applications/{app_id}/documents",
+            f"/api/v1/applications/{app_id}/documents",
             json={"document_id": str(shared_doc_id)},
             headers=viewer_headers,
         )
         assert attach_resp.status_code == 201
 
         export_resp = await client.get(
-            f"/applications/{app_id}/export",
+            f"/api/v1/applications/{app_id}/export",
             headers=viewer_headers,
         )
 
@@ -1018,20 +987,19 @@ async def test_application_export_includes_shared_attached_documents() -> None:
 
 async def test_detach_document_not_attached_returns_404() -> None:
     """DELETE on a document not attached to the application returns 404."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            "/api/v1/applications/",
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
 
         response = await client.delete(
-            f"/applications/{app_id}/documents/{uuid4()}",
+            f"/api/v1/applications/{app_id}/documents/{uuid4()}",
             headers=headers,
         )
 

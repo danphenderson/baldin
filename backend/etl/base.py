@@ -9,12 +9,13 @@ Retry and validation utilities are included to harden LinkedIn/Glassdoor crawler
 
 from __future__ import annotations
 
+import os
 import random
 from asyncio import Future, ensure_future, get_event_loop, sleep
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Literal, TypeVar
-from urllib.parse import urlparse
+from typing import Any, Callable, Literal, TypedDict, TypeVar
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from aiofiles import open as aopen
 from bs4 import BeautifulSoup
@@ -27,7 +28,7 @@ try:
     from playwright_stealth import Stealth as _Stealth
 
     async def _apply_stealth(page: Page) -> None:  # type: ignore[misc]
-        _Stealth().apply_stealth_async(page)
+        await _Stealth().apply_stealth_async(page)
 
 except ImportError:
     # Older package (<2.x) exposes stealth_async directly.
@@ -38,6 +39,42 @@ from app.logging import get_logger
 logger = get_logger(__name__)
 
 T = TypeVar("T")
+
+
+class ProxyConfig(TypedDict, total=False):
+    mode: Literal["direct", "managed"]
+    upstream_base_url: str
+    auth_header_env: str
+
+
+def build_proxy_headers(proxy_config: ProxyConfig | None) -> dict[str, str] | None:
+    if not proxy_config or proxy_config.get("mode", "direct") != "managed":
+        return None
+
+    env_name = proxy_config.get("auth_header_env")
+    if not env_name:
+        return None
+
+    header_value = os.getenv(env_name, "").strip()
+    if not header_value:
+        return None
+
+    return {"Authorization": header_value}
+
+
+def resolve_navigation_url(url: str, proxy_config: ProxyConfig | None) -> str:
+    if not proxy_config or proxy_config.get("mode", "direct") != "managed":
+        return url
+
+    upstream_base_url = (proxy_config.get("upstream_base_url") or "").strip()
+    if not upstream_base_url:
+        return url
+
+    parsed = urlparse(upstream_base_url)
+    query_pairs = parse_qsl(parsed.query, keep_blank_values=True)
+    query_pairs.append(("url", url))
+    return urlunparse(parsed._replace(query=urlencode(query_pairs, doseq=True)))
+
 
 # ---------------------------------------------------------------------------
 # Retry configuration defaults
@@ -238,10 +275,12 @@ class CrawlerBase:
         headless: bool = True,
         viewport: dict[str, int] | None = None,
         timeout: int = 30_000,
+        proxy_config: ProxyConfig | None = None,
     ) -> None:
         self._headless = headless
         self._viewport = viewport
         self._timeout = timeout
+        self._proxy_config = proxy_config or {}
         self._playwright = None
         self.browser = None
         self.context = None
@@ -258,6 +297,9 @@ class CrawlerBase:
         ctx_kwargs: dict = {}
         if self._viewport:
             ctx_kwargs["viewport"] = self._viewport
+        proxy_headers = build_proxy_headers(self._proxy_config)
+        if proxy_headers:
+            ctx_kwargs["extra_http_headers"] = proxy_headers
         self.context = await self.browser.new_context(**ctx_kwargs)
         self.context.set_default_timeout(self._timeout)
         self.page = await self.context.new_page()
@@ -295,8 +337,9 @@ class CrawlerBase:
 
     async def navigate(self, url: str, wait_until: str = "domcontentloaded") -> None:
         page = self._require_page()
-        logger.info("Navigating to %s", url)
-        await page.goto(url, wait_until=wait_until)
+        target_url = resolve_navigation_url(url, self._proxy_config)
+        logger.info("Navigating to %s", target_url)
+        await page.goto(target_url, wait_until=wait_until)
 
     async def navigate_with_retry(
         self,

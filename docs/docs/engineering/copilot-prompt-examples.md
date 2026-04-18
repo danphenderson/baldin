@@ -1,15 +1,17 @@
 ---
 sidebar_position: 5
-slug: /engineering/copilot-prompt-examples
+slug: /engineering/agentic-prompt-examples
 title: Rewrite Weak Prompts
-description: Turn vague prompts into scoped requests with validation and handback rules.
+description: Turn vague prompts into scoped requests with validation and handback rules across Copilot and Codex.
 ---
 
-<!-- last-verified: 2026-04-09 -->
+<!-- last-verified: 2026-04-16 -->
 
 # Rewrite Weak Prompts
 
 Use this page as a companion to [Prompt The Right Agent](./copilot-prompt-cookbook.md). The fastest way to get better results from Baldin's agents is to be explicit about owner, scope, validation, the standard handback, and when to stop and hand off.
+
+If you are using Codex instead of Copilot, translate slash-prompt examples into direct requests to the named custom agents under `.codex/agents/` or start with `/plan` when ownership is unclear.
 
 If the owner is already obvious, skip routing prompts and start with that specialist directly.
 
@@ -53,7 +55,7 @@ The bug might be in frontend state updates, backend aggregation, or both.
 Validation:
 Return owner selection, workstreams, generated-artifact needs, and the exact checks each owner should run.
 
-Require every implementation owner to return the standard handback fields from the Copilot Prompt Cookbook.
+Require every implementation owner to return the standard handback fields from the Agentic Workflow Cookbook.
 
 Do not implement yet unless this is obviously a tiny single-owner fix.
 ```
@@ -99,7 +101,7 @@ Validation:
 - run `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` only if routes or schemas changed
 
 Return:
-- use the Standard Handback fields from the Copilot Prompt Cookbook.
+- use the Standard Handback fields from the Agentic Workflow Cookbook.
 
 Stop and hand off if this changes the public API contract and downstream frontend validation is not straightforward.
 ```
@@ -143,7 +145,7 @@ Validation:
 - run ./node_modules/.bin/tsc --noEmit if shared types or typed service usage changed
 
 Return:
-- use the Standard Handback fields from the Copilot Prompt Cookbook.
+- use the Standard Handback fields from the Agentic Workflow Cookbook.
 
 Stop and hand off if the needed state is not available from the current API contract.
 ```
@@ -153,6 +155,56 @@ Why it works:
 - It frames the request as a user-facing problem, not vague polish.
 - It keeps the Baldin Frontend Agent focused on UI and typed contract consumption.
 - It avoids hiding backend dependency problems behind frontend workarounds.
+
+## Example 3B: Operator-Design Reference Work
+
+Bad prompt:
+
+```text
+Update the design system in Figma and wire up the code too.
+```
+
+Why it is weak:
+
+- It mixes archived-design reference work with code implementation in one sentence.
+- It does not say whether the output is a historical design review, a repo-backed mapping change, or a code implementation slice.
+- It does not ask for design evidence or a handoff when implementation should move to another owner.
+
+Good prompt:
+
+```text
+Lead this as archived-design reference work.
+
+Objective:
+Inspect the archived design evidence for the next route-family slice and prepare a concise comparison against the current code-backed implementation contract.
+
+Context:
+Use `docs/docs/reference/operator-design-forward-path.md` as the active source of truth. Archived redesign material is reference-only and must not become a delivery gate.
+
+Allowed paths:
+- ./operator-design/**
+- ./docs/docs/reference/operator-design-forward-path.md
+- ./docs/docs/architecture/frontend-design-system.md
+- ./docs/docs/engineering/local-development.md
+- ./frontend/src/design-system/**/*.figma.ts
+- ./plans/v2.1/**
+
+Validation:
+- capture or inspect the relevant Figma node
+- run `cd frontend && npm run test -- <targeted shared-surface test files>` only if a shared React primitive or pattern changed
+- run `npm --prefix docs run build` if design docs changed
+
+Return:
+- use the Standard Handback fields from the Agentic Workflow Cookbook.
+
+Stop and hand off if the task becomes broad frontend implementation or cross-stack delivery.
+```
+
+Why it works:
+
+- It gives Baldin Design Lead Agent a clearly design-first slice instead of mixing ownership.
+- It requires Figma or harness evidence, not invented polish.
+- It makes the frontend or architect handoff explicit if the work stops being primarily design.
 
 ## Example 4: Cross-Stack Feature
 
@@ -185,7 +237,7 @@ Validation:
 - run `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh`
 
 Return:
-- use the Standard Handback fields from the Copilot Prompt Cookbook.
+- use the Standard Handback fields from the Agentic Workflow Cookbook.
 
 Delegate isolated backend-only and frontend-only slices by default, but keep contract ownership here.
 ```
@@ -269,7 +321,7 @@ Validation:
 - run ./scripts/update_frontend_schemas.sh
 
 Return:
-- use the Standard Handback fields from the Copilot Prompt Cookbook.
+- use the Standard Handback fields from the Agentic Workflow Cookbook.
 
 Do not widen the task beyond this slice without stating why and naming the next owner.
 ```
@@ -322,6 +374,7 @@ Own cross-stack design, delegation, and integration across backend, frontend, an
 
 - If ownership is unclear, start with Baldin Project Manager.
 - If the task is obviously backend-only or frontend-only, start with that specialist directly instead of routing through issue-dispatch prompts.
+- If the task is primarily archived-design reference work, start with Baldin Design Lead Agent before asking for repo implementation.
 - If the task changes backend responses consumed by the frontend, either start with Baldin Lead Full-Stack Architect or explicitly require a next-owner handoff.
 - Ask for the standard handback fields whenever an agent is expected to implement or validate changes.
 - Ask for generated-artifact status whenever API routes or schemas might move.

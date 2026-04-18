@@ -1,74 +1,30 @@
-from contextlib import asynccontextmanager
 from datetime import datetime
 from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import pytest
 from fastapi import HTTPException
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app import models, schemas
 from app.api.routes import leads as lead_routes
-from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
-from app.main import app
+from app.conftest import (
+    async_client_ctx as _client,
+)
+from app.conftest import (
+    create_user as _create_user,
+)
+from app.conftest import (
+    login_and_get_headers as _auth_headers,
+)
+from app.core.db import session_context
 from app.tests import utils
 
-pytestmark = pytest.mark.asyncio(loop_scope="module")
-
-password_helper = PasswordHelper()
-_db_ready = False
-
-
-@asynccontextmanager
-async def _client() -> AsyncClient:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
-        yield client
-
-
-async def _ensure_db_ready() -> None:
-    global _db_ready
-    if _db_ready:
-        return
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
-
-
-async def _create_user(
-    password: str, *, is_superuser: bool = False
-) -> tuple[str, UUID]:
-    email = utils.random_email()
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash(password),
-            session,
-            is_superuser=is_superuser,
-        )
-        await session.commit()
-    return email, user.id
-
-
-async def _auth_headers(
-    client: AsyncClient, email: str, password: str
-) -> dict[str, str]:
-    response = await client.post(
-        "/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+pytestmark = [
+    pytest.mark.asyncio(loop_scope="module"),
+    pytest.mark.usefixtures("fresh_db"),
+]
 
 
 async def _set_user_profile(user_id: UUID, **values: str | None) -> None:
@@ -130,7 +86,6 @@ def _extractor_stub() -> SimpleNamespace:
 
 
 async def test_create_lead_uses_canonical_dedupe_and_registration_counts() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         owner_email, owner_id = await _create_user("lead-owner-pass")
         other_email, other_id = await _create_user("lead-other-pass")
@@ -138,14 +93,14 @@ async def test_create_lead_uses_canonical_dedupe_and_registration_counts() -> No
         other_headers = await _auth_headers(client, other_email, "lead-other-pass")
 
         owner_response = await client.post(
-            "/leads/",
+            "/api/v1/leads/",
             json=_lead_payload(
                 url="HTTPS://WWW.Example.com/jobs/Role/?utm_source=newsletter&b=2&a=1#fragment"
             ),
             headers=owner_headers,
         )
         other_response = await client.post(
-            "/leads/",
+            "/api/v1/leads/",
             json=_lead_payload(
                 url="https://example.com/jobs/Role?a=1&b=2",
                 title="Different title should not overwrite",
@@ -175,8 +130,6 @@ async def test_create_lead_uses_canonical_dedupe_and_registration_counts() -> No
 async def test_extract_lead_returns_created_joined_and_already_registered_dispositions(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
-
     async def _get_extractor_by_name(*args, **kwargs):
         raise HTTPException(status_code=404, detail="not found")
 
@@ -208,19 +161,19 @@ async def test_extract_lead_returns_created_joined_and_already_registered_dispos
         joiner_headers = await _auth_headers(client, joiner_email, "extract-join-pass")
 
         created_response = await client.post(
-            "/leads/extract",
+            "/api/v1/leads/extract",
             params={
                 "extraction_url": "https://www.example.com/jobs/extract-me/?utm_medium=email"
             },
             headers=creator_headers,
         )
         joined_response = await client.post(
-            "/leads/extract",
+            "/api/v1/leads/extract",
             params={"extraction_url": "https://example.com/jobs/extract-me"},
             headers=joiner_headers,
         )
         already_registered_response = await client.post(
-            "/leads/extract",
+            "/api/v1/leads/extract",
             params={"extraction_url": "https://example.com/jobs/extract-me#top"},
             headers=joiner_headers,
         )
@@ -256,7 +209,6 @@ async def test_extract_lead_rejects_unsafe_url_before_extractor_lookup() -> None
 
 
 async def test_lead_detail_scopes_registration_notes_and_exposed_participants() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         owner_email, owner_id = await _create_user("detail-owner-pass")
         viewer_email, viewer_id = await _create_user("detail-viewer-pass")
@@ -281,30 +233,32 @@ async def test_lead_detail_scopes_registration_notes_and_exposed_participants() 
         viewer_headers = await _auth_headers(client, viewer_email, "detail-viewer-pass")
 
         create_response = await client.post(
-            "/leads/",
+            "/api/v1/leads/",
             json=_lead_payload(description=None, location=None),
             headers=owner_headers,
         )
         lead_id = create_response.json()["id"]
 
         registration_response = await client.post(
-            f"/leads/{lead_id}/registration",
+            f"/api/v1/leads/{lead_id}/registration",
             headers=viewer_headers,
         )
         owner_registration_response = await client.patch(
-            f"/leads/{lead_id}/registration",
+            f"/api/v1/leads/{lead_id}/registration",
             json={"internal_notes": "Owner only note", "expose_profile": True},
             headers=owner_headers,
         )
         viewer_registration_response = await client.patch(
-            f"/leads/{lead_id}/registration",
+            f"/api/v1/leads/{lead_id}/registration",
             json={"internal_notes": "Viewer private note", "expose_profile": False},
             headers=viewer_headers,
         )
-        lead_list_response = await client.get("/leads/", headers=viewer_headers)
-        detail_response = await client.get(f"/leads/{lead_id}", headers=viewer_headers)
+        lead_list_response = await client.get("/api/v1/leads/", headers=viewer_headers)
+        detail_response = await client.get(
+            f"/api/v1/leads/{lead_id}", headers=viewer_headers
+        )
         owner_detail_response = await client.get(
-            f"/leads/{lead_id}", headers=owner_headers
+            f"/api/v1/leads/{lead_id}", headers=owner_headers
         )
 
     assert registration_response.status_code == 200
@@ -315,7 +269,7 @@ async def test_lead_detail_scopes_registration_notes_and_exposed_participants() 
     assert owner_detail_response.status_code == 200
 
     lead_list_item = next(
-        item for item in lead_list_response.json()["leads"] if item["id"] == lead_id
+        item for item in lead_list_response.json()["items"] if item["id"] == lead_id
     )
     assert lead_list_item["interest_count"] == 2
     assert lead_list_item["viewer_is_registered"] is True
@@ -342,7 +296,6 @@ async def test_lead_detail_scopes_registration_notes_and_exposed_participants() 
 
 
 async def test_registration_join_and_leave_updates_viewer_state() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         owner_email, _ = await _create_user("leave-owner-pass")
         viewer_email, viewer_id = await _create_user("leave-viewer-pass")
@@ -350,21 +303,23 @@ async def test_registration_join_and_leave_updates_viewer_state() -> None:
         viewer_headers = await _auth_headers(client, viewer_email, "leave-viewer-pass")
 
         create_response = await client.post(
-            "/leads/",
+            "/api/v1/leads/",
             json=_lead_payload(),
             headers=owner_headers,
         )
         lead_id = create_response.json()["id"]
 
         join_response = await client.post(
-            f"/leads/{lead_id}/registration",
+            f"/api/v1/leads/{lead_id}/registration",
             headers=viewer_headers,
         )
         leave_response = await client.delete(
-            f"/leads/{lead_id}/registration",
+            f"/api/v1/leads/{lead_id}/registration",
             headers=viewer_headers,
         )
-        detail_response = await client.get(f"/leads/{lead_id}", headers=viewer_headers)
+        detail_response = await client.get(
+            f"/api/v1/leads/{lead_id}", headers=viewer_headers
+        )
 
     assert join_response.status_code == 200
     assert join_response.json()["user_id"] == str(viewer_id)
@@ -379,7 +334,6 @@ async def test_registration_join_and_leave_updates_viewer_state() -> None:
 async def test_registered_viewers_can_post_anonymous_comments_and_single_level_replies() -> (
     None
 ):
-    await _ensure_db_ready()
     async with _client() as client:
         author_email, author_id = await _create_user("comment-author-pass")
         replier_email, replier_id = await _create_user("comment-replier-pass")
@@ -407,33 +361,37 @@ async def test_registered_viewers_can_post_anonymous_comments_and_single_level_r
         )
 
         create_response = await client.post(
-            "/leads/",
+            "/api/v1/leads/",
             json=_lead_payload(),
             headers=author_headers,
         )
         lead_id = create_response.json()["id"]
-        await client.post(f"/leads/{lead_id}/registration", headers=replier_headers)
+        await client.post(
+            f"/api/v1/leads/{lead_id}/registration", headers=replier_headers
+        )
 
         comment_response = await client.post(
-            f"/leads/{lead_id}/comments",
+            f"/api/v1/leads/{lead_id}/comments",
             json={"content": "First comment"},
             headers=author_headers,
         )
         reply_response = await client.post(
-            f"/leads/{lead_id}/comments/{comment_response.json()['id']}/replies",
+            f"/api/v1/leads/{lead_id}/comments/{comment_response.json()['id']}/replies",
             json={"content": "Visible reply", "anonymous": False},
             headers=replier_headers,
         )
         comments_response = await client.get(
-            f"/leads/{lead_id}/comments",
+            f"/api/v1/leads/{lead_id}/comments",
             headers=author_headers,
         )
         nested_reply_response = await client.post(
-            f"/leads/{lead_id}/comments/{reply_response.json()['id']}/replies",
+            f"/api/v1/leads/{lead_id}/comments/{reply_response.json()['id']}/replies",
             json={"content": "Not allowed"},
             headers=author_headers,
         )
-        detail_response = await client.get(f"/leads/{lead_id}", headers=author_headers)
+        detail_response = await client.get(
+            f"/api/v1/leads/{lead_id}", headers=author_headers
+        )
 
     assert comment_response.status_code == 201
     assert reply_response.status_code == 201

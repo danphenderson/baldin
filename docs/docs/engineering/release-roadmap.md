@@ -5,11 +5,11 @@ title: Track Release Readiness
 description: See current release posture, remaining launch phases, and deployment constraints.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-17 -->
 
 # Track Release Readiness
 
-Baldin is still in developer preview. The supported workflow today is the local Docker Compose stack. Repository-side CI and candidate-build workflows exist, but merge-blocking enforcement and later deployment automation are still being rebuilt, with branch protection remaining a GitHub settings step outside the repo.
+Baldin is still pre-production. The supported workflow today is the local Docker Compose stack. Repository-side CI and candidate-build workflows exist, but merge-blocking enforcement and later deployment automation are still being rebuilt, with branch protection remaining a GitHub settings step outside the repo.
 
 This page is the canonical documentation summary for the current release posture and remaining launch phases.
 
@@ -53,7 +53,7 @@ Those artifact boundaries should remain stable unless the release topology itsel
 
 ### Phase 2: CI as an integration gate
 
-The repository side of this phase is in place: `.github/workflows/ci.yml` already defines six CI jobs, including the backend coverage gate and API contract freshness check. The remaining gap is to apply the documented branch-protection settings in GitHub so reviews and required checks actually block merges on `main`.
+The repository side of this phase is in place: `.github/workflows/ci.yml` already defines seven CI jobs, including the backend coverage gate, the frontend theme drift guard, and the API contract freshness check. The remaining gap is to apply the documented branch-protection settings in GitHub so reviews and required checks actually block merges on `main`.
 
 ### Phase 3: Minimal production topology
 
@@ -86,8 +86,8 @@ See the private-repo guidance in `cdk/README.md` for the current cautionary guid
 
 ## Current Release Risks Called Out In Code And Docs
 
-- Schema management still depends on startup bootstrap rather than migrations.
-- Local persisted Postgres volumes are convenient for development, but they hide migration discipline gaps.
+- Local startup now applies Alembic migrations automatically, but production still needs explicit deploy-time migration discipline instead of relying on startup bootstrap behavior.
+- Local persisted Postgres volumes are convenient for development, but they can hide migration-order and rollback gaps that release automation still needs to surface.
 - The disabled `scripts/sync_frontend_to_s3.sh` path is intentionally not part of the current release story.
 
 ## Related Docs

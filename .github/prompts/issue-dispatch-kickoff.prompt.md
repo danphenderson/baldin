@@ -13,7 +13,7 @@ Task:
 - Accept a single GitHub issue, PR comment, backlog note, or copied ticket body as the starting point.
 - Determine whether the ticket is dispatch-ready, needs rewrite first, or is really a decision or verification ticket.
 - Reconcile the ticket text against the current repo evidence before proposing implementation.
-- Choose the smallest correct owner: [Baldin Backend Agent](../agents/baldin-backend.agent.md), [Baldin Frontend Agent](../agents/baldin-frontend-agent.agent.md), [Baldin Lead Full-Stack Architect](../agents/baldin-lead-full-stack-architect.agent.md), or keep ownership with [Baldin Project Manager](../agents/baldin-project-manager.agent.md) if the ticket still needs coordination.
+- Choose the smallest correct owner: [Baldin Backend Agent](../agents/baldin-backend.agent.md), [Baldin Frontend Agent](../agents/baldin-frontend-agent.agent.md), [Baldin Design Lead Agent](../agents/baldin-design-lead-agent.agent.md), [Baldin Lead Full-Stack Architect](../agents/baldin-lead-full-stack-architect.agent.md), or keep ownership with [Baldin Project Manager](../agents/baldin-project-manager.agent.md) if the ticket still needs coordination.
 - Keep single-owner execution as the default. Split into at most three workstreams only when paths are truly non-overlapping and the split reduces conflict.
 - If the owner is already obvious and the ticket is actionable, return a direct handoff packet immediately instead of adding an extra planning layer.
 - Call out generated-artifact, docs-source, local-development, or external-permission obligations before implementation starts.

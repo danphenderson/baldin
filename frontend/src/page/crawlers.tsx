@@ -1,27 +1,52 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Box, Card, CardContent, Typography, Chip, Stack, Button, TextField,
-  useTheme, alpha, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-  Tooltip, Skeleton, Alert, Divider, Select, MenuItem, FormControl, InputLabel,
-  Switch, FormControlLabel, Collapse, TablePagination,
-} from '@mui/material';
+  Box,
+  Typography,
+  Stack,
+  Button,
+  TextField,
+  useTheme,
+  alpha,
+  IconButton,
+  Tooltip,
+  Skeleton,
+  Alert,
+  Divider,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Switch,
+  FormControlLabel,
+  Collapse,
+  TablePagination,
+  } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
-  Hub as PipelineIcon, PlayArrow as RunIcon, Add as AddIcon,
-  Refresh as RefreshIcon, CheckCircle as SuccessIcon,
-  Error as ErrorIcon, HourglassEmpty as PendingIcon, Loop as RunningIcon,
-  Edit as EditIcon, Schedule as ScheduleIcon,
-  FiberManualRecord as DotIcon, ExpandMore as ExpandMoreIcon,
-  TrendingUp as TrendingIcon, Cancel as CancelIcon,
-  Pause as PauseIcon, PlayCircle as ResumeIcon,
+  Hub as PipelineIcon,
+  PlayArrow as RunIcon,
+  Add as AddIcon,
+  Refresh as RefreshIcon,
+  CheckCircle as SuccessIcon,
+  Error as ErrorIcon,
+  HourglassEmpty as PendingIcon,
+  Loop as RunningIcon,
+  Edit as EditIcon,
+  Schedule as ScheduleIcon,
+  FiberManualRecord as DotIcon,
+  ExpandMore as ExpandMoreIcon,
+  TrendingUp as TrendingIcon,
+  Cancel as CancelIcon,
+  Pause as PauseIcon,
+  PlayCircle as ResumeIcon,
   BugReport as CrawlerIcon,
-} from '@mui/icons-material';
-import { AnimatePresence, motion } from 'motion/react';
+  } from '@mui/icons-material';
+import { AnimatePresence,
+  motion } from 'motion/react';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
-import EmptyState from '../component/common/empty-state';
-import ConfirmDialog from '../component/common/confirm-dialog';
+import { AgentEnabledMultilineField } from '../component/agent-surface';
 import {
   type CrawlerPipelineRead,
   type CrawlerPipelineCreate,
@@ -30,10 +55,30 @@ import {
   type CrawlerRunsPaginatedRead,
   type CrawlerRunStatus,
   type CrawlerSourceType,
-  getCrawlerPipelines, createCrawlerPipeline, updateCrawlerPipeline,
-  getCrawlerRuns, triggerCrawlerRun, cancelCrawlerRun, pauseCrawlerRun, resumeCrawlerRun,
+  getCrawlerPipelines,
+  createCrawlerPipeline,
+  updateCrawlerPipeline,
+  getCrawlerRuns,
+  triggerCrawlerRun,
+  cancelCrawlerRun,
+  pauseCrawlerRun,
+  resumeCrawlerRun,
   retryCrawlerRun,
-} from '../service/crawlers';
+  } from '../service/crawlers';
+import { monoFontFamily } from '../design-system/tokens/typography';
+import { ConfirmDialog,
+  EmptyState,
+  MetricStrip,
+  getStatusColors,
+  softBrandGradient,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogActions as DialogActions,
+} from '../design-system';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -58,19 +103,25 @@ const formatRelativeTime = (iso: string): string => {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
-const STATUS_CONFIG: Record<CrawlerRunStatus, { icon: React.ReactElement; color: string; label: string }> = {
-  success: { icon: <SuccessIcon fontSize="small" />, color: '#10b981', label: 'Success' },
-  failed: { icon: <ErrorIcon fontSize="small" />, color: '#f43f5e', label: 'Failed' },
-  pending: { icon: <PendingIcon fontSize="small" />, color: '#f59e0b', label: 'Pending' },
-  running: { icon: <RunningIcon fontSize="small" />, color: '#06b6d4', label: 'Running' },
-  cancelled: { icon: <CancelIcon fontSize="small" />, color: '#94a3b8', label: 'Cancelled' },
-  paused: { icon: <PauseIcon fontSize="small" />, color: '#eab308', label: 'Paused' },
-  pending_review: { icon: <PendingIcon fontSize="small" />, color: '#8b5cf6', label: 'Pending Review' },
+const getCrawlerStatusConfig = (theme: import('@mui/material/styles').Theme) => {
+  const sc = getStatusColors(theme);
+  return {
+    success: { icon: <SuccessIcon fontSize="small" />, color: sc.success, label: 'Success' },
+    failed: { icon: <ErrorIcon fontSize="small" />, color: sc.failed, label: 'Failed' },
+    pending: { icon: <PendingIcon fontSize="small" />, color: sc.pending, label: 'Pending' },
+    running: { icon: <RunningIcon fontSize="small" />, color: sc.running, label: 'Running' },
+    cancelled: { icon: <CancelIcon fontSize="small" />, color: sc.cancelled, label: 'Cancelled' },
+    paused: { icon: <PauseIcon fontSize="small" />, color: sc.paused, label: 'Paused' },
+    pending_review: { icon: <PendingIcon fontSize="small" />, color: sc.pending_review, label: 'Pending Review' },
+  } as Record<CrawlerRunStatus, { icon: React.ReactElement; color: string; label: string }>;
 };
 
-const SOURCE_COLORS: Record<CrawlerSourceType, string> = {
-  linkedin: '#0a66c2',
-  glassdoor: '#0caa41',
+const getSourceColors = (theme: import('@mui/material/styles').Theme) => {
+  const sc = getStatusColors(theme);
+  return {
+    linkedin: sc.linkedin,
+    glassdoor: sc.glassdoor,
+  } as Record<CrawlerSourceType, string>;
 };
 
 type PipelineFormState = {
@@ -112,22 +163,14 @@ const EMPTY_RUNS_PAGE: CrawlerRunsPaginatedRead = {
 
 const MotionCard = motion.create(Card);
 
-const RunStatusChip: React.FC<{ status: CrawlerRunStatus }> = ({ status }) => {
-  const cfg = STATUS_CONFIG[status];
-  return (
-    <Chip
-      icon={cfg.icon}
-      label={cfg.label}
-      size="small"
-      sx={{
-        backgroundColor: alpha(cfg.color, 0.12),
-        color: cfg.color,
-        fontWeight: 600,
-        fontSize: '0.7rem',
-        '& .MuiChip-icon': { color: 'inherit' },
-      }}
-    />
-  );
+const CRAWLER_STATUS_TONE: Record<CrawlerRunStatus, string> = {
+  success: 'success',
+  failed: 'danger',
+  pending: 'info',
+  running: 'info',
+  cancelled: 'warning',
+  paused: 'warning',
+  pending_review: 'info',
 };
 
 // ---------------------------------------------------------------------------
@@ -151,36 +194,18 @@ const OverviewStrip: React.FC<{ pipelines: CrawlerPipelineRead[] }> = ({ pipelin
     return { total: pipelines.length, active: activePipelines, totalRuns, failedRuns };
   }, [pipelines]);
 
-  const items: { label: string; value: string | number; color?: string; icon: React.ReactElement }[] = [
-    { label: 'Pipelines', value: stats.total, icon: <PipelineIcon fontSize="small" /> },
-    { label: 'Active', value: stats.active, icon: <SuccessIcon fontSize="small" /> },
-    { label: 'Total runs', value: stats.totalRuns, icon: <TrendingIcon fontSize="small" /> },
-    { label: 'Failed runs', value: stats.failedRuns, color: stats.failedRuns > 0 ? '#f43f5e' : undefined, icon: <ErrorIcon fontSize="small" /> },
-  ];
-
   return (
-    <Card sx={{ mb: 3 }}>
-      <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
-        <Stack
-          direction="row"
-          divider={<Divider orientation="vertical" flexItem />}
-          spacing={3}
-          sx={{ justifyContent: 'space-around', flexWrap: 'wrap', rowGap: 1 }}
-        >
-          {items.map((item) => (
-            <Box key={item.label} sx={{ textAlign: 'center', minWidth: 80 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.25, color: item.color ?? theme.palette.text.secondary }}>
-                {item.icon}
-              </Box>
-              <Typography variant="h6" fontWeight={700} sx={{ color: item.color ?? 'text.primary', lineHeight: 1.2 }}>
-                {item.value}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">{item.label}</Typography>
-            </Box>
-          ))}
-        </Stack>
-      </CardContent>
-    </Card>
+    <Box sx={{ mb: 3 }}>
+      <MetricStrip
+        variant="card"
+        items={[
+          { label: 'Pipelines', value: stats.total, icon: <PipelineIcon fontSize="small" /> },
+          { label: 'Active', value: stats.active, icon: <SuccessIcon fontSize="small" /> },
+          { label: 'Total runs', value: stats.totalRuns, icon: <TrendingIcon fontSize="small" /> },
+          { label: 'Failed runs', value: stats.failedRuns, color: stats.failedRuns > 0 ? theme.palette.error.main : undefined, icon: <ErrorIcon fontSize="small" /> },
+        ]}
+      />
+    </Box>
   );
 };
 
@@ -228,6 +253,8 @@ const CrawlerPipelineCard: React.FC<{
   index,
 }) => {
   const theme = useTheme();
+  const STATUS_CONFIG = getCrawlerStatusConfig(theme);
+  const SOURCE_COLORS = getSourceColors(theme);
   const lastStatusKey = pipe.last_run_status ?? null;
   const lastCfg = lastStatusKey ? STATUS_CONFIG[lastStatusKey] : null;
   const expanded = expandedId === pipe.id;
@@ -258,7 +285,12 @@ const CrawlerPipelineCard: React.FC<{
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
-                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.14)}, ${alpha(theme.palette.secondary.main, 0.10)})`,
+                background: softBrandGradient(theme, {
+                  startTone: 'main',
+                  endTone: 'main',
+                  startOpacity: 0.14,
+                  endOpacity: 0.1,
+                }),
               }}
             >
               <CrawlerIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
@@ -286,7 +318,7 @@ const CrawlerPipelineCard: React.FC<{
               </IconButton>
             </Tooltip>
             <Tooltip title={pipe.enabled ? 'Disable' : 'Enable'}>
-              <IconButton size="small" aria-label={`Toggle ${pipe.name}`} onClick={onToggleEnabled} sx={{ color: pipe.enabled ? '#10b981' : theme.palette.text.disabled }}>
+              <IconButton size="small" aria-label={`Toggle ${pipe.name}`} onClick={onToggleEnabled} sx={{ color: pipe.enabled ? theme.palette.success.main : theme.palette.text.disabled }}>
                 <DotIcon sx={{ fontSize: 14 }} />
               </IconButton>
             </Tooltip>
@@ -311,8 +343,8 @@ const CrawlerPipelineCard: React.FC<{
             label={pipe.enabled ? 'Enabled' : 'Disabled'}
             size="small"
             sx={{
-              backgroundColor: alpha(pipe.enabled ? '#10b981' : '#94a3b8', 0.12),
-              color: pipe.enabled ? '#10b981' : '#94a3b8',
+              backgroundColor: alpha(pipe.enabled ? theme.palette.success.main : theme.palette.text.secondary, 0.12),
+              color: pipe.enabled ? theme.palette.success.main : theme.palette.text.secondary,
               fontWeight: 600,
               fontSize: '0.65rem',
               height: 22,
@@ -350,7 +382,7 @@ const CrawlerPipelineCard: React.FC<{
 
         {/* Query definition summary */}
         {pipe.query_definition && Object.keys(pipe.query_definition).length > 0 && (
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', fontFamily: 'monospace', fontSize: '0.65rem' }} noWrap>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', fontFamily: monoFontFamily, fontSize: '0.65rem' }} noWrap>
             {JSON.stringify(pipe.query_definition).slice(0, 120)}
             {JSON.stringify(pipe.query_definition).length > 120 ? '…' : ''}
           </Typography>
@@ -397,11 +429,11 @@ const CrawlerPipelineCard: React.FC<{
                       gap: 1.5,
                       px: 1.5,
                       py: 1,
-                      borderRadius: 1.5,
+                      borderRadius: '6px',
                       border: `1px solid ${theme.palette.divider}`,
                     }}
                   >
-                    <RunStatusChip status={run.status} />
+                    <Chip label={STATUS_CONFIG[run.status].label} tone={CRAWLER_STATUS_TONE[run.status] as any} size="small" />
                     <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <ScheduleIcon sx={{ fontSize: 11 }} />
@@ -544,19 +576,22 @@ const PipelineFormDialog: React.FC<{
           label="Require human review"
         />
         {jsonFields.map(({ key, label }) => (
-          <TextField
+          <AgentEnabledMultilineField
             key={key}
             label={label}
-            value={form[key]}
-            onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.value }))}
+            value={String(form[key])}
+            onChange={(nextValue) => setForm((prev) => ({ ...prev, [key]: nextValue }))}
             fullWidth
             multiline
             minRows={3}
             maxRows={8}
             size="small"
+            surfaceId={form.name || 'crawler-pipeline-dialog'}
+            fieldKey={`crawler_${key}`}
+            entityRefs={[]}
             error={!isValidJson(form[key] as string)}
             helperText={!isValidJson(form[key] as string) ? 'Invalid JSON' : undefined}
-            slotProps={{ input: { sx: { fontFamily: 'monospace', fontSize: '0.8rem' } } }}
+            slotProps={{ input: { sx: { fontFamily: monoFontFamily, fontSize: '0.8rem' } } }}
           />
         ))}
       </DialogContent>
@@ -803,7 +838,7 @@ const CrawlersPage: React.FC = () => {
     } catch (e: unknown) { setError(getErrorMessage(e)); }
   };
 
-  usePageToolbarHeader('Crawlers', `${pipelines.length} pipeline${pipelines.length !== 1 ? 's' : ''}`);
+  usePageToolbarHeader('Crawlers', `${pipelines.length} crawlers`);
 
   // -----------------------------------------------------------------------
   // Render
@@ -914,6 +949,7 @@ const CrawlersPage: React.FC = () => {
         title="Trigger Crawler Run"
         message="This will start a new crawl run for this pipeline. Continue?"
         confirmLabel="Trigger"
+        destructive={false}
         onConfirm={handleTrigger}
         onCancel={() => { setTriggerConfirmOpen(false); setTriggerPipelineId(null); }}
       />

@@ -16,16 +16,24 @@
     "noFallthroughCasesInSwitch": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    },
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
     "types": [
       "vite/client",
-      "vitest/globals"
+      "vitest/globals",
+      "@figma/code-connect/figma-types"
     ]
   },
   "include": [
-    "src"
+    "src",
+    "test"
   ]
 }

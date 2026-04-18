@@ -1,19 +1,36 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import {
-  Box, Card, CardContent, Typography, Chip, Stack, Button, TextField, useTheme, alpha,
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  IconButton, Tooltip, Skeleton, Alert, Fade, Menu, MenuItem,
+  Box,
+  Typography,
+  Stack,
+  Button,
+  TextField,
+  useTheme,
+  alpha,
+  IconButton,
+  Tooltip,
+  Alert,
+  Fade,
+  Menu,
+  MenuItem,
   useMediaQuery,
-} from '@mui/material';
+  } from '@mui/material';
 import {
-  Delete as DeleteIcon, Refresh as RefreshIcon,
+  Delete as DeleteIcon,
+  Refresh as RefreshIcon,
   ArrowForward as ArrowIcon,
-  WorkOutline as WorkIcon, Assignment as AssignmentIcon,
-  LocationOn as LocationIcon, AttachMoney as SalaryIcon,
-  Warning as WarningIcon, Schedule as ScheduleIcon,
-  Block as RejectIcon, Undo as WithdrawIcon,
-  Description as DocIcon, DragIndicator as DragIcon, SwapHoriz as MoveIcon,
-} from '@mui/icons-material';
+  WorkOutline as WorkIcon,
+  Assignment as AssignmentIcon,
+  LocationOn as LocationIcon,
+  AttachMoney as SalaryIcon,
+  Warning as WarningIcon,
+  Schedule as ScheduleIcon,
+  Block as RejectIcon,
+  Undo as WithdrawIcon,
+  Description as DocIcon,
+  DragIndicator as DragIcon,
+  SwapHoriz as MoveIcon,
+  } from '@mui/icons-material';
 import {
   DndContext,
   PointerSensor,
@@ -23,14 +40,25 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-} from '@dnd-kit/core';
+  } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import type { ApplicationRead } from '../../service/applications';
 import {
-  useApplications, ALL_STATUS_COLUMNS, COLUMNS, COLUMN_EMPTY_HINTS, relativeDate, nextStage,
+  CardShell,
+  ConfirmDialog,
+  EmptyState as DSEmptyState,
+  InlineFeedback,
+  LoadingState,
+  MetricStrip,
+  getStatusColors,
+  StatusChip as Chip,
+} from '../../design-system';
+import { radiusTokens, toRadiusPx } from '../../design-system/tokens/radius';
+import {
+  useApplications, useStageColumns, COLUMN_EMPTY_HINTS, relativeDate, nextStage,
   applicationDocumentCount,
   type Column, type Outcome,
 } from './use-applications';
@@ -39,41 +67,19 @@ import {
 /*  ApplicationCard                                                    */
 /* ------------------------------------------------------------------ */
 
-type BoardStatus = Exclude<ApplicationRead['status'], null | undefined>;
+type BoardStatus = string;
 
-const REGISTERED_COLUMN = ALL_STATUS_COLUMNS.find((column) => column.key === 'registered')!;
-const CLOSED_COLUMNS = ALL_STATUS_COLUMNS.filter(
-  (column) => column.key === 'rejected' || column.key === 'withdrawn',
-);
+import { stageTone } from './stage-tone';
+
 const BOARD_EMPTY_HINTS: Record<string, string> = {
   registered: 'Registered applications stay here until you are ready to work them in the pipeline.',
   ...COLUMN_EMPTY_HINTS,
   rejected: 'Drop here or use Move to mark an application as rejected.',
   withdrawn: 'Drop here or use Move to mark an application as withdrawn.',
 };
-const BOARD_SECTIONS: Array<{ key: string; title: string; description: string; columns: Column[] }> = [
-  {
-    key: 'intake',
-    title: 'Intake',
-    description: 'Registered applications stay separate until you deliberately enter the active pipeline.',
-    columns: [REGISTERED_COLUMN],
-  },
-  {
-    key: 'pipeline',
-    title: 'Active Pipeline',
-    description: 'Drag cards or use Move to keep the funnel current without opening the detail page.',
-    columns: COLUMNS,
-  },
-  {
-    key: 'closed',
-    title: 'Closed',
-    description: 'Rejected and withdrawn cards remain movable so reopening still goes through the explicit backend semantics.',
-    columns: CLOSED_COLUMNS,
-  },
-];
 
 function boardStatusKey(app: ApplicationRead): BoardStatus {
-  return ((app.outcome ?? app.stage ?? app.status ?? 'applied') as string).toLowerCase() as BoardStatus;
+  return ((app.outcome ?? app.stage ?? 'applied') as string).toLowerCase() as BoardStatus;
 }
 
 function laneId(status: BoardStatus): string {
@@ -111,6 +117,7 @@ const ApplicationCard: React.FC<AppCardProps> = ({
   isDragging = false,
 }) => {
   const theme = useTheme();
+  const { columns: stageColumns, allStatusColumns } = useStageColumns();
   const lead = app.lead;
   const companyName = lead?.companies?.[0]?.name;
   const currentStatus = boardStatusKey(app);
@@ -120,7 +127,7 @@ const ApplicationCard: React.FC<AppCardProps> = ({
   const isOverdue = !!(app.next_step_due && new Date(app.next_step_due) < new Date());
   const hasReminder = Boolean(app.next_step || app.next_step_due);
   const documentCount = applicationDocumentCount(app);
-  const moveTargets = ALL_STATUS_COLUMNS.filter((option) => option.key !== currentStatus) as Column[];
+  const moveTargets = allStatusColumns.filter((option) => option.key !== currentStatus) as Column[];
   const [editingReminder, setEditingReminder] = useState(false);
   const [draftNextStep, setDraftNextStep] = useState(app.next_step ?? '');
   const [draftNextStepDue, setDraftNextStepDue] = useState(app.next_step_due ? app.next_step_due.slice(0, 10) : '');
@@ -190,27 +197,16 @@ const ApplicationCard: React.FC<AppCardProps> = ({
   };
 
   return (
-    <Card
+    <CardShell
+      interactive
+      tone={stageTone(column.key as BoardStatus)}
+      density="compact"
       onClick={() => onView(app)}
       sx={{
-        cursor: 'pointer',
         opacity: isDragging ? 0.6 : 1,
-        transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-        '&:hover': {
-          transform: 'translateY(-2px)',
-          boxShadow: `0 6px 20px ${alpha(column.color, 0.18)}`,
-        },
-        '&:focus-visible': {
-          outline: `2px solid ${theme.palette.primary.main}`,
-          outlineOffset: 2,
-        },
       }}
-      tabIndex={0}
-      role="button"
       aria-label={`View ${lead?.title || 'application'} details`}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView(app); } }}
     >
-      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
         <Typography variant="body2" fontWeight={700} noWrap sx={{ mb: 0.25 }}>
           {lead?.title || 'Untitled Position'}
         </Typography>
@@ -263,7 +259,7 @@ const ApplicationCard: React.FC<AppCardProps> = ({
               onKeyDown={(event) => event.stopPropagation()}
               sx={{
                 p: 1.25,
-                borderRadius: 2,
+                borderRadius: toRadiusPx(radiusTokens.sm),
                 border: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
                 bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.08 : 0.04),
               }}
@@ -307,7 +303,7 @@ const ApplicationCard: React.FC<AppCardProps> = ({
                     mb: 0.75,
                     px: 1,
                     py: 0.5,
-                    borderRadius: 1.5,
+                    borderRadius: '6px',
                     bgcolor: alpha(theme.palette.warning.main, 0.12),
                     border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
                   }}
@@ -384,7 +380,7 @@ const ApplicationCard: React.FC<AppCardProps> = ({
                     color: theme.palette.text.secondary,
                     cursor: 'grab',
                     touchAction: 'none',
-                    borderRadius: 1,
+                    borderRadius: toRadiusPx(radiusTokens.xs),
                     '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.05) },
                   }}
                   {...dragHandleProps}
@@ -407,19 +403,18 @@ const ApplicationCard: React.FC<AppCardProps> = ({
                     py: 0.25,
                     minHeight: 0,
                     lineHeight: 1.5,
-                    borderRadius: 1.5,
-                    borderColor: '#06b6d4',
-                    color: '#06b6d4',
+                    borderColor: theme.palette.primary.main,
+                    color: theme.palette.primary.main,
                     fontWeight: 600,
                     textTransform: 'none',
-                    '&:hover': { borderColor: '#0891b2', bgcolor: alpha('#06b6d4', 0.07) },
+                    '&:hover': { borderColor: theme.palette.primary.dark, bgcolor: alpha(theme.palette.primary.main, 0.07) },
                   }}
                 >
                   Add to Pipeline
                 </Button>
               </Tooltip>
             ) : !isClosedStatus && canAdvance ? (
-              <Tooltip title={`Move to ${COLUMNS[COLUMNS.findIndex((c) => c.key === column.key) + 1]?.label}`}>
+              <Tooltip title={`Move to ${stageColumns[stageColumns.findIndex((c) => c.key === column.key) + 1]?.label}`}>
                 <IconButton
                   size="small"
                   color="primary"
@@ -503,8 +498,7 @@ const ApplicationCard: React.FC<AppCardProps> = ({
             </MenuItem>
           ))}
         </Menu>
-      </CardContent>
-    </Card>
+    </CardShell>
   );
 };
 
@@ -512,75 +506,26 @@ const ApplicationCard: React.FC<AppCardProps> = ({
 /*  Delete confirmation                                                */
 /* ------------------------------------------------------------------ */
 
-interface DeleteConfirmProps {
-  open: boolean;
-  app: ApplicationRead | null;
-  onConfirm: () => void;
-  onCancel: () => void;
-}
-
-const DeleteConfirmDialog: React.FC<DeleteConfirmProps> = ({ open, app, onConfirm, onCancel }) => (
-  <Dialog open={open} onClose={onCancel} maxWidth="xs" fullWidth>
-    <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 700 }}>
-      <WarningIcon color="error" /> Delete Application
-    </DialogTitle>
-    <DialogContent>
-      <Typography variant="body2" color="text.secondary">
-        Remove <strong>{app?.lead?.title || 'this application'}</strong>
-        {app?.lead?.companies?.[0]?.name ? ` at ${app.lead.companies[0].name}` : ''}? This action cannot be undone.
-      </Typography>
-    </DialogContent>
-    <DialogActions sx={{ px: 3, pb: 2.5 }}>
-      <Button onClick={onCancel}>Cancel</Button>
-      <Button variant="contained" color="error" onClick={onConfirm}>Delete</Button>
-    </DialogActions>
-  </Dialog>
-);
-
 /* ------------------------------------------------------------------ */
 /*  Empty state                                                        */
 /* ------------------------------------------------------------------ */
 
-const EmptyState: React.FC = () => {
-  const theme = useTheme();
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        py: 10,
-        px: 3,
-        textAlign: 'center',
-      }}
-    >
-      <Box
-        sx={{
-          width: 72,
-          height: 72,
-          borderRadius: '20px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          mb: 3,
-          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.15)}, ${alpha(theme.palette.secondary.main, 0.15)})`,
-        }}
-      >
-        <AssignmentIcon sx={{ fontSize: 36, color: theme.palette.primary.main }} />
-      </Box>
-      <Typography variant="h5" fontWeight={700} gutterBottom>
-        No applications yet
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400, mb: 2 }}>
-        When you apply to leads, they&apos;ll appear here as a pipeline board so you can track every stage of your job search.
-      </Typography>
-      <Button variant="outlined" href="/leads" startIcon={<WorkIcon />}>
-        Browse Leads
-      </Button>
-    </Box>
-  );
-};
+interface BoardEmptyStateProps {
+  onBrowseLeads: () => void;
+}
+
+const BoardEmptyState: React.FC<BoardEmptyStateProps> = ({ onBrowseLeads }) => (
+  <DSEmptyState
+    icon={<AssignmentIcon />}
+    title="No applications yet"
+    description="When you apply to leads, they'll appear here as a pipeline board so you can track every stage of your job search."
+    primaryAction={{
+      label: 'Browse Leads',
+      onClick: onBrowseLeads,
+      icon: <WorkIcon />,
+    }}
+  />
+);
 
 interface DraggableApplicationCardProps {
   app: ApplicationRead;
@@ -699,7 +644,7 @@ const BoardLane: React.FC<BoardLaneProps> = ({
         spacing={1.5}
         sx={{
           p: 1,
-          borderRadius: 3,
+          borderRadius: toRadiusPx(radiusTokens.lg),
           minHeight: 220,
           background: alpha(column.color, isOver ? 0.1 : (theme.palette.mode === 'dark' ? 0.03 : 0.025)),
           border: `1px solid ${alpha(column.color, isOver ? 0.32 : (theme.palette.mode === 'dark' ? 0.1 : 0.12))}`,
@@ -743,6 +688,20 @@ const ApplicationsBoardPage: React.FC = () => {
   const navigate = useNavigate();
   const { token } = useContext(UserContext);
 
+  const { columns: COLUMNS, allStatusColumns: ALL_STATUS_COLUMNS } = useStageColumns();
+  const sc = getStatusColors(theme);
+
+  const { REGISTERED_COLUMN, CLOSED_COLUMNS, BOARD_SECTIONS } = useMemo(() => {
+    const reg = ALL_STATUS_COLUMNS.find((c) => c.key === 'registered')!;
+    const closed = ALL_STATUS_COLUMNS.filter((c) => c.key === 'rejected' || c.key === 'withdrawn');
+    const sections: Array<{ key: string; title: string; description: string; columns: Column[] }> = [
+      { key: 'intake', title: 'Intake', description: 'Registered applications stay separate until you deliberately enter the active pipeline.', columns: [reg] },
+      { key: 'pipeline', title: 'Active Pipeline', description: 'Drag cards or use Move to keep the funnel current without opening the detail page.', columns: COLUMNS },
+      { key: 'closed', title: 'Closed', description: 'Rejected and withdrawn cards remain movable so reopening still goes through the explicit backend semantics.', columns: closed },
+    ];
+    return { REGISTERED_COLUMN: reg, CLOSED_COLUMNS: closed, BOARD_SECTIONS: sections };
+  }, [COLUMNS, ALL_STATUS_COLUMNS]);
+
   const {
     applications,
     loading,
@@ -754,8 +713,8 @@ const ApplicationsBoardPage: React.FC = () => {
     handleStatusChange,
     handleAdvance,
     handleClose,
-    handleDelete,
     handleReminderUpdate,
+    handleDelete,
     confirmDelete,
     deleteTarget,
     setDeleteTarget,
@@ -788,7 +747,7 @@ const ApplicationsBoardPage: React.FC = () => {
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
 
-  usePageToolbarHeader('Board', `${applications.length} total \u00b7 ${interviewCount} interviewing`);
+  usePageToolbarHeader('Board', `${applications.length} applications`);
 
   const viewApplication = (app: ApplicationRead) => {
     navigate(`/applications/${app.id}`);
@@ -823,7 +782,7 @@ const ApplicationsBoardPage: React.FC = () => {
           <IconButton
             onClick={refresh}
             aria-label="Refresh applications"
-            sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 2 }}
+            sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: toRadiusPx(radiusTokens.sm) }}
           >
             <RefreshIcon />
           </IconButton>
@@ -832,61 +791,43 @@ const ApplicationsBoardPage: React.FC = () => {
 
       {/* Summary stats strip */}
       {!loading && applications.length > 0 && (
-        <Stack
-          direction="row"
-          spacing={3}
-          sx={{
-            mb: 3,
-            px: 2,
-            py: 1.5,
-            borderRadius: 2,
-            bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.06 : 0.04),
-            border: `1px solid ${theme.palette.divider}`,
-            overflowX: 'auto',
-            flexWrap: 'nowrap',
-          }}
-        >
-          {[
-            { label: 'Total', value: applications.length, color: theme.palette.text.primary },
-            { label: 'Registered', value: registeredApps.length, color: '#94a3b8' },
-            { label: 'Active', value: activeCount, color: '#06b6d4' },
-            { label: 'Interviewing', value: interviewCount, color: '#f59e0b' },
-            { label: 'Offers', value: offerCount, color: '#10b981' },
-            { label: 'Closed', value: closedApps.length, color: '#f43f5e' },
-            { label: 'Overdue', value: overdueCount, color: theme.palette.warning.main },
-          ].map((stat) => (
-            <Box key={stat.label} sx={{ textAlign: 'center', minWidth: 64, flexShrink: 0 }}>
-              <Typography variant="h6" fontWeight={700} sx={{ color: stat.color, lineHeight: 1.2 }}>
-                {stat.value}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {stat.label}
-              </Typography>
-            </Box>
-          ))}
-        </Stack>
+        <Box sx={{ mb: 3 }}>
+          <MetricStrip
+            variant="inline"
+            items={[
+              { label: 'Total', value: applications.length, color: theme.palette.text.primary },
+              { label: 'Registered', value: registeredApps.length, color: sc.registered },
+              { label: 'Active', value: activeCount, color: sc.applied },
+              { label: 'Interviewing', value: interviewCount, color: sc.interviewing },
+              { label: 'Offers', value: offerCount, color: sc.offer },
+              { label: 'Closed', value: closedApps.length, color: sc.rejected },
+              { label: 'Overdue', value: overdueCount, color: theme.palette.warning.main },
+            ]}
+          />
+        </Box>
       )}
 
       {/* Alerts */}
-      <Fade in={!!error}><Box>{error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}</Box></Fade>
-      <Fade in={!!success}><Box>{success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}</Box></Fade>
+      {error && (
+        <Box sx={{ mb: 2 }}>
+          <InlineFeedback tone="error" onClose={() => setError('')}>
+            {error}
+          </InlineFeedback>
+        </Box>
+      )}
+      {success && (
+        <Box sx={{ mb: 2 }}>
+          <InlineFeedback tone="success" onClose={() => setSuccess('')}>
+            {success}
+          </InlineFeedback>
+        </Box>
+      )}
 
       {/* Content */}
       {loading ? (
-        <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 2 }}>
-          {COLUMNS.map((c) => (
-            <Box key={c.key} sx={{ minWidth: 240, flexGrow: 1, flexShrink: 0 }}>
-              <Skeleton variant="rounded" height={32} sx={{ mb: 1.5, borderRadius: 2 }} />
-              <Stack spacing={1.5}>
-                {[0, 1, 2].map((i) => (
-                  <Skeleton key={i} variant="rounded" height={100} sx={{ borderRadius: 2 }} />
-                ))}
-              </Stack>
-            </Box>
-          ))}
-        </Box>
+        <LoadingState kind="grid" count={5} itemHeight={260} columns={{ xs: 1, sm: 2, md: 5 }} />
       ) : applications.length === 0 ? (
-        <EmptyState />
+        <BoardEmptyState onBrowseLeads={() => navigate('/leads')} />
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <Stack spacing={3}>
@@ -942,9 +883,22 @@ const ApplicationsBoardPage: React.FC = () => {
         </DndContext>
       )}
 
-      <DeleteConfirmDialog
+      <ConfirmDialog
         open={deleteTarget !== null}
-        app={deleteTarget}
+        title="Delete Application"
+        message={
+          <>
+            Remove{' '}
+            <Typography component="span" fontWeight={600} color="text.primary">
+              {deleteTarget?.lead?.title || 'this application'}
+            </Typography>
+            {deleteTarget?.lead?.companies?.[0]?.name
+              ? ` at ${deleteTarget.lead.companies[0].name}`
+              : ''}
+            ? This action cannot be undone.
+          </>
+        }
+        confirmLabel="Delete"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
       />

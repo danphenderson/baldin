@@ -2,18 +2,15 @@
 
 import { components } from '../schema';
 import { createApiClient } from './api-client';
+import { fetchAllPages, FULL_LIST_PAGE_SIZE, normalizePaginatedResponse, type PaginatedResponse } from './pagination';
 
 export type CrawlerPipelineCreate = components['schemas']['CrawlerPipelineCreate'];
 export type CrawlerPipelineRead = components['schemas']['CrawlerPipelineRead'];
 export type CrawlerPipelineUpdate = components['schemas']['CrawlerPipelineUpdate'];
 export type CrawlerRunRead = components['schemas']['CrawlerRunRead'];
-type RawCrawlerRunsPaginatedRead = components['schemas']['CrawlerRunsPaginatedRead'];
-export type CrawlerRunsPaginatedRead = {
-  items: CrawlerRunRead[];
-  total: number;
-  page: number;
-  page_size: number;
-};
+type RawCrawlerPipelinesPage = components['schemas']['PaginatedResponse_CrawlerPipelineRead_'];
+type RawCrawlerRunsPaginatedRead = components['schemas']['PaginatedResponse_CrawlerRunRead_'];
+export type CrawlerRunsPaginatedRead = PaginatedResponse<CrawlerRunRead>;
 export type CrawlerRunDetailRead = components['schemas']['CrawlerRunDetailRead'];
 export type CrawlerRunStatus = components['schemas']['CrawlerRunStatus'];
 export type CrawlerSourceType = components['schemas']['CrawlerSourceType'];
@@ -49,26 +46,33 @@ const unwrap = <T,>(
 
 export const getCrawlerPipelines = async (token: string): Promise<CrawlerPipelineRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/crawlers/pipelines'));
+  return fetchAllPages<CrawlerPipelineRead>(async (page, pageSize) => unwrap<RawCrawlerPipelinesPage>(await client.GET('/api/v1/crawlers/pipelines', {
+    params: {
+      query: {
+        page,
+        page_size: pageSize,
+      },
+    },
+  })), FULL_LIST_PAGE_SIZE);
 };
 
 export const getCrawlerPipeline = async (token: string, id: string): Promise<CrawlerPipelineRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/crawlers/pipelines/{pipeline_id}', {
+  return unwrap(await client.GET('/api/v1/crawlers/pipelines/{pipeline_id}', {
     params: { path: { pipeline_id: id } },
   }));
 };
 
 export const createCrawlerPipeline = async (token: string, pipeline: CrawlerPipelineCreate): Promise<CrawlerPipelineRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/crawlers/pipelines', {
+  return unwrap(await client.POST('/api/v1/crawlers/pipelines', {
     body: pipeline,
   }));
 };
 
 export const updateCrawlerPipeline = async (token: string, id: string, pipeline: CrawlerPipelineUpdate): Promise<CrawlerPipelineRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PATCH('/crawlers/pipelines/{pipeline_id}', {
+  return unwrap(await client.PATCH('/api/v1/crawlers/pipelines/{pipeline_id}', {
     params: { path: { pipeline_id: id } },
     body: pipeline,
   }));
@@ -83,7 +87,7 @@ export const getCrawlerRuns = async (
   params?: CrawlerRunQueryParams,
 ): Promise<CrawlerRunsPaginatedRead> => {
   const client = createApiClient(token);
-  const response = unwrap<RawCrawlerRunsPaginatedRead>(await client.GET('/crawlers/runs', {
+  const response = unwrap<RawCrawlerRunsPaginatedRead>(await client.GET('/api/v1/crawlers/runs', {
     params: {
       query: {
         pipeline_id: params?.pipeline_id ?? undefined,
@@ -96,52 +100,50 @@ export const getCrawlerRuns = async (
       },
     },
   }));
-  return {
-    items: response.items ?? [],
-    total: response.total ?? 0,
-    page: response.page ?? params?.page ?? 1,
-    page_size: response.page_size ?? params?.page_size ?? 10,
-  };
+  return normalizePaginatedResponse(response, {
+    page: params?.page ?? 1,
+    page_size: params?.page_size ?? 10,
+  });
 };
 
 export const getCrawlerRunDetail = async (token: string, runId: string): Promise<CrawlerRunDetailRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/crawlers/runs/{run_id}', {
+  return unwrap(await client.GET('/api/v1/crawlers/runs/{run_id}', {
     params: { path: { run_id: runId } },
   }));
 };
 
 export const triggerCrawlerRun = async (token: string, pipelineId: string): Promise<CrawlerRunRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/crawlers/pipelines/{pipeline_id}/runs', {
+  return unwrap(await client.POST('/api/v1/crawlers/pipelines/{pipeline_id}/runs', {
     params: { path: { pipeline_id: pipelineId } },
   }));
 };
 
 export const cancelCrawlerRun = async (token: string, runId: string): Promise<CrawlerRunRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/crawlers/runs/{run_id}/cancel', {
+  return unwrap(await client.POST('/api/v1/crawlers/runs/{run_id}/cancel', {
     params: { path: { run_id: runId } },
   }));
 };
 
 export const pauseCrawlerRun = async (token: string, runId: string): Promise<CrawlerRunRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/crawlers/runs/{run_id}/pause', {
+  return unwrap(await client.POST('/api/v1/crawlers/runs/{run_id}/pause', {
     params: { path: { run_id: runId } },
   }));
 };
 
 export const resumeCrawlerRun = async (token: string, runId: string): Promise<CrawlerRunRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/crawlers/runs/{run_id}/resume', {
+  return unwrap(await client.POST('/api/v1/crawlers/runs/{run_id}/resume', {
     params: { path: { run_id: runId } },
   }));
 };
 
 export const retryCrawlerRun = async (token: string, runId: string): Promise<CrawlerRunRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/crawlers/runs/{run_id}/retry', {
+  return unwrap(await client.POST('/api/v1/crawlers/runs/{run_id}/retry', {
     params: { path: { run_id: runId } },
   }));
 };

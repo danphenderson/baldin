@@ -1,27 +1,32 @@
-# Project Guidelines
+# Baldin Copilot Compatibility Instructions
 
-## Repo Posture
-- Baldin is a local-first developer-preview monorepo moving toward a deployable POC. Prefer the smallest complete change that improves local correctness, reproducibility, or launch-path readiness.
+Use root/scoped `AGENTS.md` as the canonical shared baseline. Copilot should apply root `AGENTS.md`, the relevant scoped `AGENTS.md` chain for the target files, and any matching `.github/instructions/**` files. Do not load every scoped `AGENTS.md` file globally.
+
+## Default Workflow
+
+- Baldin is a local-first developer-preview monorepo. Prefer the smallest complete change that improves local correctness, reproducibility, or launch-path readiness.
 - Do not introduce mature-SaaS, cloud-scale, or enterprise-compliance architecture unless the task explicitly requires it.
-- Scoped delivery and Copilot-asset rules live in `.github/instructions/`.
+- Default to `docker-compose up --build --watch` from the repo root, keep the stack warm while iterating, and use Compose Watch as the supported live-edit loop. The normal loop is inspect -> patch -> smoke-check.
+- Repo-tracked `backend/.env` and `frontend/.env` are safe worktree defaults. Use ignored `.env.local` files for persistent local overrides, and Copilot or Codex env vars for one-off launches.
+- If you run backend tests from the host, use `127.0.0.1:5431` for `test_db`; inside Compose, use `test_db`.
+- If local schema drift blocks work and local data is disposable, use `./scripts/reset_local_db.sh`. Use `./scripts/repair_local_db_collation.sh` only for collation mismatch recovery when local data must survive.
 
-## Local Default Workflow
-- Default to the local `docker-compose.yml` stack. Start from the repo root with `docker-compose up --build` unless the task explicitly needs an outside-container loop.
-- Keep the stack running while you work. `web` uses Uvicorn reload and `frontend` uses Vite HMR, so the normal loop is inspect -> patch -> smoke-check, not restart-everything.
-- Running backend or frontend outside Compose is a secondary debug path. If you run backend tests from the host, use the local `test_db` port at `127.0.0.1:5431`; inside Compose the hostname is `test_db`.
-- If local schema drift blocks work and local data is disposable, use `./scripts/reset_local_db.sh`. Use `./scripts/repair_local_db_collation.sh` only for PostgreSQL collation mismatch recovery when keeping local data matters.
+## Core Repo Rules
 
-## Agent Execution Bias
-- Prefer direct execution when ownership is obvious: backend-only -> Baldin Backend Agent, frontend-only -> Baldin Frontend Agent, real cross-stack work -> Baldin Lead Full-Stack Architect.
-- Do not add planning or coordination overhead for routine single-owner fixes. Use Baldin Project Manager only when ownership, scope, or sequencing is genuinely unclear.
-- During active editing, run the smallest useful smoke check first. Treat full suites, broad docs builds, and CI-style validation as pre-push follow-up unless the request or changed surface clearly requires them.
-- If backend API routes or schemas change during active development, prefer `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` so contract regeneration works before files are staged. Do not hand-edit `openapi.json` or `frontend/src/schema.d.ts`.
-- Contract regeneration imports the backend app. Ensure backend env requirements are present, including a non-empty `OPENAI_API_KEY`; a dummy local value is acceptable when real API access is not needed.
+- Shared repo posture, owner model, scoped local deltas, and standard handback rules live in root/scoped `AGENTS.md`. `.github/**` is a Copilot compatibility and execution layer, not the canonical policy source.
+- Prefer direct ownership when it is obvious: backend-only -> Baldin Backend Agent; frontend-only -> Baldin Frontend Agent; archived-design reference or mapping maintenance -> Baldin Design Lead Agent; true cross-stack, contracts, docs, CI, scripts, or compose work -> Baldin Lead Full-Stack Architect. Use Baldin Project Manager only when routing or sequencing is genuinely unclear.
+- Start with the smallest relevant smoke check. Treat full-suite, docs-build, and CI-style validation as follow-up unless the changed surface clearly requires them.
+- Do not hand-edit `openapi.json`, `frontend/src/schema.d.ts`, or `docs/build/**`.
+- If backend routes or schemas change, prefer `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` during active local iteration and report whether generated artifacts actually changed.
+- Contract regeneration imports the backend app. Use the tracked `backend/.env` baseline, add persistent local overrides in `backend/.env.local`, and use process env only for one-off launches. A real `OPENAI_API_KEY` is only needed for OpenAI-backed features, not for app import or schema generation.
+- For archived Figma work, assume a Professional-plan workflow without a Dev seat: treat Figma as optional historical reference only, keep active implementation grounded in `frontend/src/design-system/*`, `operator-design/`, and `plans/v2.1/*`, and rely on the local browser harness plus Figma MCP or basic inspection instead of making Code Connect publish a prerequisite.
+- Do not add tracked `AGENTS.override.md` files unless the repo documents an override policy and validator allowlist first.
 
 ## Reference Docs
-- [Copilot Asset Inventory](COPILOT_SURFACE.md)
-- [Prompt The Right Agent](../docs/docs/engineering/copilot-prompt-cookbook.md)
+
+- [Agentic Asset Inventory](AGENTIC_SURFACE.md)
+- [Project Delivery Rules](instructions/baldin-project.instructions.md)
+- [Agentic Configuration Rules](instructions/baldin-agent-customization.instructions.md)
+- [Work Locally](../docs/docs/engineering/local-development.md)
 - [Run The Right Checks](../docs/docs/engineering/testing.md)
 - [Regenerate API Contracts](../docs/docs/engineering/contract-management.md)
-- [Work Locally](../docs/docs/engineering/local-development.md)
-- [System Overview](../docs/docs/architecture/system-overview.md)

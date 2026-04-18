@@ -4,6 +4,8 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FORCE_UPDATE="${SCHEMA_UPDATE_FORCE:-0}"
+# Set SCHEMA_UPDATE_STAGE=1 when a commit hook or human explicitly wants staging.
+STAGE_ARTIFACTS="${SCHEMA_UPDATE_STAGE:-0}"
 
 if [[ "$FORCE_UPDATE" != "1" ]]; then
     CHANGED_FILES="$(git -C "$REPO_ROOT" diff --cached --name-only | grep -E 'backend/app/schemas.py|backend/app/api/.*\.py' || true)"
@@ -48,5 +50,10 @@ echo "Generating TypeScript definitions."
     npm exec openapi-typescript -- ../openapi.json -o ./src/schema.d.ts
 )
 
-git -C "$REPO_ROOT" add openapi.json frontend/src/schema.d.ts
-echo "Successfully updated OpenAPI and TypeScript definitions."
+if [[ "$STAGE_ARTIFACTS" == "1" ]]; then
+    git -C "$REPO_ROOT" add openapi.json frontend/src/schema.d.ts
+    echo "Successfully updated and staged OpenAPI and TypeScript definitions."
+else
+    echo "Successfully updated OpenAPI and TypeScript definitions."
+    echo "Review and stage openapi.json and frontend/src/schema.d.ts when ready."
+fi

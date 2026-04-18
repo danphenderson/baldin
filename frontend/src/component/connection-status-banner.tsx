@@ -1,5 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Chip, Fade, type ChipProps } from '@mui/material';
+import { Fade } from '@mui/material';
+import {
+  StatusChip as Chip,
+  type StatusChipProps,
+} from '../design-system';
 import {
   WifiOff as WifiOffIcon,
   Sync as SyncIcon,
@@ -30,7 +34,7 @@ const ConnectionStatusBanner: React.FC<ConnectionStatusBannerProps> = ({ status 
 
   if (status === 'connected' && !showReconnected) return null;
 
-  let chipProps: Partial<ChipProps> & { 'data-testid': string };
+  let chipProps: Omit<StatusChipProps, 'size' | 'variant' | 'sx'> & { 'data-testid': string };
 
   if (status === 'disconnected') {
     chipProps = {

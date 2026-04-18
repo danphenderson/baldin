@@ -1,15 +1,36 @@
+x-backend-env-files: &backend-env-files
+  # Load the tracked baseline first, then optional ignored overrides.
+  - path: ./backend/.env
+    required: true
+  - path: ./backend/.env.local
+    required: false
+
+x-backend-host-secret-overrides: &backend-host-secret-overrides
+  # Compose list-style pass-through vars collapse to null when absent and mask
+  # env_file values. Route host overrides through namespaced vars so the
+  # entrypoint can apply them only when explicitly exported.
+  HOST_OPENAI_API_KEY: ${OPENAI_API_KEY-__BALDIN_ENV_UNSET__}
+  HOST_LINKEDIN_USERNAME: ${LINKEDIN_USERNAME-__BALDIN_ENV_UNSET__}
+  HOST_LINKEDIN_PASSWORD: ${LINKEDIN_PASSWORD-__BALDIN_ENV_UNSET__}
+  HOST_GLASSDOOR_USERNAME: ${GLASSDOOR_USERNAME-__BALDIN_ENV_UNSET__}
+  HOST_GLASSDOOR_PASSWORD: ${GLASSDOOR_PASSWORD-__BALDIN_ENV_UNSET__}
+  HOST_SENTRY_DSN: ${SENTRY_DSN-__BALDIN_ENV_UNSET__}
+  HOST_SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE-__BALDIN_ENV_UNSET__}
+
 services:
   db:
     image: pgvector/pgvector:pg15
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      # Publish locally by default. Set DOCKER_PUBLISH_HOST=0.0.0.0 before
+      # `docker-compose up` when another device needs LAN access.
+      - "${DOCKER_PUBLISH_HOST:-127.0.0.1}:5432:5432"
     environment:
       POSTGRES_DB: db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - ./backend/public/db:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d db"]
       interval: 10s
@@ -20,13 +41,13 @@ services:
     image: pgvector/pgvector:pg15
     restart: unless-stopped
     ports:
-      - "5431:5432"
+      - "${DOCKER_PUBLISH_HOST:-127.0.0.1}:5431:5432"
     environment:
       POSTGRES_DB: test_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - ./backend/public/test_db:/var/lib/postgresql/data
+      - test-db-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d test_db"]
       interval: 10s
@@ -37,12 +58,69 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${DOCKER_PUBLISH_HOST:-127.0.0.1}:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  etl-service:
+    build:
+      context: ./backend
+      dockerfile: ./Dockerfile
+      target: dev
+    working_dir: /usr/src/app
+    entrypoint: ["/bin/sh", "/usr/src/app/compose-backend-entrypoint.sh"]
+    command:
+      - uvicorn
+      - --app-dir
+      - /usr/src/app
+      - app.etl_service_main:app
+      - --reload
+      # Restrict reload watching to importable source trees so mounted caches,
+      # virtualenvs, and egg metadata do not exhaust file descriptors.
+      - --reload-dir
+      - /usr/src/app/app
+      - --reload-dir
+      - /usr/src/app/etl
+      - --workers
+      - "1"
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8010"
+    env_file: *backend-env-files
+    environment:
+      <<: *backend-host-secret-overrides
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health').read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    develop:
+      watch:
+        - action: sync
+          path: ./backend/app
+          target: /usr/src/app/app
+          initial_sync: true
+        - action: sync
+          path: ./backend/etl
+          target: /usr/src/app/etl
+          initial_sync: true
+        - action: sync+restart
+          path: ./backend
+          target: /usr/src/app
+          include:
+            - .env
+            - .env.local
+          initial_sync: true
+        - action: rebuild
+          path: ./backend/Pipfile
+        - action: rebuild
+          path: ./backend/Pipfile.lock
+        - action: rebuild
+          path: ./backend/Dockerfile
 
   web:
     build:
@@ -50,42 +128,134 @@ services:
       dockerfile: ./Dockerfile
       target: dev
     working_dir: /usr/src/app
-    command: uvicorn --app-dir /usr/src/app app.main:app --reload --workers 1 --host 0.0.0.0 --port 8000
-    env_file:
-      - ./backend/.env
+    entrypoint: ["/bin/sh", "/usr/src/app/compose-backend-entrypoint.sh"]
+    command:
+      - uvicorn
+      - --app-dir
+      - /usr/src/app
+      - app.main:app
+      - --reload
+      # Keep the Compose-first dev loop on source changes without recursively
+      # watching the full bind mount under /usr/src/app.
+      - --reload-dir
+      - /usr/src/app/app
+      - --reload-dir
+      - /usr/src/app/etl
+      - --workers
+      - "1"
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    env_file: *backend-env-files
     environment:
+      <<: *backend-host-secret-overrides
       REDIS_URL: redis://redis:6379/0
       CRAWLER_QUEUE_NAME: crawler_jobs
       CRAWLER_EXECUTION_MODE: worker
-    volumes:
-      - ./backend:/usr/src/app
+      ETL_SERVICE_URL: http://etl-service:8010
     ports:
-      - 8004:8000
+      - "${DOCKER_PUBLISH_HOST:-127.0.0.1}:8004:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready').read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     depends_on:
       db:
         condition: service_healthy
-      test_db:
-        condition: service_healthy
       redis:
         condition: service_healthy
+      etl-service:
+        condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: ./backend/app
+          target: /usr/src/app/app
+          initial_sync: true
+        - action: sync
+          path: ./backend/etl
+          target: /usr/src/app/etl
+          initial_sync: true
+        - action: sync+restart
+          path: ./backend
+          target: /usr/src/app
+          include:
+            - .env
+            - .env.local
+          initial_sync: true
+        - action: rebuild
+          path: ./backend/Pipfile
+        - action: rebuild
+          path: ./backend/Pipfile.lock
+        - action: rebuild
+          path: ./backend/Dockerfile
 
   crawler-worker:
     build:
       context: ./backend
       dockerfile: ./Dockerfile
+    entrypoint: ["/bin/sh", "/usr/src/app/compose-backend-entrypoint.sh"]
     command: python -m app.crawler_worker
-    env_file:
-      - ./backend/.env
+    env_file: *backend-env-files
     environment:
+      <<: *backend-host-secret-overrides
       REDIS_URL: redis://redis:6379/0
       CRAWLER_QUEUE_NAME: crawler_jobs
       CRAWLER_EXECUTION_MODE: worker
-    volumes:
-      - ./backend:/usr/src/app
+      ETL_SERVICE_URL: http://etl-service:8010
     depends_on:
       db:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      etl-service:
+        condition: service_healthy
+    develop:
+      watch:
+        # The worker process does not run Uvicorn reload, so restart it when
+        # backend source changes land.
+        - action: sync+restart
+          path: ./backend/app
+          target: /usr/src/app/app
+          initial_sync: true
+        - action: sync+restart
+          path: ./backend/etl
+          target: /usr/src/app/etl
+          initial_sync: true
+        - action: sync+restart
+          path: ./backend
+          target: /usr/src/app
+          include:
+            - .env
+            - .env.local
+          initial_sync: true
+        - action: rebuild
+          path: ./backend/Pipfile
+        - action: rebuild
+          path: ./backend/Pipfile.lock
+        - action: rebuild
+          path: ./backend/Dockerfile
+
+  backend-test:
+    profiles: ["test"]
+    build:
+      context: ./backend
+      dockerfile: ./Dockerfile
+      target: test
+    working_dir: /usr/src/app
+    # Keep raw pytest-argument invocation working for direct Compose runs
+    # without changing the runtime-service launcher semantics.
+    entrypoint: ["/bin/sh", "/usr/src/app/compose-backend-test-entrypoint.sh"]
+    env_file: *backend-env-files
+    environment:
+      <<: *backend-host-secret-overrides
+      ENVIRONMENT: PYTEST
+      TEST_DATABASE_HOSTNAME: test_db
+      TEST_DATABASE_PORT: 5432
+    depends_on:
+      test_db:
         condition: service_healthy
 
   frontend:
@@ -93,17 +263,86 @@ services:
       context: ./frontend
       dockerfile: ./Dockerfile
     env_file:
-      - ./frontend/.env
+      - path: ./frontend/.env
+        required: true
+      - path: ./frontend/.env.local
+        required: false
+    # Docker Desktop now exhausts file descriptors even on targeted bind
+    # mounts here, so run the frontend from image contents and rebuild when
+    # dependency changes land. Use Compose Watch for live source sync.
     command: npm run dev
     stdin_open: true
     tty: true
-    volumes:
-      - ./frontend:/usr/src/app
-      - /usr/src/app/node_modules
     ports:
-      - 5173:5173
+      - "${DOCKER_PUBLISH_HOST:-127.0.0.1}:5173:5173"
     depends_on:
       - web
+    develop:
+      watch:
+        - action: sync
+          path: ./frontend/src
+          target: /usr/src/app/src
+          initial_sync: true
+        - action: sync
+          path: ./frontend/admin
+          target: /usr/src/app/admin
+          initial_sync: true
+        - action: sync
+          path: ./frontend/browser-harness
+          target: /usr/src/app/browser-harness
+          initial_sync: true
+        - action: sync+restart
+          path: ./frontend
+          target: /usr/src/app
+          include:
+            - index.html
+            - vite.config.ts
+            - tsconfig.json
+            - .env
+            - .env.local
+          initial_sync: true
+        - action: rebuild
+          path: ./frontend/package.json
+        - action: rebuild
+          path: ./frontend/package-lock.json
+        - action: rebuild
+          path: ./frontend/Dockerfile
+
+  operator-design:
+    build:
+      context: ./operator-design
+      dockerfile: ./Dockerfile
+    command: npm run dev
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+    stdin_open: true
+    tty: true
+    ports:
+      - "${DOCKER_PUBLISH_HOST:-127.0.0.1}:5174:5174"
+    develop:
+      watch:
+        - action: sync
+          path: ./operator-design/src
+          target: /usr/src/app/src
+          initial_sync: true
+        - action: sync
+          path: ./operator-design/guidelines
+          target: /usr/src/app/guidelines
+          initial_sync: true
+        - action: sync+restart
+          path: ./operator-design
+          target: /usr/src/app
+          include:
+            - index.html
+            - vite.config.ts
+            - postcss.config.mjs
+          initial_sync: true
+        - action: rebuild
+          path: ./operator-design/package.json
+        - action: rebuild
+          path: ./operator-design/package-lock.json
+        - action: rebuild
+          path: ./operator-design/Dockerfile
 
   docs:
     build:
@@ -115,8 +354,41 @@ services:
       WATCHPACK_POLLING: "true"
     stdin_open: true
     tty: true
-    volumes:
-      - ./docs:/usr/src/app
-      - /usr/src/app/node_modules
     ports:
-      - 3001:3000
+      - "${DOCKER_PUBLISH_HOST:-127.0.0.1}:3001:3000"
+    develop:
+      watch:
+        - action: sync
+          path: ./docs/docs
+          target: /usr/src/app/docs
+          initial_sync: true
+        - action: sync
+          path: ./docs/src
+          target: /usr/src/app/src
+          initial_sync: true
+        - action: sync
+          path: ./docs/static
+          target: /usr/src/app/static
+          initial_sync: true
+        - action: sync
+          path: ./docs/i18n
+          target: /usr/src/app/i18n
+          initial_sync: true
+        - action: sync+restart
+          path: ./docs
+          target: /usr/src/app
+          include:
+            - docusaurus.config.ts
+            - sidebars.ts
+            - tsconfig.json
+          initial_sync: true
+        - action: rebuild
+          path: ./docs/package.json
+        - action: rebuild
+          path: ./docs/package-lock.json
+        - action: rebuild
+          path: ./docs/Dockerfile
+
+volumes:
+  db-data:
+  test-db-data:

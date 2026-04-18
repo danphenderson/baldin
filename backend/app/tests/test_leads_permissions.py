@@ -1,69 +1,25 @@
-from contextlib import asynccontextmanager
 from uuid import UUID
 
 import pytest
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from app import models
-from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
-from app.main import app
+from app.conftest import (
+    async_client_ctx as _client,
+)
+from app.conftest import (
+    create_user as _create_user,
+)
+from app.conftest import (
+    login_and_get_headers as _auth_headers,
+)
+from app.core.db import session_context
 from app.tests import utils
 
-pytestmark = pytest.mark.asyncio(loop_scope="module")
-
-password_helper = PasswordHelper()
-_db_ready = False
-
-
-@asynccontextmanager
-async def _client() -> AsyncClient:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
-        yield client
-
-
-async def _ensure_db_ready() -> None:
-    global _db_ready
-    if _db_ready:
-        return
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
-
-
-async def _create_user(
-    password: str, *, is_superuser: bool = False
-) -> tuple[str, UUID]:
-    email = utils.random_email()
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash(password),
-            session,
-            is_superuser=is_superuser,
-        )
-        await session.commit()
-    return email, user.id
-
-
-async def _auth_headers(
-    client: AsyncClient, email: str, password: str
-) -> dict[str, str]:
-    response = await client.post(
-        "/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+pytestmark = [
+    pytest.mark.asyncio(loop_scope="module"),
+    pytest.mark.usefixtures("fresh_db"),
+]
 
 
 async def _create_company(name: str | None = None) -> UUID:
@@ -92,7 +48,6 @@ def _lead_payload(url: str | None = None, **overrides: object) -> dict[str, obje
 async def test_registered_viewer_can_fill_empty_shared_fields_and_add_companies() -> (
     None
 ):
-    await _ensure_db_ready()
     async with _client() as client:
         owner_email, _ = await _create_user("fill-owner-pass")
         collaborator_email, _ = await _create_user("fill-collaborator-pass")
@@ -104,32 +59,32 @@ async def test_registered_viewer_can_fill_empty_shared_fields_and_add_companies(
         company_b = await _create_company("Beta")
 
         create_response = await client.post(
-            "/leads/",
+            "/api/v1/leads/",
             json=_lead_payload(description=None, company_ids=[str(company_a)]),
             headers=owner_headers,
         )
         lead_id = create_response.json()["id"]
 
         await client.post(
-            f"/leads/{lead_id}/registration", headers=collaborator_headers
+            f"/api/v1/leads/{lead_id}/registration", headers=collaborator_headers
         )
         fill_response = await client.patch(
-            f"/leads/{lead_id}",
+            f"/api/v1/leads/{lead_id}",
             json={"description": "Filled later", "company_ids": [str(company_b)]},
             headers=collaborator_headers,
         )
         overwrite_response = await client.patch(
-            f"/leads/{lead_id}",
+            f"/api/v1/leads/{lead_id}",
             json={"title": "Overwrite not allowed"},
             headers=collaborator_headers,
         )
         clear_response = await client.patch(
-            f"/leads/{lead_id}",
+            f"/api/v1/leads/{lead_id}",
             json={"description": None},
             headers=collaborator_headers,
         )
         immutable_url_response = await client.patch(
-            f"/leads/{lead_id}",
+            f"/api/v1/leads/{lead_id}",
             json={"url": "https://example.com/other"},
             headers=collaborator_headers,
         )
@@ -146,7 +101,6 @@ async def test_registered_viewer_can_fill_empty_shared_fields_and_add_companies(
 
 
 async def test_superuser_can_overwrite_populated_fields_and_replace_companies() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         owner_email, _ = await _create_user("admin-owner-pass")
         admin_email, _ = await _create_user("admin-pass", is_superuser=True)
@@ -156,14 +110,14 @@ async def test_superuser_can_overwrite_populated_fields_and_replace_companies() 
         company_b = await _create_company("Delta")
 
         create_response = await client.post(
-            "/leads/",
+            "/api/v1/leads/",
             json=_lead_payload(company_ids=[str(company_a)]),
             headers=owner_headers,
         )
         lead_id = create_response.json()["id"]
 
         update_response = await client.patch(
-            f"/leads/{lead_id}",
+            f"/api/v1/leads/{lead_id}",
             json={
                 "title": "Admin overwrite",
                 "description": None,
@@ -181,7 +135,6 @@ async def test_superuser_can_overwrite_populated_fields_and_replace_companies() 
 
 
 async def test_unregistered_viewer_can_read_lead_but_cannot_mutate_or_comment() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         owner_email, _ = await _create_user("perm-owner-pass")
         other_email, _ = await _create_user("perm-other-pass")
@@ -189,29 +142,31 @@ async def test_unregistered_viewer_can_read_lead_but_cannot_mutate_or_comment() 
         other_headers = await _auth_headers(client, other_email, "perm-other-pass")
 
         create_response = await client.post(
-            "/leads/",
+            "/api/v1/leads/",
             json=_lead_payload(),
             headers=owner_headers,
         )
         lead_id = create_response.json()["id"]
 
-        read_response = await client.get(f"/leads/{lead_id}", headers=other_headers)
+        read_response = await client.get(
+            f"/api/v1/leads/{lead_id}", headers=other_headers
+        )
         update_response = await client.patch(
-            f"/leads/{lead_id}",
+            f"/api/v1/leads/{lead_id}",
             json={"description": "Unauthorized"},
             headers=other_headers,
         )
         registration_response = await client.patch(
-            f"/leads/{lead_id}/registration",
+            f"/api/v1/leads/{lead_id}/registration",
             json={"internal_notes": "Unauthorized"},
             headers=other_headers,
         )
         read_comments_response = await client.get(
-            f"/leads/{lead_id}/comments",
+            f"/api/v1/leads/{lead_id}/comments",
             headers=other_headers,
         )
         post_comment_response = await client.post(
-            f"/leads/{lead_id}/comments",
+            f"/api/v1/leads/{lead_id}/comments",
             json={"content": "Unauthorized"},
             headers=other_headers,
         )
@@ -224,7 +179,6 @@ async def test_unregistered_viewer_can_read_lead_but_cannot_mutate_or_comment() 
 
 
 async def test_regular_users_cannot_delete_shared_lead_but_superuser_can() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         owner_email, _ = await _create_user("delete-owner-pass")
         admin_email, _ = await _create_user("delete-admin-pass", is_superuser=True)
@@ -232,17 +186,17 @@ async def test_regular_users_cannot_delete_shared_lead_but_superuser_can() -> No
         admin_headers = await _auth_headers(client, admin_email, "delete-admin-pass")
 
         create_response = await client.post(
-            "/leads/",
+            "/api/v1/leads/",
             json=_lead_payload(),
             headers=owner_headers,
         )
         lead_id = create_response.json()["id"]
 
         owner_delete_response = await client.delete(
-            f"/leads/{lead_id}", headers=owner_headers
+            f"/api/v1/leads/{lead_id}", headers=owner_headers
         )
         admin_delete_response = await client.delete(
-            f"/leads/{lead_id}", headers=admin_headers
+            f"/api/v1/leads/{lead_id}", headers=admin_headers
         )
 
     assert owner_delete_response.status_code == 403
@@ -263,7 +217,6 @@ async def test_regular_users_cannot_delete_shared_lead_but_superuser_can() -> No
 async def test_leads_purge_rejects_non_superusers_and_clears_registrations_and_comments() -> (
     None
 ):
-    await _ensure_db_ready()
     async with _client() as client:
         user_email, _ = await _create_user("purge-user-pass")
         owner_email, _ = await _create_user("purge-owner-pass")
@@ -276,23 +229,27 @@ async def test_leads_purge_rejects_non_superusers_and_clears_registrations_and_c
         )
         admin_headers = await _auth_headers(client, admin_email, "purge-admin-pass")
 
-        reject_response = await client.delete("/leads/purge", headers=user_headers)
+        reject_response = await client.delete(
+            "/api/v1/leads/purge", headers=user_headers
+        )
         create_response = await client.post(
-            "/leads/",
+            "/api/v1/leads/",
             json=_lead_payload(),
             headers=owner_headers,
         )
         lead_id = create_response.json()["id"]
         await client.post(
-            f"/leads/{lead_id}/registration", headers=collaborator_headers
+            f"/api/v1/leads/{lead_id}/registration", headers=collaborator_headers
         )
         await client.post(
-            f"/leads/{lead_id}/comments",
+            f"/api/v1/leads/{lead_id}/comments",
             json={"content": "Comment before purge"},
             headers=owner_headers,
         )
 
-        purge_response = await client.delete("/leads/purge", headers=admin_headers)
+        purge_response = await client.delete(
+            "/api/v1/leads/purge", headers=admin_headers
+        )
 
     assert reject_response.status_code == 403
     assert purge_response.status_code == 202

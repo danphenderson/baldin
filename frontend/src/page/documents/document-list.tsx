@@ -1,26 +1,67 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Box, Card, CardContent, Typography, Chip, Stack, Button, useTheme, alpha,
-  IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  Tooltip, Skeleton, Alert, InputAdornment, Menu, MenuItem, Fab, Tabs, Tab,
-} from '@mui/material';
+  Box,
+  Typography,
+  Stack,
+  Button,
+  useTheme,
+  alpha,
+  IconButton,
+  TextField,
+  Tooltip,
+  InputAdornment,
+  Menu,
+  MenuItem,
+  Fab,
+  Tabs,
+  Tab,
+  } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
-  Description as DocIcon, Download as DownloadIcon, Delete as DeleteIcon,
-  Edit as EditIcon, Search as SearchIcon, Visibility as ViewIcon,
-  NoteAdd as NoteAddIcon, SortByAlpha as SortIcon, PushPin as PushPinIcon,
-  Add as AddIcon, Article as ResumeIcon, Mail as LetterIcon,
-  Replay as FollowUpIcon, MenuBook as RefSheetIcon, TextSnippet as FreeformIcon,
+  Description as DocIcon,
+  Download as DownloadIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  Search as SearchIcon,
+  Visibility as ViewIcon,
+  NoteAdd as NoteAddIcon,
+  SortByAlpha as SortIcon,
+  PushPin as PushPinIcon,
+  Add as AddIcon,
+  Article as ResumeIcon,
+  Mail as LetterIcon,
+  Replay as FollowUpIcon,
+  MenuBook as RefSheetIcon,
+  TextSnippet as FreeformIcon,
   CloudUpload as CloudUploadIcon,
-} from '@mui/icons-material';
+  } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import {
-  getDocuments, deleteDocument, downloadDocument, pinDocument, getSharedWithMe,
-  type DocumentRead, type DocumentKind, type DocumentStatus,
-} from '../../service/documents';
+  getDocuments,
+  deleteDocument,
+  downloadDocument,
+  pinDocument,
+  getSharedWithMe,
+  type DocumentRead,
+  type DocumentKind,
+  type DocumentStatus,
+  } from '../../service/documents';
 import UploadDocumentDialog from '../../component/upload-document-dialog';
+import {
+  CardShell,
+  CollectionToolbar,
+  EmptyState as DSEmptyState,
+  InlineFeedback,
+  LoadingState,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogActions as DialogActions,
+} from '../../design-system';
+import { radiusTokens, toRadiusPx } from '../../design-system/tokens/radius';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -41,6 +82,7 @@ const KIND_META: Record<DocumentKind, { label: string; icon: React.ReactElement;
   follow_up:       { label: 'Follow-up',       icon: <FollowUpIcon fontSize="small" />, colorKey: 'info' },
   reference_sheet: { label: 'Reference Sheet', icon: <RefSheetIcon fontSize="small" />, colorKey: 'warning' },
   freeform:        { label: 'Freeform',        icon: <FreeformIcon fontSize="small" />, colorKey: 'success' },
+  cell_doc:        { label: 'Cell Doc',        icon: <DocIcon fontSize="small" />,      colorKey: 'info' },
 };
 
 const STATUS_META: Record<DocumentStatus, { label: string; color: 'default' | 'success' | 'warning' }> = {
@@ -48,6 +90,8 @@ const STATUS_META: Record<DocumentStatus, { label: string; color: 'default' | 's
   active:   { label: 'Active',   color: 'success' },
   archived: { label: 'Archived', color: 'warning' },
 };
+
+type SurfaceTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -69,6 +113,23 @@ function relativeTime(dateStr: string): string {
 function accentForKind(kind: DocumentKind, palette: Record<string, { main: string }>): string {
   const key = KIND_META[kind]?.colorKey ?? 'primary';
   return (palette as Record<string, { main: string }>)[key]?.main ?? palette.primary.main;
+}
+
+function toneForKind(kind: DocumentKind): SurfaceTone {
+  switch (kind) {
+    case 'resume':
+      return 'primary';
+    case 'reference_sheet':
+      return 'warning';
+    case 'freeform':
+      return 'success';
+    case 'cover_letter':
+    case 'follow_up':
+    case 'cell_doc':
+      return 'info';
+    default:
+      return 'neutral';
+  }
 }
 
 function formatPersonLabel(fullName?: string | null, email?: string | null, fallback = 'Unknown user'): string {
@@ -134,12 +195,8 @@ const DocumentListPage: React.FC = () => {
   /* toolbar header ------------------------------------------------- */
   const activeDocs = tab === 'my' ? docs : sharedDocs;
   const summary = useMemo(() => {
-    if (tab === 'shared') {
-      return `${sharedDocs.length} shared document${sharedDocs.length !== 1 ? 's' : ''}`;
-    }
-    const total = docs.length;
-    const pinned = docs.filter(d => d.is_pinned).length;
-    return `${total} document${total !== 1 ? 's' : ''}${pinned ? ` · ${pinned} pinned` : ''}`;
+    const count = tab === 'shared' ? sharedDocs.length : docs.length;
+    return `${count} documents`;
   }, [docs, sharedDocs, tab]);
 
   usePageToolbarHeader('Workspace', summary);
@@ -288,7 +345,11 @@ const DocumentListPage: React.FC = () => {
   return (
     <Box>
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')} role="alert">{error}</Alert>
+        <Box sx={{ mb: 2 }}>
+          <InlineFeedback tone="error" onClose={() => setError('')}>
+            {error}
+          </InlineFeedback>
+        </Box>
       )}
 
       {/* ── Tabs ────────────────────────────────────────────────── */}
@@ -303,138 +364,129 @@ const DocumentListPage: React.FC = () => {
       </Tabs>
 
       {/* ── Toolbar ─────────────────────────────────────────────── */}
-      <Stack direction="row" spacing={1.5} sx={{ mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-        <TextField
-          size="small" placeholder="Search documents…" value={search}
-          onChange={e => setSearch(e.target.value)}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
-                </InputAdornment>
-              ),
-              'aria-label': 'Search documents',
-            },
-          }}
-          sx={{ minWidth: 220, flex: { xs: '1 1 100%', sm: '0 1 280px' } }}
-        />
-
-        {/* Kind chips */}
-        <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap' }}>
-          <Chip
-            size="small" label="All"
-            variant={kindFilter === 'all' ? 'filled' : 'outlined'}
-            color={kindFilter === 'all' ? 'primary' : 'default'}
-            onClick={() => setKindFilter('all')}
-            sx={{ fontWeight: 600, cursor: 'pointer' }}
+      <CollectionToolbar
+        sx={{ mb: 3 }}
+        search={
+          <TextField
+            size="small" placeholder="Search documents…" value={search}
+            onChange={e => setSearch(e.target.value)}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                  </InputAdornment>
+                ),
+                'aria-label': 'Search documents',
+              },
+            }}
+            sx={{ minWidth: 220, flex: { xs: '1 1 100%', sm: '0 1 280px' } }}
           />
-          {availableKinds.map(k => (
-            <Chip
-              key={k} size="small" label={KIND_META[k].label}
-              variant={kindFilter === k ? 'filled' : 'outlined'}
-              color={kindFilter === k ? 'primary' : 'default'}
-              onClick={() => setKindFilter(k)}
-              sx={{ fontWeight: 600, cursor: 'pointer' }}
-            />
-          ))}
-        </Stack>
+        }
+        controls={
+          <>
+            {/* Kind chips */}
+            <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap' }}>
+              <Chip
+                size="small" label="All"
+                variant={kindFilter === 'all' ? 'filled' : 'outlined'}
+                color={kindFilter === 'all' ? 'primary' : 'default'}
+                onClick={() => setKindFilter('all')}
+                sx={{ fontWeight: kindFilter === 'all' ? 600 : 400, cursor: 'pointer' }}
+              />
+              {availableKinds.map(k => (
+                <Chip
+                  key={k} size="small" label={KIND_META[k].label}
+                  variant={kindFilter === k ? 'filled' : 'outlined'}
+                  color={kindFilter === k ? 'primary' : 'default'}
+                  onClick={() => setKindFilter(k)}
+                  sx={{ fontWeight: kindFilter === k ? 600 : 400, cursor: 'pointer' }}
+                />
+              ))}
+            </Stack>
 
-        {/* Status chips */}
-        <Stack direction="row" spacing={0.5}>
-          <Chip
-            size="small" label="All"
-            variant={statusFilter === 'all' ? 'filled' : 'outlined'}
-            color={statusFilter === 'all' ? 'primary' : 'default'}
-            onClick={() => setStatusFilter('all')}
-            sx={{ fontWeight: 600, cursor: 'pointer' }}
-          />
-          {(Object.keys(STATUS_META) as DocumentStatus[]).map(s => (
-            <Chip
-              key={s} size="small" label={STATUS_META[s].label}
-              variant={statusFilter === s ? 'filled' : 'outlined'}
-              color={statusFilter === s ? 'primary' : 'default'}
-              onClick={() => setStatusFilter(s)}
-              sx={{ fontWeight: 600, cursor: 'pointer' }}
-            />
-          ))}
-        </Stack>
+            {/* Status chips */}
+            <Stack direction="row" spacing={0.5}>
+              <Chip
+                size="small" label="All"
+                variant={statusFilter === 'all' ? 'filled' : 'outlined'}
+                color={statusFilter === 'all' ? 'primary' : 'default'}
+                onClick={() => setStatusFilter('all')}
+                sx={{ fontWeight: statusFilter === 'all' ? 600 : 400, cursor: 'pointer' }}
+              />
+              {(Object.keys(STATUS_META) as DocumentStatus[]).map(s => (
+                <Chip
+                  key={s} size="small" label={STATUS_META[s].label}
+                  variant={statusFilter === s ? 'filled' : 'outlined'}
+                  color={statusFilter === s ? 'primary' : 'default'}
+                  onClick={() => setStatusFilter(s)}
+                  sx={{ fontWeight: statusFilter === s ? 600 : 400, cursor: 'pointer' }}
+                />
+              ))}
+            </Stack>
+          </>
+        }
+        actions={
+          <>
+            {/* Upload PDF */}
+            <Button
+              size="small" variant="outlined" startIcon={<CloudUploadIcon />}
+              onClick={() => setUploadOpen(true)}
+              aria-label="Upload PDF"
+            >
+              Upload PDF
+            </Button>
 
-        <Box sx={{ flex: 1 }} />
-
-        {/* Upload PDF */}
-        <Button
-          size="small" variant="outlined" startIcon={<CloudUploadIcon />}
-          onClick={() => setUploadOpen(true)}
-          aria-label="Upload PDF"
-        >
-          Upload PDF
-        </Button>
-
-        {/* Sort */}
-        <Tooltip title="Sort">
-          <Chip
-            icon={<SortIcon sx={{ fontSize: 16 }} />} size="small" variant="outlined"
-            label={SORT_LABELS[sort]}
-            onClick={e => setSortAnchor(e.currentTarget)}
-            sx={{ cursor: 'pointer', fontWeight: 500 }}
-            aria-label="Sort documents"
-          />
-        </Tooltip>
-        <Menu
-          anchorEl={sortAnchor} open={Boolean(sortAnchor)}
-          onClose={() => setSortAnchor(null)}
-          slotProps={{ paper: { sx: { mt: 1 } } }}
-        >
-          {(Object.entries(SORT_LABELS) as [SortOption, string][]).map(([key, label]) => (
-            <MenuItem key={key} selected={sort === key} onClick={() => { setSort(key); setSortAnchor(null); }}>
-              {label}
-            </MenuItem>
-          ))}
-        </Menu>
-      </Stack>
+            {/* Sort */}
+            <Tooltip title="Sort">
+              <Chip
+                icon={<SortIcon sx={{ fontSize: 16 }} />} size="small" variant="outlined"
+                label={SORT_LABELS[sort]}
+                onClick={e => setSortAnchor(e.currentTarget)}
+                sx={{ cursor: 'pointer', fontWeight: 500 }}
+                aria-label="Sort documents"
+              />
+            </Tooltip>
+          </>
+        }
+      />
+      <Menu
+        anchorEl={sortAnchor} open={Boolean(sortAnchor)}
+        onClose={() => setSortAnchor(null)}
+        slotProps={{ paper: { sx: { mt: 1 } } }}
+      >
+        {(Object.entries(SORT_LABELS) as [SortOption, string][]).map(([key, label]) => (
+          <MenuItem key={key} selected={sort === key} onClick={() => { setSort(key); setSortAnchor(null); }}>
+            {label}
+          </MenuItem>
+        ))}
+      </Menu>
 
       {/* ── Grid ────────────────────────────────────────────────── */}
       {(tab === 'my' ? loading : sharedLoading) ? (
-        <Grid container spacing={2.5} aria-busy="true" aria-label="Loading documents">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={i}>
-              <Skeleton variant="rounded" height={200} sx={{ borderRadius: 3 }} />
-            </Grid>
-          ))}
-        </Grid>
+        <LoadingState kind="grid" count={6} itemHeight={200} columns={{ xs: 1, sm: 2, md: 3 }} />
       ) : (tab === 'my' ? filtered : filteredShared).length === 0 ? (
-        <Box sx={{
-          textAlign: 'center', py: 10,
-          border: `1.5px dashed ${alpha(theme.palette.divider, 0.4)}`,
-          borderRadius: 4,
-        }}>
-          <Box sx={{
-            width: 72, height: 72, mx: 'auto', mb: 2.5, borderRadius: '20px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.15)}, ${alpha(theme.palette.secondary.main, 0.15)})`,
-          }}>
-            <NoteAddIcon sx={{ fontSize: 36, color: 'primary.main' }} />
-          </Box>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>{tab === 'shared' ? 'No shared documents' : emptyLabel}</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, maxWidth: 360, mx: 'auto' }}>
-            {tab === 'shared'
+        <DSEmptyState
+          icon={<NoteAddIcon />}
+          title={tab === 'shared' ? 'No shared documents' : emptyLabel}
+          description={
+            tab === 'shared'
               ? 'Documents shared with you will appear here.'
               : search
                 ? 'Try a different search term or create a new document.'
-                : 'Create your first document to start building your professional profile with Baldin.'}
-          </Typography>
-          {tab === 'my' && !search && kindFilter === 'all' && statusFilter === 'all' && (
-            <Button
-              variant="contained" size="small" startIcon={<AddIcon />}
-              onClick={() => navigate('/workspace/new')}
-              sx={{ mt: 3 }}
-              aria-label="Create new document"
-            >
-              New Document
-            </Button>
-          )}
-        </Box>
+                : 'Create your first document to start building your professional profile with Baldin.'
+          }
+          primaryAction={
+            tab === 'my' && !search && kindFilter === 'all' && statusFilter === 'all'
+              ? {
+                  label: 'New Document',
+                  onClick: () => navigate('/workspace/new'),
+                  icon: <AddIcon />,
+                  buttonProps: { variant: 'contained', size: 'small' },
+                }
+              : undefined
+          }
+        />
       ) : (
         <Grid container spacing={2.5}>
           {(tab === 'my' ? filtered : filteredShared).map(doc => {
@@ -451,29 +503,24 @@ const DocumentListPage: React.FC = () => {
 
             return (
               <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={doc.id}>
-                <Card
-                  sx={{
-                    position: 'relative', height: '100%', display: 'flex', flexDirection: 'column',
-                    borderLeft: `3px solid ${alpha(accent, 0.5)}`,
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      transform: 'translateY(-2px)',
-                      borderLeftColor: accent,
-                      boxShadow: `0 8px 24px ${alpha(accent, 0.12)}`,
-                    },
-                    '& .doc-actions': { opacity: { xs: 1, sm: 0 }, transition: 'opacity 0.15s ease' },
-                    '&:hover .doc-actions': { opacity: 1 },
-                  }}
+                <CardShell
+                  interactive
+                  tone={toneForKind(doc.kind)}
                   onClick={() => navigate(`/workspace/${doc.id}`)}
+                  sx={{
+                    position: 'relative',
+                    '& .doc-actions': { opacity: { xs: 1, md: 0 }, transition: 'opacity 0.15s ease' },
+                    '&:focus-within .doc-actions': { opacity: 1 },
+                    '@media (hover: hover)': { '&:hover .doc-actions': { opacity: 1 } },
+                  }}
                   role="article"
                   aria-label={`Document: ${doc.title}`}
+                  contentSx={{ p: 2.5, flex: 1, display: 'flex', flexDirection: 'column' }}
                 >
-                  <CardContent sx={{ p: 2.5, flex: 1, display: 'flex', flexDirection: 'column' }}>
                     {/* header */}
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, mb: 1.5 }}>
                       <Box sx={{
-                        width: 40, height: 40, borderRadius: '10px', flexShrink: 0,
+                        width: 40, height: 40, borderRadius: toRadiusPx(radiusTokens.md), flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         background: alpha(accent, 0.1),
                         color: accent,
@@ -539,7 +586,7 @@ const DocumentListPage: React.FC = () => {
                         sx={{
                           mb: 1.5,
                           p: 1.25,
-                          borderRadius: 2,
+                            borderRadius: toRadiusPx(radiusTokens.sm),
                           background: alpha(theme.palette.info.main, 0.05),
                           border: `1px solid ${alpha(theme.palette.info.main, 0.14)}`,
                         }}
@@ -615,8 +662,7 @@ const DocumentListPage: React.FC = () => {
                         </Tooltip>
                       </Stack>
                     </Box>
-                  </CardContent>
-                </Card>
+                </CardShell>
               </Grid>
             );
           })}
@@ -624,14 +670,16 @@ const DocumentListPage: React.FC = () => {
       )}
 
       {/* ── FAB ─────────────────────────────────────────────────── */}
-      <Fab
-        color="primary"
-        onClick={() => navigate('/workspace/new')}
-        aria-label="Create new document"
-        sx={{ position: 'fixed', bottom: 32, right: 32 }}
-      >
-        <AddIcon />
-      </Fab>
+      {(loading || docs.length > 0) && (
+        <Fab
+          color="primary"
+          onClick={() => navigate('/workspace/new')}
+          aria-label="Create new document"
+          sx={{ position: 'fixed', bottom: 32, right: 32 }}
+        >
+          <AddIcon />
+        </Fab>
+      )}
 
       {/* ── Upload dialog ──────────────────────────────────────── */}
       <UploadDocumentDialog

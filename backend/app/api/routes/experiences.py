@@ -1,6 +1,6 @@
 # app/api/routes/experiences.py
-from fastapi import APIRouter, BackgroundTasks, Depends
-from sqlalchemy import select
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from sqlalchemy import func, select
 
 from app.api.deps import (
     AsyncSession,
@@ -30,16 +30,24 @@ EXPERIENCE_SEED_OPERATION = SeedOperation(
 )
 
 
-@router.get("/", response_model=list[schemas.ExperienceRead])
+@router.get("/", response_model=schemas.PaginatedResponse[schemas.ExperienceRead])
 async def read_current_user_experiences(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
 ):
-    result = await db.execute(
-        select(models.Experience).where(models.Experience.user_id == user.id)
+    base = select(models.Experience).where(models.Experience.user_id == user.id)
+    count_result = await db.execute(select(func.count()).select_from(base.subquery()))
+    total = count_result.scalar_one()
+    offset = (page - 1) * page_size
+    result = await db.execute(base.offset(offset).limit(page_size))
+    return schemas.PaginatedResponse[schemas.ExperienceRead](
+        items=result.scalars().all(),
+        total=total,
+        page=page,
+        page_size=page_size,
     )
-    experiences = result.scalars().all()
-    return experiences
 
 
 @router.post("/", status_code=201, response_model=schemas.ExperienceRead)
@@ -48,7 +56,7 @@ async def create_user_experience(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    experience = models.Experience(**payload.dict(), user_id=user.id)
+    experience = models.Experience(**payload.model_dump(), user_id=user.id)
     log.info(f"Creating experience: {experience.__dict__}")
     db.add(experience)
     await db.commit()
@@ -56,20 +64,20 @@ async def create_user_experience(
     return experience
 
 
-@router.get("/{experience_id}", response_model=schemas.ExperienceRead)
+@router.get("/{id}", response_model=schemas.ExperienceRead)
 async def read_user_experience(
     experience: schemas.ExperienceRead = Depends(get_experience),
 ):
     return experience
 
 
-@router.put("/{experience_id}", response_model=schemas.ExperienceRead)
+@router.patch("/{id}", response_model=schemas.ExperienceRead)
 async def update_user_experience(
     payload: schemas.ExperienceUpdate,
     experience: schemas.ExperienceRead = Depends(get_experience),
     db: AsyncSession = Depends(get_async_session),
 ):
-    experience_data = payload.dict(exclude_unset=True)
+    experience_data = payload.model_dump(exclude_unset=True)
     for field in experience_data:
         setattr(experience, field, experience_data[field])
     await db.commit()
@@ -77,7 +85,7 @@ async def update_user_experience(
     return experience
 
 
-@router.delete("/{experience_id}", status_code=204)
+@router.delete("/{id}", status_code=204)
 async def delete_user_experience(
     experience: schemas.ExperienceRead = Depends(get_experience),
     db: AsyncSession = Depends(get_async_session),

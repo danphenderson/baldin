@@ -3,51 +3,27 @@
 from datetime import datetime, timedelta
 
 import pytest
-from fastapi_users.password import PasswordHelper
 
 from app import models
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
-from app.tests import utils
+from app.conftest import create_user
+from app.core.db import session_context
 
-pytestmark = pytest.mark.asyncio(loop_scope="module")
-
-password_helper = PasswordHelper()
-_db_ready = False
-
-
-async def _ensure_db_ready():
-    global _db_ready
-    if _db_ready:
-        return
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    _db_ready = True
-
-
-async def _create_user(email: str = "reaper@test.com", is_superuser: bool = False):
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash("testpass"),
-            session,
-            is_superuser=is_superuser,
-        )
-        await session.commit()
-    return user
+pytestmark = [
+    pytest.mark.asyncio(loop_scope="module"),
+    pytest.mark.usefixtures("fresh_db"),
+]
 
 
 async def test_reap_stale_crawler_run():
-    await _ensure_db_ready()
-
     async with session_context() as db:
-        user = await _create_user(email="reaper-cr@test.com")
+        _, user_id = await create_user("testpass", email="reaper-cr@test.com")
 
         pipeline = models.CrawlerPipeline(
             name="test-reap-pipeline",
             source="test",
             query_definition={"q": "test"},
             schedule_definition={"type": "manual"},
-            created_by_user_id=user.id,
+            created_by_user_id=user_id,
         )
         db.add(pipeline)
         await db.commit()
@@ -75,14 +51,12 @@ async def test_reap_stale_crawler_run():
 
 
 async def test_reap_stale_orchestration_event():
-    await _ensure_db_ready()
-
     async with session_context() as db:
-        user = await _create_user(email="reaper-orch@test.com")
+        _, user_id = await create_user("testpass", email="reaper-orch@test.com")
 
         pipeline = models.OrchestrationPipeline(
             name="test-reap-orch",
-            user_id=user.id,
+            user_id=user_id,
         )
         db.add(pipeline)
         await db.commit()
@@ -110,17 +84,15 @@ async def test_reap_stale_orchestration_event():
 
 async def test_reap_skips_pending_review():
     """Items in pending_review should not be reaped."""
-    await _ensure_db_ready()
-
     async with session_context() as db:
-        user = await _create_user(email="reaper-skip@test.com")
+        _, user_id = await create_user("testpass", email="reaper-skip@test.com")
 
         pipeline = models.CrawlerPipeline(
             name="test-skip-pipeline",
             source="test",
             query_definition={"q": "test"},
             schedule_definition={"type": "manual"},
-            created_by_user_id=user.id,
+            created_by_user_id=user_id,
         )
         db.add(pipeline)
         await db.commit()

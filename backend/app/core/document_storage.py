@@ -21,6 +21,12 @@ _AVATAR_CONTENT_TYPE_SUFFIX = {
     "image/webp": ".webp",
     "image/gif": ".gif",
 }
+_AVATAR_SIGNATURES = {
+    "image/png": lambda data: data.startswith(b"\x89PNG\r\n\x1a\n"),
+    "image/jpeg": lambda data: data.startswith(b"\xff\xd8\xff"),
+    "image/webp": lambda data: data.startswith(b"RIFF") and data[8:12] == b"WEBP",
+    "image/gif": lambda data: data.startswith((b"GIF87a", b"GIF89a")),
+}
 
 
 def public_assets_root() -> Path:
@@ -117,13 +123,25 @@ def build_avatar_path(
     user_id: UUID | str,
     content_type: str,
 ) -> str:
-    suffix = _AVATAR_CONTENT_TYPE_SUFFIX.get(content_type)
+    normalized_content_type = normalize_avatar_content_type(content_type)
+    suffix = _AVATAR_CONTENT_TYPE_SUFFIX.get(normalized_content_type)
     if suffix is None:
         raise ValueError(
-            f"Unsupported avatar content type: {content_type}. "
+            f"Unsupported avatar content type: {normalized_content_type}. "
             f"Allowed: {', '.join(sorted(ALLOWED_AVATAR_CONTENT_TYPES))}"
         )
     return f"{UPLOADS_SUBDIR}/{AVATARS_SUBDIR}/{user_id}/avatar{suffix}"
+
+
+def normalize_avatar_content_type(content_type: str | None) -> str:
+    return (content_type or "").split(";", 1)[0].strip().lower()
+
+
+def sniff_avatar_content_type(file_bytes: bytes) -> str | None:
+    for content_type, matcher in _AVATAR_SIGNATURES.items():
+        if matcher(file_bytes):
+            return content_type
+    return None
 
 
 def resolve_avatar_path(relative_path: str) -> Path:

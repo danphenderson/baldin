@@ -3,35 +3,40 @@ import {
   Avatar,
   Box,
   Button,
-  Card,
-  CardContent,
-  Chip,
   CircularProgress,
   Collapse,
-  Dialog,
-  DialogActions,
-  DialogContent,
   DialogContentText,
-  DialogTitle,
   IconButton,
-  Snackbar,
-  Alert,
   Stack,
   TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
 import {
+  EmptyState,
+  InlineFeedback,
+  LoadingState,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogActions as DialogActions,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogTitle as DialogTitle,
+} from '../../design-system';
+import {
   ArrowBack as ArrowBackIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
+  ForumOutlined as ForumOutlinedIcon,
   Group as GroupIcon,
   Send as SendIcon,
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
+import { useNotification } from '../../context/notification-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import { avatarUrl } from '../../service/users';
 import {
@@ -43,6 +48,7 @@ import {
   type ConversationDetailRead,
   type MessageRead,
 } from '../../service/messages';
+import { AgentEnabledMultilineField } from '../../component/agent-surface';
 
 const formatTime = (iso: string): string => {
   const date = new Date(iso);
@@ -78,13 +84,7 @@ const ConversationDetailPage: React.FC = () => {
 
   const [showParticipants, setShowParticipants] = useState(false);
 
-  const [snack, setSnack] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success',
-  });
-
-  const notify = useCallback((message: string, severity: 'success' | 'error' = 'success') => {
-    setSnack({ open: true, message, severity });
-  }, []);
+  const notify = useNotification();
 
   const currentUserId = user?.id;
 
@@ -133,7 +133,7 @@ const ConversationDetailPage: React.FC = () => {
       });
       setNewMessage('');
     } catch (e: unknown) {
-      notify(e instanceof Error ? e.message : 'Failed to send message', 'error');
+      notify.error(e instanceof Error ? e.message : 'Failed to send message');
     }
     setSending(false);
   };
@@ -159,7 +159,7 @@ const ConversationDetailPage: React.FC = () => {
       setEditingId(null);
       setEditContent('');
     } catch (e: unknown) {
-      notify(e instanceof Error ? e.message : 'Failed to edit message', 'error');
+      notify.error(e instanceof Error ? e.message : 'Failed to edit message');
     }
   };
 
@@ -176,9 +176,9 @@ const ConversationDetailPage: React.FC = () => {
         };
       });
       setDeleteTarget(null);
-      notify('Message deleted');
+      notify.success('Message deleted');
     } catch (e: unknown) {
-      notify(e instanceof Error ? e.message : 'Failed to delete message', 'error');
+      notify.error(e instanceof Error ? e.message : 'Failed to delete message');
     }
     setDeleting(false);
   };
@@ -186,7 +186,7 @@ const ConversationDetailPage: React.FC = () => {
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
-        <CircularProgress />
+        <LoadingState kind="list" />
       </Box>
     );
   }
@@ -197,7 +197,7 @@ const ConversationDetailPage: React.FC = () => {
         <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/network/messages')} sx={{ mb: 2 }}>
           Back to Messages
         </Button>
-        <Alert severity="error">{error ?? 'Conversation not found.'}</Alert>
+        <InlineFeedback tone="error">{error ?? 'Conversation not found.'}</InlineFeedback>
       </Box>
     );
   }
@@ -226,7 +226,11 @@ const ConversationDetailPage: React.FC = () => {
         )}
         {isGroup && (
           <Tooltip title={showParticipants ? 'Hide participants' : 'Show participants'}>
-            <IconButton size="small" onClick={() => setShowParticipants((v) => !v)}>
+            <IconButton
+              size="small"
+              onClick={() => setShowParticipants((v) => !v)}
+              aria-label={showParticipants ? 'Hide participants' : 'Show participants'}
+            >
               {showParticipants ? <ExpandLessIcon /> : <ExpandMoreIcon />}
               <GroupIcon sx={{ ml: 0.5 }} fontSize="small" />
             </IconButton>
@@ -261,9 +265,13 @@ const ConversationDetailPage: React.FC = () => {
       {/* Messages list */}
       <Box sx={{ flex: 1, overflow: 'auto', mb: 2, px: 1 }}>
         {messages.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 6 }}>
-            <Typography color="text.secondary">No messages yet. Send the first one!</Typography>
-          </Box>
+          <EmptyState
+            icon={<ForumOutlinedIcon />}
+            layout="section"
+            compact
+            title="No messages yet"
+            description="Send the first one to start the conversation."
+          />
         ) : (
           <Stack spacing={1.5}>
             {messages.map((msg) => {
@@ -318,12 +326,15 @@ const ConversationDetailPage: React.FC = () => {
                         <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
                           {isEditing ? (
                             <Stack spacing={1}>
-                              <TextField
+                              <AgentEnabledMultilineField
                                 size="small"
                                 multiline
                                 maxRows={4}
+                                surfaceId={msg.id}
+                                fieldKey="conversation_message_edit"
+                                entityRefs={conversationId ? [{ kind: 'conversation', id: conversationId, label: displayName }] : []}
                                 value={editContent}
-                                onChange={(e) => setEditContent(e.target.value)}
+                                onChange={setEditContent}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter' && !e.shiftKey) {
                                     e.preventDefault();
@@ -362,12 +373,13 @@ const ConversationDetailPage: React.FC = () => {
                             <IconButton
                               size="small"
                               onClick={() => { setEditingId(msg.id); setEditContent(msg.content); }}
+                              aria-label="Edit message"
                             >
                               <EditIcon sx={{ fontSize: 14 }} />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="Delete">
-                            <IconButton size="small" onClick={() => setDeleteTarget(msg.id)}>
+                            <IconButton size="small" onClick={() => setDeleteTarget(msg.id)} aria-label="Delete message">
                               <DeleteIcon sx={{ fontSize: 14 }} />
                             </IconButton>
                           </Tooltip>
@@ -386,14 +398,17 @@ const ConversationDetailPage: React.FC = () => {
       {/* Message input */}
       <Card sx={{ p: 2, flexShrink: 0 }}>
         <Stack direction="row" spacing={1} alignItems="flex-end">
-          <TextField
+          <AgentEnabledMultilineField
             fullWidth
             size="small"
             placeholder="Type a message…"
             multiline
             maxRows={4}
+            surfaceId={conversationId ?? 'conversation-compose'}
+            fieldKey="conversation_message_compose"
+            entityRefs={conversationId ? [{ kind: 'conversation', id: conversationId, label: displayName }] : []}
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={setNewMessage}
             onKeyDown={handleKeyDown}
             disabled={sending}
           />
@@ -421,22 +436,6 @@ const ConversationDetailPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={snack.open}
-        autoHideDuration={4000}
-        onClose={() => setSnack((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={() => setSnack((s) => ({ ...s, open: false }))}
-          severity={snack.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {snack.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

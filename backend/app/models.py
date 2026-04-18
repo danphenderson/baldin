@@ -15,6 +15,7 @@ from sqlalchemy import (
     Integer,
     LargeBinary,
     String,
+    Table,
     Text,
     UniqueConstraint,
     event,
@@ -22,7 +23,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 # ---------------------------------------------------------------------------
@@ -47,18 +48,6 @@ class ApplicationOutcome(str, enum.Enum):
     WITHDRAWN = "withdrawn"
 
 
-# Kept as the union of stage + outcome values for the native Postgres enum column.
-# The DB column name and enum type name stay the same so existing rows remain valid.
-class ApplicationStatus(str, enum.Enum):
-    REGISTERED = "registered"
-    APPLIED = "applied"
-    SCREENING = "screening"
-    INTERVIEW = "interview"
-    OFFER = "offer"
-    REJECTED = "rejected"
-    WITHDRAWN = "withdrawn"
-
-
 class LeadReviewStatus(str, enum.Enum):
     PENDING_REVIEW = "pending_review"
     APPROVED = "approved"
@@ -79,6 +68,101 @@ def _enum_values(enum_class: type[enum.Enum]) -> list[str]:
     return [member.value for member in enum_class]
 
 
+def _string_in_check_constraint(
+    column_name: str,
+    values: tuple[str, ...],
+    *,
+    name: str,
+) -> CheckConstraint:
+    allowed_values = ", ".join(repr(value) for value in values)
+    return CheckConstraint(f"{column_name} IN ({allowed_values})", name=name)
+
+
+DOCUMENT_KIND_VALUES = (
+    "resume",
+    "cover_letter",
+    "follow_up",
+    "reference_sheet",
+    "freeform",
+    "cell_doc",
+)
+DOCUMENT_STATUS_VALUES = ("draft", "active", "archived")
+DOCUMENT_CONTENT_FORMAT_VALUES = ("plain_text", "tiptap_json")
+DOCUMENT_SHARE_ROLE_VALUES = ("viewer", "editor")
+DOCUMENT_ACTIVITY_TYPE_VALUES = (
+    "document_created",
+    "document_uploaded",
+    "version_saved",
+    "agent_task_requested",
+    "agent_task_applied",
+    "agent_task_failed",
+    "agent_task_dismissed",
+    "share_created",
+    "share_updated",
+    "share_revoked",
+    "document_archived",
+    "document_unarchived",
+    "document_pinned",
+    "document_unpinned",
+    "block_created",
+    "block_updated",
+    "block_deleted",
+    "block_reordered",
+    "block_type_changed",
+)
+DOCUMENT_BLOCK_TYPE_VALUES = (
+    "paragraph",
+    "heading",
+    "bullet_list",
+    "ordered_list",
+    "list_item",
+    "task_list",
+    "task_item",
+    "blockquote",
+    "code_block",
+    "callout",
+    "toggle",
+    "table",
+    "table_row",
+    "table_cell",
+    "divider",
+    "mention",
+    "embed",
+)
+ORCHESTRATION_EVENT_STATUS_VALUES = (
+    "pending",
+    "running",
+    "success",
+    "failure",
+    "pending_review",
+)
+CONNECTION_STATUS_VALUES = ("pending", "accepted", "declined", "blocked")
+CONVERSATION_TYPE_VALUES = ("direct", "group")
+CONVERSATION_PARTICIPANT_ROLE_VALUES = ("member", "admin")
+ACTION_ITEM_STATUS_VALUES = ("pending", "in_progress", "completed", "dismissed")
+ACTION_ITEM_KIND_VALUES = (
+    "follow_up",
+    "prepare_document",
+    "send_message",
+    "review_lead",
+    "schedule_interview",
+    "custom",
+)
+ACTION_ITEM_PRIORITY_VALUES = ("low", "medium", "high", "urgent")
+ASPIRATION_KIND_VALUES = ("role", "company")
+AGENT_KIND_VALUES = ("cover_letter", "follow_up", "outreach", "custom")
+AGENT_RUN_TRIGGER_KIND_VALUES = ("manual", "event", "surface_mention")
+AGENT_RUN_STATUS_VALUES = ("pending", "running", "completed", "failed")
+AGENT_RUN_SOURCE_SURFACE_KIND_VALUES = (
+    "cell_doc_editor",
+    "rich_text_editor",
+    "multiline_text_field",
+)
+AGENT_RUN_APPLY_STATUS_VALUES = ("pending", "applied", "dismissed")
+AGENT_CHAT_SESSION_STATUS_VALUES = ("active", "archived")
+AGENT_CHAT_MESSAGE_ROLE_VALUES = ("system", "user", "assistant")
+
+
 class Base(DeclarativeBase):
     """
     Base model for all database entities.
@@ -89,8 +173,10 @@ class Base(DeclarativeBase):
     __abstract__ = True
 
     id = Column(UUID, primary_key=True, default=uuid4)
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 # Data Orchestration models
@@ -104,6 +190,14 @@ class OrchestrationEvent(Base):
     """
 
     __tablename__ = "orchestration_events"
+    __table_args__ = (
+        _string_in_check_constraint(
+            "status",
+            ORCHESTRATION_EVENT_STATUS_VALUES,
+            name="ck_orchestration_events_status",
+        ),
+        Index("ix_orchestration_events_pipeline_created", "pipeline_id", "created_at"),
+    )
     status = Column(String, default="pending")  # running, success, failure
     message = Column(Text)
     payload = Column(JSON)
@@ -111,8 +205,14 @@ class OrchestrationEvent(Base):
     source_uri = Column(JSON)
     destination_uri = Column(JSON)
     version_hash = Column(String, nullable=True)
-    retry_of_id = Column(UUID, ForeignKey("orchestration_events.id"), nullable=True)
-    pipeline_id = Column(UUID, ForeignKey("orchestration_pipelines.id"))
+    retry_of_id = Column(
+        UUID, ForeignKey("orchestration_events.id", ondelete="SET NULL"), nullable=True
+    )
+    pipeline_id = Column(
+        UUID,
+        ForeignKey("orchestration_pipelines.id", ondelete="CASCADE"),
+        nullable=True,
+    )
     orchestration_pipeline = relationship(
         "OrchestrationPipeline", back_populates="orchestration_events"
     )
@@ -130,7 +230,7 @@ class OrchestrationPipeline(Base):
     name = Column(String, index=True, nullable=False)
     description = Column(Text)
     definition = Column(JSON)
-    user_id = Column(UUID, ForeignKey("users.id"))
+    user_id = Column(UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user = relationship("User", back_populates="orchestration_pipelines")
     orchestration_events = relationship(
         "OrchestrationEvent", back_populates="orchestration_pipeline"
@@ -176,7 +276,10 @@ class CrawlerRun(Base):
 
     __tablename__ = "crawler_runs"
     crawler_pipeline_id = Column(
-        UUID, ForeignKey("crawler_pipelines.id"), nullable=False, index=True
+        UUID,
+        ForeignKey("crawler_pipelines.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     trigger_type = Column(String, nullable=False)
     status = Column(
@@ -189,13 +292,15 @@ class CrawlerRun(Base):
         nullable=False,
         default=CrawlerRunStatus.PENDING,
     )
-    scheduled_for = Column(DateTime)
-    started_at = Column(DateTime)
-    finished_at = Column(DateTime)
+    scheduled_for = Column(DateTime(timezone=True))
+    started_at = Column(DateTime(timezone=True))
+    finished_at = Column(DateTime(timezone=True))
     checkpoint = Column(JSON)
     stats = Column(JSON)
     error_summary = Column(Text)
-    retry_of_id = Column(UUID, ForeignKey("crawler_runs.id"), nullable=True)
+    retry_of_id = Column(
+        UUID, ForeignKey("crawler_runs.id", ondelete="SET NULL"), nullable=True
+    )
     crawler_pipeline = relationship("CrawlerPipeline", back_populates="runs")
 
 
@@ -218,7 +323,9 @@ class ExtractorExample(Base):
     __tablename__ = "extractor_examples"
     content = Column(Text, nullable=False, comment="The input portion of the example.")
     output = Column(JSONB, comment="The output associated with the example.")
-    extractor_id = Column(UUID, ForeignKey("extractors.id"))
+    extractor_id = Column(
+        UUID, ForeignKey("extractors.id", ondelete="CASCADE"), nullable=False
+    )
     extractor = relationship("Extractor", back_populates="extractor_examples")
 
     def __repr__(self) -> str:
@@ -243,7 +350,7 @@ class Extractor(Base):
         server_default=text("false"),
         nullable=False,
     )
-    user_id = Column(UUID, ForeignKey("users.id"))
+    user_id = Column(UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user = relationship("User", back_populates="extractors")
     extractor_examples = relationship("ExtractorExample", back_populates="extractor")
     versions = relationship(
@@ -268,7 +375,12 @@ class ExtractorVersion(Base):
             name="uq_extractor_versions_extractor_id_version_number",
         ),
     )
-    extractor_id = Column(UUID, ForeignKey("extractors.id"), nullable=False, index=True)
+    extractor_id = Column(
+        UUID,
+        ForeignKey("extractors.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     version_number = Column(Integer, nullable=False)
     instruction = Column(Text)
     json_schema = Column(JSONB)
@@ -277,10 +389,32 @@ class ExtractorVersion(Base):
     extractor = relationship("Extractor", back_populates="versions")
 
 
-class LeadXCompany(Base):
+# ---------------------------------------------------------------------------
+#  Junction tables — plain Table constructs, no surrogate columns
+# ---------------------------------------------------------------------------
+
+_leads_x_companies_table = Table(
+    "leads_x_companies",
+    Base.metadata,
+    Column(
+        "lead_id", UUID, ForeignKey("leads.id", ondelete="CASCADE"), primary_key=True
+    ),
+    Column(
+        "company_id",
+        UUID,
+        ForeignKey("companies.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)
+
+
+class LeadXCompany:
+    """Mapped junction: leads ↔ companies. No surrogate ID or timestamps."""
+
     __tablename__ = "leads_x_companies"
-    lead_id = Column(UUID, ForeignKey("leads.id"), primary_key=True)
-    company_id = Column(UUID, ForeignKey("companies.id"), primary_key=True)
+
+
+Base.registry.map_imperatively(LeadXCompany, _leads_x_companies_table)
 
 
 class LeadRegistration(Base):
@@ -289,8 +423,12 @@ class LeadRegistration(Base):
     __tablename__ = "lead_registrations"
     __table_args__ = (UniqueConstraint("lead_id", "user_id"),)
 
-    lead_id = Column(UUID, ForeignKey("leads.id"), nullable=False, index=True)
-    user_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
+    lead_id = Column(
+        UUID, ForeignKey("leads.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     internal_notes = Column(Text)
     expose_profile = Column(Boolean, default=False, nullable=False)
 
@@ -306,11 +444,25 @@ class Company(Base):
     """
 
     __tablename__ = "companies"
+    __table_args__ = (
+        Index(
+            "ix_companies_name_lower_trim",
+            text("lower(trim(name))"),
+            unique=True,
+        ),
+    )
+    creator_user_id = Column(
+        UUID,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     name = Column(String, nullable=False)
     industry = Column(String)
     size = Column(String)
     location = Column(String)
     description = Column(Text)
+    creator = relationship("User", back_populates="companies_created")
 
     leads = relationship(
         "Lead", secondary="leads_x_companies", back_populates="companies"
@@ -346,7 +498,7 @@ class Lead(Base):
         nullable=True,
     )
 
-    application = relationship("Application", back_populates="lead")
+    applications = relationship("Application", back_populates="lead")
     companies = relationship(
         "Company",
         secondary="leads_x_companies",
@@ -377,9 +529,19 @@ class LeadComment(Base):
     """Represents a lead comment or a single-level reply."""
 
     __tablename__ = "lead_comments"
-    lead_id = Column(UUID, ForeignKey("leads.id"), nullable=False, index=True)
-    author_user_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
-    parent_comment_id = Column(UUID, ForeignKey("lead_comments.id"), index=True)
+    __table_args__ = (Index("ix_lead_comments_lead_created", "lead_id", "created_at"),)
+    lead_id = Column(
+        UUID, ForeignKey("leads.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    author_user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    parent_comment_id = Column(
+        UUID,
+        ForeignKey("lead_comments.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     content = Column(Text, nullable=False)
     anonymous = Column(Boolean, default=True, nullable=False)
 
@@ -411,8 +573,8 @@ class Skill(Base):
     name = Column(String)
     category = Column(String)
     yoe = Column(Integer)
-    subskills = Column(String)
-    user_id = Column(UUID, ForeignKey("users.id"))
+    subskills = Column(ARRAY(Text))
+    user_id = Column(UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user = relationship("User", back_populates="skills")
 
 
@@ -426,12 +588,12 @@ class Experience(Base):
     title = Column(String)
     company = Column(String)
     location = Column(String)
-    start_date = Column(DateTime)
-    end_date = Column(DateTime)
+    start_date = Column(DateTime(timezone=True))
+    end_date = Column(DateTime(timezone=True))
     description = Column(Text)
-    projects = Column(String)
+    projects = Column(ARRAY(Text))
 
-    user_id = Column(UUID, ForeignKey("users.id"))
+    user_id = Column(UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user = relationship("User", back_populates="experiences")
 
 
@@ -440,12 +602,12 @@ class Education(Base):
     __tablename__ = "user_education"
     university = Column(String)
     degree = Column(String)
-    gradePoint = Column(String)
-    activities = Column(JSON)  # Assuming activities are stored as JSON
-    achievements = Column(JSON)  # Assuming achievements are stored as JSON
-    start_date = Column(DateTime)
-    end_date = Column(DateTime)
-    user_id = Column(UUID, ForeignKey("users.id"))
+    grade_point = Column(String)
+    activities = Column(ARRAY(Text))
+    achievements = Column(ARRAY(Text))
+    start_date = Column(DateTime(timezone=True))
+    end_date = Column(DateTime(timezone=True))
+    user_id = Column(UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user = relationship("User", back_populates="education")
 
 
@@ -454,10 +616,42 @@ class Certificate(Base):
     __tablename__ = "user_certificates"
     title = Column(String)
     issuer = Column(String)
-    expiration_date = Column(DateTime)  # Assuming date is stored as a DateTime
-    issued_date = Column(DateTime)  # Assuming date is stored as a DateTime
-    user_id = Column(UUID, ForeignKey("users.id"))
+    expiration_date = Column(DateTime(timezone=True))
+    issued_date = Column(DateTime(timezone=True))
+    user_id = Column(UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user = relationship("User", back_populates="certificates")
+
+
+class Aspiration(Base):
+    """Represents a user-owned role or company aspiration."""
+
+    __tablename__ = "aspirations"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "kind",
+            "label",
+            name="uq_aspirations_user_kind_label",
+        ),
+        _string_in_check_constraint(
+            "kind",
+            ASPIRATION_KIND_VALUES,
+            name="ck_aspirations_kind",
+        ),
+        Index("ix_aspirations_user_kind", "user_id", "kind"),
+    )
+
+    user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    kind = Column(String, nullable=False)
+    label = Column(String, nullable=False)
+    reason = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+    priority = Column(Integer, nullable=False, default=0, server_default="0")
+    extracted_attributes = Column(JSONB, nullable=True)
+
+    user = relationship("User", back_populates="aspirations")
 
 
 class Application(Base):
@@ -468,10 +662,30 @@ class Application(Base):
     """
 
     __tablename__ = "applications"
-    status = Column(
+    __table_args__ = (
+        UniqueConstraint("user_id", "lead_id", name="uq_applications_user_lead"),
+        CheckConstraint(
+            "outcome IS NULL OR stage IS NOT NULL",
+            name="ck_applications_outcome_requires_stage",
+        ),
+        Index("ix_applications_user_stage", "user_id", "stage"),
+        Index("ix_applications_user_outcome", "user_id", "outcome"),
+    )
+
+    stage = Column(
         SAEnum(
-            ApplicationStatus,
-            name="applicationstatus",
+            ApplicationStage,
+            name="applicationstage",
+            native_enum=True,
+            values_callable=_enum_values,
+        ),
+        nullable=False,
+        server_default="registered",
+    )
+    outcome = Column(
+        SAEnum(
+            ApplicationOutcome,
+            name="applicationoutcome",
             native_enum=True,
             values_callable=_enum_values,
         ),
@@ -479,18 +693,336 @@ class Application(Base):
     )
     notes = Column(Text)
     next_step = Column(String)
-    next_step_due = Column(DateTime)
+    next_step_due = Column(DateTime(timezone=True))
     outcome_reason = Column(Text)
-    status_history = Column(JSONB, server_default="[]")
-    lead_id = Column(UUID, ForeignKey("leads.id"), index=True)
-    user_id = Column(UUID, ForeignKey("users.id"))
-    lead = relationship("Lead", back_populates="application", uselist=False)
+    lead_id = Column(
+        UUID, ForeignKey("leads.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    user_id = Column(UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    lead = relationship("Lead", back_populates="applications", uselist=False)
     user = relationship("User", back_populates="applications")
     documents = relationship(
         "Document",
         secondary="documents_x_applications",
         back_populates="applications",
     )
+    agent_runs = relationship("AgentRun", back_populates="application")
+    chat_sessions = relationship("AgentChatSession", back_populates="application")
+    status_history = relationship(
+        "ApplicationStatusHistory",
+        back_populates="application",
+        cascade="all, delete-orphan",
+        order_by="ApplicationStatusHistory.changed_at",
+        lazy="selectin",
+    )
+
+
+class ApplicationStatusHistory(Base):
+    """Audit row for each application stage/outcome transition."""
+
+    __tablename__ = "application_status_history"
+
+    application_id = Column(
+        UUID, ForeignKey("applications.id", ondelete="CASCADE"), nullable=False
+    )
+    stage = Column(
+        SAEnum(
+            ApplicationStage,
+            name="applicationstage",
+            native_enum=True,
+            values_callable=_enum_values,
+        ),
+        nullable=False,
+    )
+    outcome = Column(
+        SAEnum(
+            ApplicationOutcome,
+            name="applicationoutcome",
+            native_enum=True,
+            values_callable=_enum_values,
+        ),
+        nullable=True,
+    )
+    changed_by_user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    changed_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    note = Column(Text, nullable=True)
+
+    application = relationship("Application", back_populates="status_history")
+
+
+class Agent(Base):
+    """Persistent definition for a reusable AI workflow."""
+
+    __tablename__ = "agents"
+    __table_args__ = (
+        _string_in_check_constraint(
+            "kind",
+            AGENT_KIND_VALUES,
+            name="ck_agents_kind",
+        ),
+        Index("ix_agents_user_kind_enabled", "user_id", "kind", "is_enabled"),
+    )
+
+    user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name = Column(String, nullable=False)
+    description = Column(Text)
+    kind = Column(String, nullable=False)
+    instructions = Column(Text)
+    configuration = Column(
+        JSONB,
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
+    )
+    is_enabled = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default=text("true"),
+    )
+
+    user = relationship("User", back_populates="agents")
+    runs = relationship(
+        "AgentRun",
+        back_populates="agent",
+        order_by="AgentRun.created_at.desc()",
+    )
+    chat_sessions = relationship("AgentChatSession", back_populates="agent")
+
+
+class AgentRun(Base):
+    """Audit row for an agent execution and the session revision it produced."""
+
+    __tablename__ = "agent_runs"
+    __table_args__ = (
+        _string_in_check_constraint(
+            "trigger_kind",
+            AGENT_RUN_TRIGGER_KIND_VALUES,
+            name="ck_agent_runs_trigger_kind",
+        ),
+        _string_in_check_constraint(
+            "status",
+            AGENT_RUN_STATUS_VALUES,
+            name="ck_agent_runs_status",
+        ),
+        _string_in_check_constraint(
+            "source_surface_kind",
+            AGENT_RUN_SOURCE_SURFACE_KIND_VALUES,
+            name="ck_agent_runs_source_surface_kind",
+        ),
+        _string_in_check_constraint(
+            "apply_status",
+            AGENT_RUN_APPLY_STATUS_VALUES,
+            name="ck_agent_runs_apply_status",
+        ),
+        Index("ix_agent_runs_agent_created", "agent_id", "created_at"),
+        Index("ix_agent_runs_user_created", "user_id", "created_at"),
+    )
+
+    agent_id = Column(
+        UUID,
+        ForeignKey("agents.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    application_id = Column(
+        UUID,
+        ForeignKey("applications.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    chat_session_id = Column(
+        UUID,
+        ForeignKey("agent_chat_sessions.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    parent_run_id = Column(
+        UUID,
+        ForeignKey("agent_runs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    trigger_kind = Column(
+        String,
+        nullable=False,
+        default="manual",
+        server_default=text("'manual'"),
+    )
+    status = Column(
+        String,
+        nullable=False,
+        default="pending",
+        server_default=text("'pending'"),
+    )
+    input_context = Column(
+        JSONB,
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
+    )
+    source_surface_kind = Column(String, nullable=True, index=True)
+    source_document_id = Column(
+        UUID,
+        ForeignKey("documents.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    source_field_key = Column(String, nullable=True, index=True)
+    source_route = Column(String, nullable=True, index=True)
+    source_anchor_id = Column(String, nullable=True, index=True)
+    apply_status = Column(
+        String,
+        nullable=False,
+        default="pending",
+        server_default=text("'pending'"),
+        index=True,
+    )
+    applied_at = Column(DateTime(timezone=True), nullable=True)
+    suggested_edit = Column(JSONB, nullable=True)
+    session_document_id = Column(
+        UUID,
+        ForeignKey("documents.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    session_version_id = Column(
+        UUID,
+        ForeignKey("document_versions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    error_summary = Column(Text)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+
+    agent = relationship("Agent", back_populates="runs")
+    user = relationship("User", back_populates="agent_runs")
+    application = relationship("Application", back_populates="agent_runs")
+    chat_session = relationship(
+        "AgentChatSession",
+        back_populates="export_runs",
+        foreign_keys=[chat_session_id],
+    )
+    parent_run = relationship(
+        "AgentRun",
+        remote_side="AgentRun.id",
+        back_populates="child_runs",
+    )
+    child_runs = relationship("AgentRun", back_populates="parent_run")
+    session_document = relationship(
+        "Document",
+        back_populates="agent_runs",
+        foreign_keys=[session_document_id],
+    )
+    session_version = relationship(
+        "DocumentVersion",
+        back_populates="agent_runs",
+        foreign_keys=[session_version_id],
+    )
+
+
+class AgentChatSession(Base):
+    """Persistent chat session for a single agent and user."""
+
+    __tablename__ = "agent_chat_sessions"
+    __table_args__ = (
+        _string_in_check_constraint(
+            "status",
+            AGENT_CHAT_SESSION_STATUS_VALUES,
+            name="ck_agent_chat_sessions_status",
+        ),
+        Index("ix_agent_chat_sessions_agent", "agent_id"),
+        Index("ix_agent_chat_sessions_user_updated", "user_id", "updated_at"),
+    )
+
+    agent_id = Column(
+        UUID, ForeignKey("agents.id", ondelete="RESTRICT"), nullable=False
+    )
+    user_id = Column(UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    application_id = Column(
+        UUID,
+        ForeignKey("applications.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    title = Column(Text, nullable=True)
+    model_name = Column(String, nullable=True)
+    status = Column(
+        String,
+        nullable=False,
+        default="active",
+        server_default=text("'active'"),
+    )
+    message_count = Column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default=text("0"),
+    )
+    last_message_at = Column(DateTime(timezone=True), nullable=True)
+
+    agent = relationship("Agent", back_populates="chat_sessions")
+    user = relationship("User", back_populates="chat_sessions")
+    application = relationship("Application", back_populates="chat_sessions")
+    messages = relationship(
+        "AgentChatMessage",
+        back_populates="session",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="AgentChatMessage.created_at.asc()",
+    )
+    export_runs = relationship(
+        "AgentRun",
+        back_populates="chat_session",
+        foreign_keys="AgentRun.chat_session_id",
+        order_by="AgentRun.created_at.desc()",
+        passive_deletes=True,
+    )
+
+
+class AgentChatMessage(Base):
+    """A single chat message stored inside an agent chat session."""
+
+    __tablename__ = "agent_chat_messages"
+    __table_args__ = (
+        _string_in_check_constraint(
+            "role",
+            AGENT_CHAT_MESSAGE_ROLE_VALUES,
+            name="ck_agent_chat_messages_role",
+        ),
+        Index(
+            "ix_agent_chat_messages_session_created",
+            "session_id",
+            "created_at",
+            "id",
+        ),
+    )
+
+    session_id = Column(
+        UUID,
+        ForeignKey("agent_chat_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    role = Column(String, nullable=False)
+    content = Column(Text, nullable=False)
+    metadata_ = Column(
+        "metadata",
+        JSONB,
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
+    )
+
+    session = relationship("AgentChatSession", back_populates="messages")
 
 
 class Contact(Base):
@@ -500,13 +1032,16 @@ class Contact(Base):
     """
 
     __tablename__ = "contacts"
+    __table_args__ = (
+        UniqueConstraint("user_id", "email", name="uq_contacts_user_email"),
+    )
     first_name = Column(String)
     last_name = Column(String)
     phone_number = Column(String)
     email = Column(String)
     time_zone = Column(String)
     notes = Column(Text)
-    user_id = Column(UUID, ForeignKey("users.id"))
+    user_id = Column(UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user = relationship("User", back_populates="contacts")
 
 
@@ -522,8 +1057,23 @@ class Document(Base):
     """
 
     __tablename__ = "documents"
+    __table_args__ = (
+        _string_in_check_constraint(
+            "kind",
+            DOCUMENT_KIND_VALUES,
+            name="ck_documents_kind",
+        ),
+        _string_in_check_constraint(
+            "status",
+            DOCUMENT_STATUS_VALUES,
+            name="ck_documents_status",
+        ),
+        Index("ix_documents_user_kind_status", "user_id", "kind", "status"),
+    )
 
-    user_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     kind = Column(String, nullable=False, index=True)
     title = Column(String, nullable=False)
     status = Column(
@@ -538,7 +1088,9 @@ class Document(Base):
         nullable=False,
         server_default=text("false"),
     )
-    head_version_id = Column(UUID, ForeignKey("document_versions.id"))
+    head_version_id = Column(
+        UUID, ForeignKey("document_versions.id", ondelete="SET NULL"), nullable=True
+    )
     yjs_state = Column(LargeBinary, nullable=True)
 
     user = relationship("User", back_populates="documents")
@@ -569,10 +1121,23 @@ class Document(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    blocks = relationship(
+        "DocumentBlock",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="DocumentBlock.position",
+        lazy="selectin",
+    )
     applications = relationship(
         "Application",
         secondary="documents_x_applications",
         back_populates="documents",
+    )
+    agent_runs = relationship(
+        "AgentRun",
+        back_populates="session_document",
+        foreign_keys="AgentRun.session_document_id",
     )
     embeddings = relationship(
         "DocumentEmbedding",
@@ -588,9 +1153,18 @@ class DocumentVersion(Base):
     """
 
     __tablename__ = "document_versions"
-    __table_args__ = (UniqueConstraint("document_id", "version_number"),)
+    __table_args__ = (
+        UniqueConstraint("document_id", "version_number"),
+        _string_in_check_constraint(
+            "content_format",
+            DOCUMENT_CONTENT_FORMAT_VALUES,
+            name="ck_document_versions_content_format",
+        ),
+    )
 
-    document_id = Column(UUID, ForeignKey("documents.id"), nullable=False, index=True)
+    document_id = Column(
+        UUID, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     version_number = Column(Integer, nullable=False)
     name = Column(String)
     content = Column(Text)
@@ -601,6 +1175,7 @@ class DocumentVersion(Base):
         nullable=False,
         server_default=text("'plain_text'"),
     )
+    block_snapshot = Column(JSONB, nullable=True)
     source_file = Column(String, nullable=True)
     change_summary = Column(String)
 
@@ -609,17 +1184,105 @@ class DocumentVersion(Base):
         back_populates="versions",
         foreign_keys=[document_id],
     )
+    agent_runs = relationship(
+        "AgentRun",
+        back_populates="session_version",
+        foreign_keys="AgentRun.session_version_id",
+    )
 
 
-class DocumentXApplication(Base):
-    """Junction: links a document (optionally at a specific version) to an application."""
+class DocumentBlock(Base):
+    """Stable block row backing cell-doc authoring and version restore."""
+
+    __tablename__ = "document_blocks"
+    __table_args__ = (
+        _string_in_check_constraint(
+            "block_type",
+            DOCUMENT_BLOCK_TYPE_VALUES,
+            name="ck_document_blocks_block_type",
+        ),
+        Index("ix_document_blocks_document_id", "document_id"),
+        Index("ix_document_blocks_parent", "parent_block_id"),
+        Index(
+            "ix_document_blocks_doc_parent_pos",
+            "document_id",
+            "parent_block_id",
+            "position",
+        ),
+    )
+
+    document_id = Column(
+        UUID,
+        ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    parent_block_id = Column(
+        UUID,
+        ForeignKey("document_blocks.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    block_type = Column(String, nullable=False)
+    content = Column(JSONB, nullable=True)
+    properties = Column(
+        JSONB,
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
+    )
+    position = Column(Integer, nullable=False, default=0, server_default=text("0"))
+
+    document = relationship("Document", back_populates="blocks")
+    parent_block = relationship(
+        "DocumentBlock",
+        remote_side="DocumentBlock.id",
+        back_populates="children",
+    )
+    children = relationship(
+        "DocumentBlock",
+        back_populates="parent_block",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="DocumentBlock.position",
+    )
+    activities = relationship(
+        "DocumentActivity",
+        primaryjoin="DocumentBlock.id == foreign(DocumentActivity.block_id)",
+        foreign_keys="DocumentActivity.block_id",
+        viewonly=True,
+    )
+
+
+_documents_x_applications_table = Table(
+    "documents_x_applications",
+    Base.metadata,
+    Column(
+        "application_id",
+        UUID,
+        ForeignKey("applications.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "document_id",
+        UUID,
+        ForeignKey("documents.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "version_id",
+        UUID,
+        ForeignKey("document_versions.id", ondelete="SET NULL"),
+        nullable=True,
+    ),
+)
+
+
+class DocumentXApplication:
+    """Mapped junction: documents ↔ applications. No surrogate ID or timestamps."""
 
     __tablename__ = "documents_x_applications"
-    __table_args__ = (UniqueConstraint("application_id", "document_id"),)
 
-    application_id = Column(UUID, ForeignKey("applications.id"), primary_key=True)
-    document_id = Column(UUID, ForeignKey("documents.id"), primary_key=True)
-    version_id = Column(UUID, ForeignKey("document_versions.id"))
+
+Base.registry.map_imperatively(DocumentXApplication, _documents_x_applications_table)
 
 
 class DocumentShare(Base):
@@ -629,6 +1292,11 @@ class DocumentShare(Base):
     __table_args__ = (
         UniqueConstraint(
             "document_id", "shared_with_user_id", name="uq_document_share_user"
+        ),
+        _string_in_check_constraint(
+            "role",
+            DOCUMENT_SHARE_ROLE_VALUES,
+            name="ck_document_shares_role",
         ),
     )
 
@@ -657,10 +1325,18 @@ class DocumentActivity(Base):
     """Audit-style activity event recorded against a document."""
 
     __tablename__ = "document_activities"
+    __table_args__ = (
+        _string_in_check_constraint(
+            "activity_type",
+            DOCUMENT_ACTIVITY_TYPE_VALUES,
+            name="ck_document_activities_activity_type",
+        ),
+    )
 
     document_id = Column(
         UUID, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    block_id = Column(UUID, nullable=True, index=True)
     actor_user_id = Column(
         UUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
@@ -674,6 +1350,12 @@ class DocumentActivity(Base):
     )
 
     document = relationship("Document", back_populates="activities")
+    block = relationship(
+        "DocumentBlock",
+        primaryjoin="foreign(DocumentActivity.block_id) == DocumentBlock.id",
+        foreign_keys=[block_id],
+        viewonly=True,
+    )
     actor = relationship("User", foreign_keys=[actor_user_id])
 
 
@@ -726,26 +1408,51 @@ class ActionItem(Base):
             "(lead_id IS NOT NULL)::int + "
             "(document_id IS NOT NULL)::int + "
             "(conversation_id IS NOT NULL)::int"
-            ") = 1",
-            name="ck_action_items_exactly_one_fk",
+            ") <= 1",
+            name="ck_action_items_at_most_one_fk",
         ),
+        _string_in_check_constraint(
+            "kind",
+            ACTION_ITEM_KIND_VALUES,
+            name="ck_action_items_kind",
+        ),
+        _string_in_check_constraint(
+            "status",
+            ACTION_ITEM_STATUS_VALUES,
+            name="ck_action_items_status",
+        ),
+        _string_in_check_constraint(
+            "priority",
+            ACTION_ITEM_PRIORITY_VALUES,
+            name="ck_action_items_priority",
+        ),
+        Index("ix_action_items_user_status", "user_id", "status"),
+        Index("ix_action_items_user_due_at", "user_id", "due_at"),
     )
 
-    user_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     kind = Column(String, nullable=False, index=True)
     status = Column(String, nullable=False, default="pending")
     priority = Column(String, nullable=False, default="medium")
-    due_at = Column(DateTime, nullable=True, index=True)
-    completed_at = Column(DateTime, nullable=True)
+    due_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
     sort_order = Column(Integer, nullable=False, default=0, server_default="0")
 
     # Polymorphic nullable FKs
-    application_id = Column(UUID, ForeignKey("applications.id"), nullable=True)
-    lead_id = Column(UUID, ForeignKey("leads.id"), nullable=True)
-    document_id = Column(UUID, ForeignKey("documents.id"), nullable=True)
-    conversation_id = Column(UUID, ForeignKey("conversations.id"), nullable=True)
+    application_id = Column(
+        UUID, ForeignKey("applications.id", ondelete="CASCADE"), nullable=True
+    )
+    lead_id = Column(UUID, ForeignKey("leads.id", ondelete="CASCADE"), nullable=True)
+    document_id = Column(
+        UUID, ForeignKey("documents.id", ondelete="CASCADE"), nullable=True
+    )
+    conversation_id = Column(
+        UUID, ForeignKey("conversations.id", ondelete="CASCADE"), nullable=True
+    )
 
     # Relationships
     user = relationship("User", back_populates="action_items")
@@ -789,14 +1496,14 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
         nullable=False,
         server_default=text("'free'"),
     )
-    subscription_expires_at = Column(DateTime)
+    subscription_expires_at = Column(DateTime(timezone=True))
     placement_status = Column(
         String,
         default="active",
         nullable=False,
         server_default=text("'active'"),
     )
-    placement_date = Column(DateTime)
+    placement_date = Column(DateTime(timezone=True))
 
     # MFA / Two-Factor Authentication
     mfa_secret = Column(String, nullable=True)
@@ -823,14 +1530,23 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
         back_populates="author",
         cascade="all, delete-orphan",
     )
+    agents = relationship("Agent", back_populates="user")
+    agent_runs = relationship("AgentRun", back_populates="user")
     applications = relationship("Application", back_populates="user")
     contacts = relationship("Contact", back_populates="user")
     skills = relationship("Skill", back_populates="user")
     experiences = relationship("Experience", back_populates="user")
     education = relationship("Education", back_populates="user")
     certificates = relationship("Certificate", back_populates="user")
+    companies_created = relationship("Company", back_populates="creator")
+    aspirations = relationship(
+        "Aspiration",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
     documents = relationship("Document", back_populates="user")
     extractors = relationship("Extractor", back_populates="user")
+    chat_sessions = relationship("AgentChatSession", back_populates="user")
     orchestration_pipelines = relationship(
         "OrchestrationPipeline", back_populates="user"
     )
@@ -861,13 +1577,34 @@ def _apply_user_visibility_defaults(_mapper, _connection, target: User) -> None:
 
 
 class Connection(Base):
-    """Represents a peer connection request between two users."""
+    """Represents a peer connection request between two users.
+
+    Bidirectional dedup decision (S-2.8): Application-layer guard prevents
+    (A→B) + (B→A) duplicates.  A DB-level UNIQUE index on
+    (LEAST(requester_id, addressee_id), GREATEST(requester_id, addressee_id))
+    is the upgrade path if DB enforcement is needed later.  For the developer
+    preview the route-level check is sufficient and avoids changing the
+    semantic meaning of requester/addressee column ordering.
+    """
 
     __tablename__ = "connections"
-    __table_args__ = (UniqueConstraint("requester_id", "addressee_id"),)
+    __table_args__ = (
+        UniqueConstraint("requester_id", "addressee_id"),
+        _string_in_check_constraint(
+            "status",
+            CONNECTION_STATUS_VALUES,
+            name="ck_connections_status",
+        ),
+        Index("ix_connections_requester_status", "requester_id", "status"),
+        Index("ix_connections_addressee_status", "addressee_id", "status"),
+    )
 
-    requester_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
-    addressee_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
+    requester_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    addressee_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     status = Column(String, default="pending", nullable=False)
     message = Column(Text)
 
@@ -888,10 +1625,19 @@ class Conversation(Base):
     """Represents a direct or group messaging conversation."""
 
     __tablename__ = "conversations"
+    __table_args__ = (
+        _string_in_check_constraint(
+            "type",
+            CONVERSATION_TYPE_VALUES,
+            name="ck_conversations_type",
+        ),
+    )
 
     type = Column(String, nullable=False)  # "direct" or "group"
     title = Column(Text, nullable=True)
-    created_by_user_id = Column(UUID, ForeignKey("users.id"), nullable=False)
+    created_by_user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
 
     created_by = relationship("User")
     participants = relationship(
@@ -912,7 +1658,14 @@ class ConversationParticipant(Base):
     """Junction table linking users to conversations."""
 
     __tablename__ = "conversation_participants"
-    __table_args__ = (UniqueConstraint("conversation_id", "user_id"),)
+    __table_args__ = (
+        UniqueConstraint("conversation_id", "user_id"),
+        _string_in_check_constraint(
+            "role",
+            CONVERSATION_PARTICIPANT_ROLE_VALUES,
+            name="ck_conversation_participants_role",
+        ),
+    )
 
     conversation_id = Column(
         UUID,
@@ -926,8 +1679,8 @@ class ConversationParticipant(Base):
         nullable=False,
         primary_key=True,
     )
-    joined_at = Column(DateTime, server_default=func.now())
-    last_read_at = Column(DateTime, nullable=True)
+    joined_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_read_at = Column(DateTime(timezone=True), nullable=True)
     role = Column(String, default="member")  # "member" or "admin"
 
     conversation = relationship("Conversation", back_populates="participants")
@@ -948,10 +1701,14 @@ class Message(Base):
         nullable=False,
         index=True,
     )
-    author_user_id = Column(UUID, ForeignKey("users.id"), nullable=False)
+    author_user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
     content = Column(Text, nullable=False)
-    parent_message_id = Column(UUID, ForeignKey("messages.id"), nullable=True)
-    edited_at = Column(DateTime, nullable=True)
+    parent_message_id = Column(
+        UUID, ForeignKey("messages.id", ondelete="CASCADE"), nullable=True
+    )
+    edited_at = Column(DateTime(timezone=True), nullable=True)
 
     conversation = relationship("Conversation", back_populates="messages")
     author = relationship("User")

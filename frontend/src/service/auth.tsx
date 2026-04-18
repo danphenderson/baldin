@@ -3,7 +3,7 @@
 import { components } from '../schema';
 import { API_URL } from '../config/env';
 
-const BASE_URL = `${API_URL}/auth`;
+const BASE_URL = `${API_URL}/api/v1/auth`;
 
 const JSON_HEADERS = {"Content-Type": "application/json"};
 
@@ -63,6 +63,15 @@ export const mfaLoginVerify = async (mfaToken: string, code: string): Promise<st
     method: "POST",
     headers: JSON_HEADERS,
     body: JSON.stringify({ mfa_token: mfaToken, code }),
+  });
+  const data = await response.json();
+  return data.access_token;
+};
+
+export const devBootstrapSuperuserSession = async (): Promise<string> => {
+  const response = await fetchApi(`${BASE_URL}/jwt/dev-bootstrap-superuser`, {
+    method: "POST",
+    headers: JSON_HEADERS,
   });
   const data = await response.json();
   return data.access_token;

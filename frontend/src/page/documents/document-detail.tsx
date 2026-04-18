@@ -1,28 +1,70 @@
 import React, { useContext, useEffect, useState, useCallback } from 'react';
 import {
-  Box, Typography, Chip, Stack, Button, useTheme, alpha, IconButton,
-  Dialog, DialogTitle, DialogContent, DialogActions, Tooltip, Skeleton,
-  Alert, Collapse, Divider, Paper,
-} from '@mui/material';
+  Box,
+  Typography,
+  Stack,
+  Button,
+  useTheme,
+  alpha,
+  IconButton,
+  Tooltip,
+  Skeleton,
+  Alert,
+  Collapse,
+  Divider,
+  Paper,
+  } from '@mui/material';
 import {
-  Edit as EditIcon, Download as DownloadIcon, Delete as DeleteIcon,
-  ArrowBack as BackIcon, PushPin as PushPinIcon, Archive as ArchiveIcon,
-  Unarchive as UnarchiveIcon, CompareArrows as CompareIcon,
-  ExpandMore as ExpandIcon, ExpandLess as CollapseIcon,
-  Article as ResumeIcon, Mail as LetterIcon, Replay as FollowUpIcon,
-  MenuBook as RefSheetIcon, TextSnippet as FreeformIcon,
-  PictureAsPdf as PdfIcon, Share as ShareIcon,
-} from '@mui/icons-material';
-import { useNavigate, useParams } from 'react-router-dom';
+  Edit as EditIcon,
+  Download as DownloadIcon,
+  Delete as DeleteIcon,
+  ArrowBack as BackIcon,
+  PushPin as PushPinIcon,
+  Archive as ArchiveIcon,
+  Unarchive as UnarchiveIcon,
+  CompareArrows as CompareIcon,
+  ExpandMore as ExpandIcon,
+  ExpandLess as CollapseIcon,
+  Article as ResumeIcon,
+  Mail as LetterIcon,
+  Replay as FollowUpIcon,
+  MenuBook as RefSheetIcon,
+  TextSnippet as FreeformIcon,
+  Description as CellDocIcon,
+  PictureAsPdf as PdfIcon,
+  Share as ShareIcon,
+  } from '@mui/icons-material';
+import { useNavigate,
+  useParams } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
+import CellDocEditor from '../../component/cell-doc/cell-doc-editor';
 import RichTextEditor from '../../component/rich-text-editor';
 import {
-  getDocument, updateDocument, deleteDocument, downloadDocument, pinDocument, downloadOriginal,
+  getDocument,
+  updateDocument,
+  deleteDocument,
+  downloadDocument,
+  pinDocument,
+  downloadOriginal,
   getDocumentActivity,
-  type DocumentActivityRead, type DocumentActivityType, type DocumentDetailRead, type DocumentVersionRead, type DocumentKind, type DocumentStatus,
-} from '../../service/documents';
+  type DocumentActivityRead,
+  type DocumentActivityType,
+  type DocumentDetailRead,
+  type DocumentVersionRead,
+  type DocumentKind,
+  type DocumentStatus,
+  } from '../../service/documents';
 import ShareDocumentDialog from '../../component/share-document-dialog';
+import { PageTitle,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogActions as DialogActions,
+} from '../../design-system';
+import { radiusTokens, toRadiusPx } from '../../design-system/tokens/radius';
+import { monoFontFamily } from '../../design-system/tokens/typography';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -34,6 +76,7 @@ const KIND_META: Record<DocumentKind, { label: string; icon: React.ReactElement;
   follow_up:       { label: 'Follow-up',       icon: <FollowUpIcon fontSize="small" />, colorKey: 'info' },
   reference_sheet: { label: 'Reference Sheet', icon: <RefSheetIcon fontSize="small" />, colorKey: 'warning' },
   freeform:        { label: 'Freeform',        icon: <FreeformIcon fontSize="small" />, colorKey: 'success' },
+  cell_doc:        { label: 'Cell Doc',        icon: <CellDocIcon fontSize="small" />,  colorKey: 'info' },
 };
 
 const STATUS_META: Record<DocumentStatus, { label: string; color: 'default' | 'success' | 'warning' }> = {
@@ -93,6 +136,44 @@ function getActivityBadgeLabels(activity: DocumentActivityRead): string[] {
   }
   return labels.slice(0, 3);
 }
+
+const ReadOnlyVersionPreview: React.FC<{
+  kind: DocumentKind;
+  version: DocumentVersionRead;
+}> = ({ kind, version }) => {
+  if (version.content_format !== 'tiptap_json') {
+    return (
+      <Typography
+        variant="body2" component="pre"
+        sx={{ whiteSpace: 'pre-wrap', fontFamily: monoFontFamily, fontSize: '0.8rem', m: 0 }}
+      >
+        {version.content || '(empty)'}
+      </Typography>
+    );
+  }
+
+  if (kind === 'cell_doc') {
+    return (
+      <CellDocEditor
+        content={version.content || ''}
+        readOnly
+        onChange={() => {}}
+        minHeight="100px"
+        viewerRole="viewer"
+      />
+    );
+  }
+
+  return (
+    <RichTextEditor
+      content={version.content || ''}
+      contentFormat="tiptap_json"
+      readOnly
+      onChange={() => {}}
+      minHeight="100px"
+    />
+  );
+};
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -218,8 +299,8 @@ const DocumentDetailPage: React.FC = () => {
     return (
       <Box>
         <Skeleton variant="text" width={300} height={40} />
-        <Skeleton variant="rounded" height={200} sx={{ mt: 2, borderRadius: 3 }} />
-        <Skeleton variant="rounded" height={300} sx={{ mt: 3, borderRadius: 3 }} />
+        <Skeleton variant="rounded" height={200} sx={{ mt: 2, borderRadius: '12px' }} />
+        <Skeleton variant="rounded" height={300} sx={{ mt: 3, borderRadius: '12px' }} />
       </Box>
     );
   }
@@ -258,12 +339,22 @@ const DocumentDetailPage: React.FC = () => {
       case 'share_updated':
       case 'share_revoked':
         return theme.palette.secondary.main;
+      case 'block_created':
+        return theme.palette.success.main;
+      case 'block_updated':
+      case 'block_reordered':
+        return theme.palette.info.main;
+      case 'block_deleted':
+        return theme.palette.error.main;
       case 'document_archived':
       case 'document_unarchived':
+      case 'block_type_changed':
         return theme.palette.warning.main;
       case 'document_pinned':
       case 'document_unpinned':
         return accent;
+      default:
+        return theme.palette.text.secondary;
     }
   };
 
@@ -282,6 +373,10 @@ const DocumentDetailPage: React.FC = () => {
       case 'document_pinned':
       case 'document_unpinned':
         return <PushPinIcon fontSize="small" />;
+      case 'block_deleted':
+        return <DeleteIcon fontSize="small" />;
+      case 'block_reordered':
+        return <CompareIcon fontSize="small" />;
       default:
         return <EditIcon fontSize="small" />;
     }
@@ -306,7 +401,7 @@ const DocumentDetailPage: React.FC = () => {
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>{doc.title}</Typography>
+              <PageTitle>{doc.title}</PageTitle>
               {doc.is_pinned && (
                 <PushPinIcon sx={{ fontSize: 18, color: accent, transform: 'rotate(45deg)' }} />
               )}
@@ -510,7 +605,7 @@ const DocumentDetailPage: React.FC = () => {
                     sx={{
                       width: 36,
                       height: 36,
-                      borderRadius: '12px',
+                      borderRadius: toRadiusPx(radiusTokens.lg),
                       flexShrink: 0,
                       display: 'flex',
                       alignItems: 'center',
@@ -571,7 +666,7 @@ const DocumentDetailPage: React.FC = () => {
                 <Box
                   sx={{
                     display: 'flex', alignItems: 'center', gap: 2, py: 1.5, px: 2,
-                    borderRadius: 2,
+                    borderRadius: toRadiusPx(radiusTokens.sm),
                     background: isSelected ? alpha(accent, 0.06) : 'transparent',
                     '&:hover': { background: alpha(theme.palette.action.hover, 0.04) },
                   }}
@@ -634,27 +729,12 @@ const DocumentDetailPage: React.FC = () => {
                 <Collapse in={isExpanded}>
                   <Box sx={{
                     ml: 7, mr: 2, mb: 2, p: 2,
-                    borderRadius: 2,
+                    borderRadius: toRadiusPx(radiusTokens.sm),
                     background: alpha(theme.palette.background.default, 0.6),
                     border: `1px solid ${theme.palette.divider}`,
                     maxHeight: 400, overflow: 'auto',
                   }}>
-                    {v.content_format === 'tiptap_json' ? (
-                      <RichTextEditor
-                        content={v.content || ''}
-                        contentFormat="tiptap_json"
-                        readOnly
-                        onChange={() => {}}
-                        minHeight="100px"
-                      />
-                    ) : (
-                      <Typography
-                        variant="body2" component="pre"
-                        sx={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.8rem', m: 0 }}
-                      >
-                        {v.content || '(empty)'}
-                      </Typography>
-                    )}
+                    <ReadOnlyVersionPreview kind={doc.kind} version={v} />
                   </Box>
                 </Collapse>
               </Box>

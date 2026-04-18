@@ -4,9 +4,6 @@ import {
   Avatar,
   Box,
   Button,
-  Card,
-  CardContent,
-  Chip,
   CircularProgress,
   Stack,
   Typography,
@@ -26,10 +23,20 @@ import {
   getDirectoryProfile,
   type UserPublicProfileRead,
 } from '../service/directory';
-import { createConnection, getConnections } from '../service/connections';
+import {
+  createConnection,
+  getAllConnections,
+  type ConnectionRead,
+} from '../service/connections';
 import { createConversation } from '../service/messages';
 import { avatarUrl } from '../service/users';
 import { useNotification } from '../context/notification-context';
+import {
+  PageTitle,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+} from '../design-system';
 
 const UserProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -53,33 +60,49 @@ const UserProfilePage: React.FC = () => {
     setError(null);
 
     getDirectoryProfile(token, userId)
-      .then((data) => { if (!cancelled) setProfile(data); })
-      .catch((e) => { if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load profile'); })
-      .finally(() => { if (!cancelled) setLoading(false); });
+      .then((data) => {
+        if (!cancelled) setProfile(data);
+      })
+      .catch((e) => {
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : 'Failed to load profile');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [token, userId]);
 
   useEffect(() => {
     if (!token || !userId || userId === user?.id) return;
     let cancelled = false;
-    getConnections(token, { status: 'accepted', page: 1, page_size: 500 })
+    getAllConnections(token, { status: 'accepted' })
       .then((res) => {
         if (cancelled) return;
-        const found = (res.items ?? []).some(
-          (c) => c.requester.user_id === userId || c.addressee.user_id === userId,
+        const found = (res ?? []).some(
+          (c: ConnectionRead) =>
+            c.requester.user_id === userId || c.addressee.user_id === userId,
         );
         setIsConnected(found);
       })
       .catch(() => {});
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [token, userId, user?.id]);
 
-  usePageToolbarHeader(profile?.display_name ?? 'User Profile', profile?.headline ?? undefined);
+  usePageToolbarHeader(
+    profile?.display_name ?? 'User Profile',
+    profile?.headline ?? undefined,
+  );
 
   const isSelf = user?.id === userId;
   const canSendMessage = canAccessTier('starter');
-  const canRequestConnection = Boolean(profile?.is_superuser) || canAccessTier('starter');
+  const canRequestConnection =
+    Boolean(profile?.is_superuser) || canAccessTier('starter');
 
   const handleConnect = async () => {
     if (!token || !userId) return;
@@ -89,7 +112,10 @@ const UserProfilePage: React.FC = () => {
       setConnected(true);
       notify('Connection request sent');
     } catch (err: unknown) {
-      notify(err instanceof Error ? err.message : 'Failed to send request', 'error');
+      notify(
+        err instanceof Error ? err.message : 'Failed to send request',
+        'error',
+      );
     }
     setConnecting(false);
   };
@@ -104,7 +130,10 @@ const UserProfilePage: React.FC = () => {
       });
       navigate(`/network/messages/${conv.id}`);
     } catch (err: unknown) {
-      notify(err instanceof Error ? err.message : 'Failed to open conversation', 'error');
+      notify(
+        err instanceof Error ? err.message : 'Failed to open conversation',
+        'error',
+      );
     }
     setMessaging(false);
   };
@@ -120,7 +149,11 @@ const UserProfilePage: React.FC = () => {
   if (error || !profile) {
     return (
       <Box>
-        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/network/discover')} sx={{ mb: 2 }}>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/network/discover')}
+          sx={{ mb: 2 }}
+        >
           Back to Discover
         </Button>
         <Alert severity="error">{error ?? 'Profile not found.'}</Alert>
@@ -128,18 +161,28 @@ const UserProfilePage: React.FC = () => {
     );
   }
 
-  const location = [profile.city, profile.state, profile.country].filter(Boolean).join(', ');
+  const location = [profile.city, profile.state, profile.country]
+    .filter(Boolean)
+    .join(', ');
 
   return (
     <Box>
-      <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/network/discover')} sx={{ mb: 3 }}>
+      <Button
+        startIcon={<ArrowBackIcon />}
+        onClick={() => navigate('/network/discover')}
+        sx={{ mb: 3 }}
+      >
         Back to Discover
       </Button>
 
       {/* Header card */}
       <Card sx={{ mb: 3 }}>
         <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} alignItems={{ sm: 'center' }}>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={3}
+            alignItems={{ sm: 'center' }}
+          >
             <Avatar
               src={avatarUrl(profile.user_id, profile.avatar_uri)}
               sx={{ width: 80, height: 80, fontSize: 32 }}
@@ -147,7 +190,7 @@ const UserProfilePage: React.FC = () => {
               {profile.display_name.charAt(0)}
             </Avatar>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="h5" fontWeight={700}>{profile.display_name}</Typography>
+              <PageTitle>{profile.display_name}</PageTitle>
               {profile.is_superuser && (
                 <Chip
                   icon={<AutoAwesomeIcon fontSize="small" />}
@@ -159,18 +202,33 @@ const UserProfilePage: React.FC = () => {
                 />
               )}
               {profile.headline && (
-                <Typography variant="body1" color="text.secondary" sx={{ mt: profile.is_superuser ? 1 : 0.5 }}>{profile.headline}</Typography>
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
+                  sx={{ mt: profile.is_superuser ? 1 : 0.5 }}
+                >
+                  {profile.headline}
+                </Typography>
               )}
               {location && (
-                <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 1 }}>
+                <Stack
+                  direction="row"
+                  spacing={0.5}
+                  alignItems="center"
+                  sx={{ mt: 1 }}
+                >
                   <LocationIcon fontSize="small" color="action" />
-                  <Typography variant="body2" color="text.secondary">{location}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {location}
+                  </Typography>
                 </Stack>
               )}
               <Chip
                 label={profile.placement_status}
                 size="small"
-                color={profile.placement_status === 'active' ? 'success' : 'default'}
+                color={
+                  profile.placement_status === 'active' ? 'success' : 'default'
+                }
                 variant="outlined"
                 sx={{ mt: 1.5 }}
               />
@@ -178,11 +236,17 @@ const UserProfilePage: React.FC = () => {
             {!isSelf && (
               <Stack spacing={1} alignItems={{ sm: 'flex-end' }}>
                 <Stack direction="row" spacing={1}>
-                  {isConnected && (
-                    canSendMessage ? (
+                  {isConnected &&
+                    (canSendMessage ? (
                       <Button
                         variant="outlined"
-                        startIcon={messaging ? <CircularProgress size={16} color="inherit" /> : <MessageIcon />}
+                        startIcon={
+                          messaging ? (
+                            <CircularProgress size={16} color="inherit" />
+                          ) : (
+                            <MessageIcon />
+                          )
+                        }
                         disabled={messaging}
                         onClick={handleMessage}
                       >
@@ -196,12 +260,17 @@ const UserProfilePage: React.FC = () => {
                       >
                         Unlock Messages
                       </Button>
-                    )
-                  )}
+                    ))}
                   {canRequestConnection ? (
                     <Button
                       variant="contained"
-                      startIcon={connecting ? <CircularProgress size={16} color="inherit" /> : <PersonAddIcon />}
+                      startIcon={
+                        connecting ? (
+                          <CircularProgress size={16} color="inherit" />
+                        ) : (
+                          <PersonAddIcon />
+                        )
+                      }
                       disabled={connecting || connected}
                       onClick={handleConnect}
                     >
@@ -232,8 +301,12 @@ const UserProfilePage: React.FC = () => {
       {profile.bio && (
         <Card sx={{ mb: 3 }}>
           <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>About</Typography>
-            <Typography variant="body1" sx={{ whiteSpace: 'pre-line' }}>{profile.bio}</Typography>
+            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+              About
+            </Typography>
+            <Typography variant="body1" sx={{ whiteSpace: 'pre-line' }}>
+              {profile.bio}
+            </Typography>
           </CardContent>
         </Card>
       )}
@@ -242,10 +315,17 @@ const UserProfilePage: React.FC = () => {
       {(profile.skills ?? []).length > 0 && (
         <Card sx={{ mb: 3 }}>
           <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>Skills</Typography>
+            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+              Skills
+            </Typography>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               {(profile.skills ?? []).map((skill) => (
-                <Chip key={skill.id} label={skill.name} size="small" variant="outlined" />
+                <Chip
+                  key={skill.id}
+                  label={skill.name}
+                  size="small"
+                  variant="outlined"
+                />
               ))}
             </Stack>
           </CardContent>
@@ -256,13 +336,19 @@ const UserProfilePage: React.FC = () => {
       {(profile.experiences ?? []).length > 0 && (
         <Card>
           <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>Experience</Typography>
+            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+              Experience
+            </Typography>
             <Stack spacing={2}>
               {(profile.experiences ?? []).map((exp) => (
                 <Box key={exp.id}>
-                  <Typography variant="body1" fontWeight={600}>{exp.title}</Typography>
+                  <Typography variant="body1" fontWeight={600}>
+                    {exp.title}
+                  </Typography>
                   {exp.company && (
-                    <Typography variant="body2" color="text.secondary">{exp.company}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {exp.company}
+                    </Typography>
                   )}
                   {(exp.start_date || exp.end_date) && (
                     <Typography variant="caption" color="text.secondary">
@@ -270,7 +356,12 @@ const UserProfilePage: React.FC = () => {
                     </Typography>
                   )}
                   {exp.description && (
-                    <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-line' }}>{exp.description}</Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{ mt: 0.5, whiteSpace: 'pre-line' }}
+                    >
+                      {exp.description}
+                    </Typography>
                   )}
                 </Box>
               ))}

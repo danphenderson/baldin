@@ -1,10 +1,22 @@
 import React, { useContext, useState, useMemo, useDeferredValue, useCallback } from 'react';
 import {
-  Box, Typography, TextField, InputAdornment, Stack, Chip, Card, CardContent,
-  IconButton, Tooltip, Skeleton, Snackbar, Alert, Fade, FormControl, InputLabel,
-  Select, MenuItem, useMediaQuery,
-} from '@mui/material';
-import { useTheme, alpha } from '@mui/material/styles';
+  Box,
+  Typography,
+  TextField,
+  InputAdornment,
+  Stack,
+  Divider,
+  IconButton,
+  Tooltip,
+  Snackbar,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  useMediaQuery,
+  } from '@mui/material';
+import { useTheme,
+  alpha } from '@mui/material/styles';
 import {
   Search as SearchIcon,
   ArrowForward as ArrowIcon,
@@ -16,31 +28,41 @@ import {
   SearchOff as SearchOffIcon,
   Warning as WarningIcon,
   Description as DocIcon,
-} from '@mui/icons-material';
+  } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import {
   useApplications,
-  COLUMNS,
-  ALL_STATUS_COLUMNS,
+  useStageColumns,
   relativeDate,
-  nextStatus,
+  nextStage,
   effectiveStage,
   isClosed,
   applicationDocumentCount,
   applicationHasResume,
   applicationHasCoverLetter,
-} from './use-applications';
+  type Column,
+  } from './use-applications';
 import type { ApplicationRead } from '../../service/applications';
-import ConfirmDialog from '../../component/common/confirm-dialog';
-import EmptyState from '../../component/common/empty-state';
+import {
+  CollectionToolbar,
+  ConfirmDialog,
+  EmptyState,
+  InlineFeedback,
+  LoadingState,
+  CardShell,
+  MetricStrip,
+  StatusChip,
+  StatusChip as Chip,
+} from '../../design-system';
 
 /* ------------------------------------------------------------------ */
 /*  Sort options                                                       */
 /* ------------------------------------------------------------------ */
 
 type SortKey = 'updated' | 'company' | 'stage' | 'due';
+import { stageTone } from './stage-tone';
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: 'updated', label: 'Recently Updated' },
@@ -49,14 +71,12 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: 'due', label: 'Due Date' },
 ];
 
-const STAGE_ORDER = Object.fromEntries(ALL_STATUS_COLUMNS.map((c, i) => [c.key, i]));
+/** Static stage ordering (no colors needed for sort comparisons). */
+const STAGE_KEYS = ['registered', 'applied', 'screening', 'interview', 'offer', 'rejected', 'withdrawn'];
+const STAGE_ORDER = Object.fromEntries(STAGE_KEYS.map((k, i) => [k, i]));
 
 function stageOf(app: ApplicationRead): string {
   return effectiveStage(app);
-}
-
-function columnFor(status: string) {
-  return ALL_STATUS_COLUMNS.find((c) => c.key === status) ?? ALL_STATUS_COLUMNS[0];
 }
 
 /* ------------------------------------------------------------------ */
@@ -68,6 +88,10 @@ const ApplicationsQueuePage: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const { token } = useContext(UserContext);
+  const { columns: COLUMNS, allStatusColumns: ALL_STATUS_COLUMNS } = useStageColumns();
+
+  const columnFor = (status: string): Column =>
+    ALL_STATUS_COLUMNS.find((c) => c.key === status) ?? ALL_STATUS_COLUMNS[0];
 
   const {
     applications, loading, error, success, setError, setSuccess,
@@ -104,7 +128,7 @@ const ApplicationsQueuePage: React.FC = () => {
 
   usePageToolbarHeader(
     'Applications',
-    `${totalCount} total · ${activeCount} active · ${offerCount} offers`,
+    `${totalCount} applications`,
   );
 
   /* ---- Filtering + sorting ---- */
@@ -190,205 +214,157 @@ const ApplicationsQueuePage: React.FC = () => {
     <Box>
       {/* ── Feedback alerts ── */}
       {error && (
-        <Fade in>
-          <Alert
-            severity="error"
-            onClose={() => setError('')}
-            sx={{ mb: 2 }}
-          >
+        <InlineFeedback
+          tone="error"
+          onClose={() => setError('')}
+          sx={{ mb: 2 }}
+        >
             {error}
-          </Alert>
-        </Fade>
+        </InlineFeedback>
       )}
       {success && (
-        <Fade in>
-          <Alert
-            severity="success"
-            onClose={() => setSuccess('')}
-            sx={{ mb: 2 }}
-          >
+        <InlineFeedback
+          tone="success"
+          onClose={() => setSuccess('')}
+          sx={{ mb: 2 }}
+        >
             {success}
-          </Alert>
-        </Fade>
+        </InlineFeedback>
       )}
 
-      {/* ── Summary strip ── */}
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}
-      >
-        <Chip
-          label={`${totalCount} total`}
-          size="small"
-          variant="outlined"
-        />
-        <Chip
-          label={`${activeCount} active`}
-          size="small"
-          variant={activeCount ? 'filled' : 'outlined'}
-          sx={activeCount ? {
-            bgcolor: alpha(COLUMNS[0].color, 0.12),
-            color: COLUMNS[0].color,
-            fontWeight: 600,
-          } : undefined}
-        />
-        <Chip
-          label={`${interviewCount} interviewing`}
-          size="small"
-          variant={interviewCount ? 'filled' : 'outlined'}
-          sx={interviewCount ? {
-            bgcolor: alpha(COLUMNS[2].color, 0.12),
-            color: COLUMNS[2].color,
-            fontWeight: 600,
-          } : undefined}
-        />
-        <Chip
-          label={`${offerCount} offers`}
-          size="small"
-          variant={offerCount ? 'filled' : 'outlined'}
-          sx={offerCount ? {
-            bgcolor: alpha(COLUMNS[3].color, 0.12),
-            color: COLUMNS[3].color,
-            fontWeight: 600,
-          } : undefined}
-        />
-        <Chip
-          label={`${rejectedCount} closed`}
-          size="small"
-          variant={rejectedCount ? 'filled' : 'outlined'}
-          sx={rejectedCount ? {
-            bgcolor: alpha(ALL_STATUS_COLUMNS.find((c) => c.key === 'rejected')!.color, 0.12),
-            color: ALL_STATUS_COLUMNS.find((c) => c.key === 'rejected')!.color,
-            fontWeight: 600,
-          } : undefined}
-        />
-      </Stack>
+      {/* ── Metric strip ── */}
+      <MetricStrip
+        variant="inline"
+        items={[
+          { label: 'Total', value: totalCount },
+          { label: 'Active', value: activeCount, color: COLUMNS[0].color },
+          { label: 'Interviewing', value: interviewCount, color: COLUMNS[2].color },
+          { label: 'Offers', value: offerCount, color: COLUMNS[3].color },
+          { label: 'Closed', value: rejectedCount, color: ALL_STATUS_COLUMNS.find((c) => c.key === 'rejected')!.color },
+        ]}
+      />
 
       {/* ── Search + filters + sort ── */}
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={2}
-        sx={{ mb: 2 }}
-        alignItems={{ sm: 'center' }}
-      >
-        <TextField
-          size="small"
-          placeholder="Search by title, company, or location…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          sx={{ flexGrow: 1 }}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                </InputAdornment>
-              ),
-              'aria-label': 'Search applications',
-            },
-          }}
-        />
-
-        <FormControl size="small" sx={{ minWidth: 130 }}>
-          <InputLabel id="apps-sort-label">Sort</InputLabel>
-          <Select
-            labelId="apps-sort-label"
-            value={sortKey}
-            label="Sort"
-            onChange={(e) => setSortKey(e.target.value as SortKey)}
+      <CollectionToolbar
+        sx={{ mb: 3, mt: 2 }}
+        search={(
+          <TextField
+            size="small"
+            placeholder="Search by title, company, or location…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            sx={{ flexGrow: 1 }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                  </InputAdornment>
+                ),
+                'aria-label': 'Search applications',
+              },
+            }}
+          />
+        )}
+        controls={(
+          <FormControl size="small" sx={{ minWidth: 130 }}>
+            <InputLabel id="apps-sort-label">Sort</InputLabel>
+            <Select
+              labelId="apps-sort-label"
+              value={sortKey}
+              label="Sort"
+              onChange={(e) => setSortKey(e.target.value as SortKey)}
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        )}
+        secondary={applications.length > 0 ? (
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={1}
+            alignItems={{ md: 'center' }}
+            sx={{ flexWrap: 'wrap', rowGap: 1, columnGap: 1 }}
           >
-            {SORT_OPTIONS.map((opt) => (
-              <MenuItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Stack>
-
-      {/* ── Stage filter chips ── */}
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{ mb: 1.5, flexWrap: 'wrap', gap: 1 }}
-      >
-        <Chip
-          label="All Stages"
-          size="small"
-          variant={stageFilter === 'all' ? 'filled' : 'outlined'}
-          color={stageFilter === 'all' ? 'primary' : 'default'}
-          onClick={() => setStageFilter('all')}
-        />
-        {ALL_STATUS_COLUMNS.map((col) => (
-          <Chip
-            key={col.key}
-            label={col.label}
-            size="small"
-            variant={stageFilter === col.key ? 'filled' : 'outlined'}
-            onClick={() => setStageFilter(stageFilter === col.key ? 'all' : col.key)}
-            sx={
-              stageFilter === col.key
-                ? { bgcolor: col.color, color: '#fff', fontWeight: 600 }
-                : { borderColor: alpha(col.color, 0.4), color: col.color }
-            }
-          />
-        ))}
-      </Stack>
-
-      {/* ── Active / Closed filter ── */}
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{ mb: 3, flexWrap: 'wrap', gap: 1 }}
-      >
-        {(['all', 'active', 'closed'] as const).map((key) => (
-          <Chip
-            key={key}
-            label={key === 'all' ? 'All' : key === 'active' ? 'Active' : 'Closed'}
-            size="small"
-            variant={activeFilter === key ? 'filled' : 'outlined'}
-            color={activeFilter === key ? 'primary' : 'default'}
-            onClick={() => setActiveFilter(key)}
-          />
-        ))}
-        <Chip
-          icon={<DocIcon sx={{ fontSize: '0.85rem !important' }} />}
-          label="Has Resume"
-          size="small"
-          variant={resumeFilter === 'yes' ? 'filled' : 'outlined'}
-          color={resumeFilter === 'yes' ? 'success' : 'default'}
-          onClick={() => setResumeFilter(resumeFilter === 'yes' ? 'all' : 'yes')}
-        />
-        <Chip
-          icon={<DocIcon sx={{ fontSize: '0.85rem !important' }} />}
-          label="Has Cover Letter"
-          size="small"
-          variant={coverLetterFilter === 'yes' ? 'filled' : 'outlined'}
-          color={coverLetterFilter === 'yes' ? 'success' : 'default'}
-          onClick={() => setCoverLetterFilter(coverLetterFilter === 'yes' ? 'all' : 'yes')}
-        />
-      </Stack>
+            <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
+              <Chip
+                label="All Stages"
+                size="small"
+                variant={stageFilter === 'all' ? 'filled' : 'outlined'}
+                color={stageFilter === 'all' ? 'primary' : 'default'}
+                onClick={() => setStageFilter('all')}
+                sx={{ fontWeight: stageFilter === 'all' ? 600 : 400 }}
+              />
+              {ALL_STATUS_COLUMNS.map((col) => (
+                <Chip
+                  key={col.key}
+                  label={col.label}
+                  size="small"
+                  variant={stageFilter === col.key ? 'filled' : 'outlined'}
+                  onClick={() => setStageFilter(stageFilter === col.key ? 'all' : col.key)}
+                  sx={
+                    stageFilter === col.key
+                      ? { bgcolor: col.color, color: theme.palette.getContrastText(col.color), fontWeight: 600 }
+                      : { borderColor: alpha(col.color, 0.4), color: col.color }
+                  }
+                />
+              ))}
+            </Stack>
+            <Divider
+              data-testid="applications-filter-divider"
+              orientation={isMobile ? 'horizontal' : 'vertical'}
+              flexItem
+              sx={{ alignSelf: 'stretch' }}
+            />
+            <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
+              {(['all', 'active', 'closed'] as const).map((key) => (
+                <Chip
+                  key={key}
+                  label={key === 'all' ? 'All' : key === 'active' ? 'Active' : 'Closed'}
+                  size="small"
+                  variant={activeFilter === key ? 'filled' : 'outlined'}
+                  color={activeFilter === key ? 'primary' : 'default'}
+                  onClick={() => setActiveFilter(key)}
+                  sx={{ fontWeight: activeFilter === key ? 600 : 400 }}
+                />
+              ))}
+              <Chip
+                icon={<DocIcon sx={{ fontSize: '0.85rem !important' }} />}
+                label="Has Resume"
+                size="small"
+                variant={resumeFilter === 'yes' ? 'filled' : 'outlined'}
+                color={resumeFilter === 'yes' ? 'success' : 'default'}
+                onClick={() => setResumeFilter(resumeFilter === 'yes' ? 'all' : 'yes')}
+                sx={{ fontWeight: resumeFilter === 'yes' ? 600 : 400 }}
+              />
+              <Chip
+                icon={<DocIcon sx={{ fontSize: '0.85rem !important' }} />}
+                label="Has Cover Letter"
+                size="small"
+                variant={coverLetterFilter === 'yes' ? 'filled' : 'outlined'}
+                color={coverLetterFilter === 'yes' ? 'success' : 'default'}
+                onClick={() => setCoverLetterFilter(coverLetterFilter === 'yes' ? 'all' : 'yes')}
+                sx={{ fontWeight: coverLetterFilter === 'yes' ? 600 : 400 }}
+              />
+            </Stack>
+          </Stack>
+        ) : undefined}
+      />
 
       {/* ── Application list ── */}
       {loading ? (
-        <Stack spacing={2}>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton
-              key={i}
-              variant="rounded"
-              height={96}
-              sx={{ borderRadius: 3 }}
-            />
-          ))}
-        </Stack>
+        <LoadingState kind="list" count={5} itemHeight={96} />
       ) : sorted.length === 0 ? (
         applications.length === 0 ? (
           <EmptyState
             icon={<WorkIcon />}
             title="No applications tracked"
             description="Apply to a lead to start tracking your application progress."
-            action={{
+            primaryAction={{
               label: 'Browse Leads',
               onClick: () => navigate('/leads'),
               icon: <ExploreIcon />,
@@ -408,155 +384,138 @@ const ApplicationsQueuePage: React.FC = () => {
             const stage = stageOf(app);
             const column = columnFor(stage);
             const companyName = lead?.companies?.[0]?.name;
-            const canAdvance = nextStatus(stage) !== null;
+            const canAdvance = nextStage(stage) !== null;
             const documentCount = applicationDocumentCount(app);
 
             return (
-              <Card
+              <CardShell
                 key={app.id}
                 onClick={() => handleCardClick(app)}
+                interactive
+                tone={stageTone(column.key)}
+                density="compact"
                 sx={{
-                  cursor: 'pointer',
-                  transition: 'box-shadow 0.15s ease, transform 0.15s ease',
+                  '&:focus-within .queue-actions': { opacity: 1 },
                   '&:hover': {
                     boxShadow: `0 4px 16px ${alpha(column.color, 0.15)}`,
-                    transform: 'translateY(-1px)',
                     '& .queue-actions': { opacity: 1 },
                   },
-                  '&:focus-visible': {
-                    outline: `2px solid ${theme.palette.primary.main}`,
-                    outlineOffset: 2,
-                  },
                 }}
-                tabIndex={0}
-                role="button"
+                contentSx={{
+                  p: 2,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 2,
+                }}
                 aria-label={`View ${lead?.title || 'application'} details`}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleCardClick(app);
-                  }
-                }}
               >
-                <CardContent
+                <Box
                   sx={{
-                    p: 2,
-                    '&:last-child': { pb: 2 },
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
+                    width: 4,
+                    alignSelf: 'stretch',
+                    borderRadius: '8px',
+                    bgcolor: column.color,
+                    flexShrink: 0,
                   }}
                 >
-                  {/* Stage indicator */}
-                  <Box
-                    sx={{
-                      width: 4,
-                      alignSelf: 'stretch',
-                      borderRadius: 2,
-                      bgcolor: column.color,
-                      flexShrink: 0,
-                    }}
-                  />
+                </Box>
 
-                  {/* Main content */}
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Stack
-                      direction={{ xs: 'column', sm: 'row' }}
-                      spacing={{ xs: 0.25, sm: 1 }}
-                      alignItems={{ sm: 'center' }}
-                      sx={{ mb: 0.5 }}
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={{ xs: 0.25, sm: 1 }}
+                    alignItems={{ sm: 'center' }}
+                    sx={{ mb: 0.5 }}
+                  >
+                    <Typography
+                      variant="body1"
+                      fontWeight={700}
+                      noWrap
+                      sx={{ flex: 1, minWidth: 0 }}
                     >
+                      {lead?.title || 'Untitled Position'}
+                    </Typography>
+
+                    {companyName && (
                       <Typography
-                        variant="body1"
-                        fontWeight={700}
+                        variant="body2"
+                        color="text.secondary"
                         noWrap
-                        sx={{ flex: 1, minWidth: 0 }}
                       >
-                        {lead?.title || 'Untitled Position'}
+                        {companyName}
                       </Typography>
+                    )}
+                  </Stack>
 
-                      {companyName && (
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          noWrap
-                        >
-                          {companyName}
-                        </Typography>
-                      )}
-                    </Stack>
-
-                    <Stack
-                      direction="row"
-                      spacing={0.75}
-                      sx={{ flexWrap: 'wrap', gap: 0.5 }}
-                    >
+                  <Stack
+                    direction="row"
+                    spacing={0.75}
+                    sx={{ flexWrap: 'wrap', gap: 0.5 }}
+                  >
+                    <StatusChip
+                      label={column.label}
+                      size="small"
+                      tone={stageTone(column.key)}
+                      sx={{
+                        fontSize: '0.7rem',
+                        height: 22,
+                      }}
+                    />
+                    {lead?.location && (
                       <Chip
-                        label={column.label}
+                        icon={<LocationIcon sx={{ fontSize: '0.75rem !important' }} />}
+                        label={lead.location}
                         size="small"
-                        sx={{
-                          bgcolor: alpha(column.color, 0.12),
-                          color: column.color,
-                          fontWeight: 600,
-                          fontSize: '0.7rem',
-                          height: 22,
-                        }}
-                      />
-                      {lead?.location && (
-                        <Chip
-                          icon={<LocationIcon sx={{ fontSize: '0.75rem !important' }} />}
-                          label={lead.location}
-                          size="small"
-                          variant="outlined"
-                          sx={{
-                            fontSize: '0.7rem',
-                            height: 22,
-                            '& .MuiChip-icon': { ml: 0.5, mr: -0.25 },
-                          }}
-                        />
-                      )}
-                      {lead?.salary && (
-                        <Chip
-                          icon={<SalaryIcon sx={{ fontSize: '0.75rem !important' }} />}
-                          label={lead.salary}
-                          size="small"
-                          variant="outlined"
-                          color="success"
-                          sx={{
-                            fontSize: '0.7rem',
-                            height: 22,
-                            '& .MuiChip-icon': { ml: 0.5, mr: -0.25 },
-                          }}
-                        />
-                      )}
-                      <Chip
-                        icon={<DocIcon sx={{ fontSize: '0.75rem !important' }} />}
-                        label={`${documentCount} doc${documentCount === 1 ? '' : 's'}`}
-                        size="small"
-                        variant={documentCount > 0 ? 'filled' : 'outlined'}
+                        variant="outlined"
                         sx={{
                           fontSize: '0.7rem',
                           height: 22,
-                          bgcolor: documentCount > 0 ? alpha(theme.palette.primary.main, 0.12) : undefined,
-                          color: documentCount > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
                           '& .MuiChip-icon': { ml: 0.5, mr: -0.25 },
                         }}
                       />
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
+                    )}
+                    {lead?.salary && (
+                      <Chip
+                        icon={<SalaryIcon sx={{ fontSize: '0.75rem !important' }} />}
+                        label={lead.salary}
+                        size="small"
+                        variant="outlined"
+                        color="success"
                         sx={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
                           fontSize: '0.7rem',
-                          opacity: 0.7,
+                          height: 22,
+                          '& .MuiChip-icon': { ml: 0.5, mr: -0.25 },
                         }}
-                      >
-                        {relativeDate(app.updated_at)}
-                      </Typography>
-                    </Stack>
+                      />
+                    )}
+                    <Chip
+                      icon={<DocIcon sx={{ fontSize: '0.75rem !important' }} />}
+                      label={`${documentCount} doc${documentCount === 1 ? '' : 's'}`}
+                      size="small"
+                      variant={documentCount > 0 ? 'filled' : 'outlined'}
+                      sx={{
+                        fontSize: '0.7rem',
+                        height: 22,
+                        bgcolor: documentCount > 0 ? alpha(theme.palette.primary.main, 0.12) : undefined,
+                        color: documentCount > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
+                        '& .MuiChip-icon': { ml: 0.5, mr: -0.25 },
+                      }}
+                    />
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        fontSize: '0.7rem',
+                        opacity: 0.7,
+                      }}
+                    >
+                      {relativeDate(app.updated_at)}
+                    </Typography>
+                  </Stack>
 
-                    {app.next_step && (
+                  {app.next_step && (
                       <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.5 }}>
                         {app.next_step_due && new Date(app.next_step_due) < new Date() && (
                           <WarningIcon sx={{ fontSize: '0.75rem', color: 'warning.main' }} />
@@ -577,56 +536,55 @@ const ApplicationsQueuePage: React.FC = () => {
                           )}
                         </Typography>
                       </Stack>
-                    )}
-                  </Box>
+                  )}
+                </Box>
 
-                  {/* Quick actions */}
-                  <Stack
-                    className="queue-actions"
-                    direction="row"
-                    spacing={0}
-                    sx={{
-                      opacity: isMobile ? 1 : 0,
-                      transition: 'opacity 0.15s ease',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {canAdvance && (
-                      <Tooltip
-                        title={`Move to ${ALL_STATUS_COLUMNS[ALL_STATUS_COLUMNS.findIndex((c) => c.key === stage) + 1]?.label}`}
-                      >
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          aria-label="Advance application"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAdvance(app);
-                          }}
-                        >
-                          <ArrowIcon sx={{ fontSize: '1.1rem' }} />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                    <Tooltip title="Delete">
+                {/* Quick actions */}
+                <Stack
+                  className="queue-actions"
+                  direction="row"
+                  spacing={0}
+                  sx={{
+                    opacity: isMobile ? 1 : 0,
+                    transition: 'opacity 0.15s ease',
+                    flexShrink: 0,
+                  }}
+                >
+                  {canAdvance && (
+                    <Tooltip
+                      title={`Move to ${ALL_STATUS_COLUMNS[ALL_STATUS_COLUMNS.findIndex((c) => c.key === stage) + 1]?.label}`}
+                    >
                       <IconButton
                         size="small"
-                        aria-label="Delete application"
+                        color="primary"
+                        aria-label="Advance application"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDelete(app);
-                        }}
-                        sx={{
-                          color: theme.palette.text.secondary,
-                          '&:hover': { color: theme.palette.error.main },
+                          handleAdvance(app);
                         }}
                       >
-                        <DeleteIcon sx={{ fontSize: '1.1rem' }} />
+                        <ArrowIcon sx={{ fontSize: '1.1rem' }} />
                       </IconButton>
                     </Tooltip>
-                  </Stack>
-                </CardContent>
-              </Card>
+                  )}
+                  <Tooltip title="Delete">
+                    <IconButton
+                      size="small"
+                      aria-label="Delete application"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(app);
+                      }}
+                      sx={{
+                        color: theme.palette.text.secondary,
+                        '&:hover': { color: theme.palette.error.main },
+                      }}
+                    >
+                      <DeleteIcon sx={{ fontSize: '1.1rem' }} />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
+              </CardShell>
             );
           })}
         </Stack>
@@ -660,14 +618,13 @@ const ApplicationsQueuePage: React.FC = () => {
         onClose={() => setSuccess('')}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert
+        <InlineFeedback
+          tone="success"
           onClose={() => setSuccess('')}
-          severity="success"
           variant="filled"
-          sx={{ width: '100%' }}
         >
           {success}
-        </Alert>
+        </InlineFeedback>
       </Snackbar>
     </Box>
   );

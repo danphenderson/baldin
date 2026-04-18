@@ -1,9 +1,10 @@
 import { components } from '../schema';
 import { API_URL } from '../config/env';
+import type { PaginatedResponse } from './pagination';
 
 export type ConversationRead = components['schemas']['ConversationRead'];
 export type ConversationDetailRead = components['schemas']['ConversationDetailRead'];
-export type ConversationsPaginatedRead = components['schemas']['ConversationsPaginatedRead'];
+export type ConversationsPaginatedRead = PaginatedResponse<ConversationRead>;
 export type ConversationCreate = components['schemas']['ConversationCreate'];
 export type ConversationType = components['schemas']['ConversationType'];
 export type ConversationParticipantRead = components['schemas']['ConversationParticipantRead'];
@@ -16,7 +17,7 @@ export type UnreadCountRead = components['schemas']['UnreadCountRead'];
 
 type MessagingErrorDetail = unknown;
 
-const BASE_URL = `${API_URL}/conversations`;
+const BASE_URL = `${API_URL}/api/v1/conversations`;
 
 export class MessagingServiceError extends Error {
   status: number;

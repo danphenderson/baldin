@@ -85,6 +85,7 @@ def _base_state(store: _FakeStore, leads: list[dict] | None = None) -> dict:
         "workflow_name": "rag.rank_leads",
         "model_name": "gpt-5.4-nano-2026-03-17",
         "leads": leads,
+        "aspirations": [],
         "combined_query": combined_query,
         "combined_query_chars": len(combined_query),
         "requested_k": 5,
@@ -99,6 +100,7 @@ def _valid_draft() -> LeadRankingDraft:
                 title="Senior Backend Engineer",
                 relevance_score=9,
                 explanation="Your FastAPI and PostgreSQL experience directly matches this role's core requirements.",
+                aspiration_alignment="Direct fit with the user's aspiration to grow into senior backend platform roles.",
             ),
             RankedLeadEntry(
                 lead_index=3,
@@ -125,6 +127,25 @@ def _out_of_range_draft() -> LeadRankingDraft:
                 relevance_score=9,
                 explanation="This explanation is long enough to satisfy validation even though the lead index is invalid.",
             )
+        ]
+    )
+
+
+def _missing_lead_draft() -> LeadRankingDraft:
+    return LeadRankingDraft(
+        ranked_leads=[
+            RankedLeadEntry(
+                lead_index=1,
+                title="Senior Backend Engineer",
+                relevance_score=9,
+                explanation="The backend scope strongly matches the user's existing FastAPI and PostgreSQL experience.",
+            ),
+            RankedLeadEntry(
+                lead_index=2,
+                title="Platform Engineer",
+                relevance_score=7,
+                explanation="The infrastructure focus partially aligns, but it is not a complete ranking for the request.",
+            ),
         ]
     )
 
@@ -163,6 +184,41 @@ def _install_generator(
         return outcome
 
     monkeypatch.setattr(nodes, "ainvoke_structured_prompt", _fake_ainvoke)
+
+
+def test_build_ranking_prompt_includes_aspirations() -> None:
+    prompt = nodes._build_ranking_prompt(" - Role: Staff Engineer")
+    messages = prompt.format_messages(
+        context="PROFILE CONTEXT",
+        leads_text="1. Staff Engineer: Platform and backend scope.",
+        aspirations_text="- Role: Staff Engineer",
+    )
+    rendered = "\n".join(str(message.content) for message in messages)
+    assert "career aspirations" in rendered
+    assert "Staff Engineer" in rendered
+
+
+def test_build_ranking_prompt_omits_aspirations_when_absent() -> None:
+    prompt = nodes._build_ranking_prompt()
+    messages = prompt.format_messages(
+        context="PROFILE CONTEXT",
+        leads_text="1. Staff Engineer: Platform and backend scope.",
+    )
+    rendered = "\n".join(str(message.content) for message in messages)
+    assert "career aspirations" not in rendered
+    assert "complete 1..N permutation" in rendered
+
+
+def test_build_ranking_prompt_repair_requires_complete_permutation() -> None:
+    prompt = nodes._build_ranking_prompt(repair_note="missing 2")
+    messages = prompt.format_messages(
+        context="PROFILE CONTEXT",
+        leads_text="1. Staff Engineer: Platform and backend scope.",
+    )
+    rendered = "\n".join(str(message.content) for message in messages)
+
+    assert "covering every input lead exactly once" in rendered
+    assert "Prior failure: missing 2" in rendered
 
 
 @pytest.mark.asyncio
@@ -377,6 +433,38 @@ async def test_ranking_graph_rejects_out_of_range_lead_indices(
     assert payload["outcome"]["error_code"] == "generation_failed"
 
 
+@pytest.mark.asyncio
+async def test_ranking_graph_rejects_missing_lead_indices(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = _FakeStore(
+        [[_result("MISSING_LEAD_CONTEXT", 0.9), _result("SECOND_CONTEXT", 0.83)]]
+    )
+    recorder = _install_orchestration_recorder(monkeypatch)
+    _install_generator(
+        monkeypatch,
+        [_missing_lead_draft(), _missing_lead_draft()],
+    )
+
+    graph = build_lead_ranking_graph()
+    final_state = await graph.ainvoke(_base_state(store))
+
+    assert final_state["outcome_result"] == "failure"
+    assert final_state["http_status"] == 500
+    assert final_state["error_code"] == "generation_failed"
+    assert final_state["generation_attempts"] == 2
+    assert final_state["repair_used"] is True
+    assert (
+        "include every input lead exactly once"
+        in final_state["generation_error_summary"]
+    )
+
+    payload = recorder.updated_payloads[-1][1].payload
+    assert payload is not None
+    assert payload["generation"]["attempts"] == 2
+    assert payload["outcome"]["error_code"] == "generation_failed"
+
+
 def test_render_lead_ranking_is_stable_and_sorted() -> None:
     draft = _valid_draft()
     rendered = render_lead_ranking(draft)
@@ -385,6 +473,10 @@ def test_render_lead_ranking_is_stable_and_sorted() -> None:
     assert "Senior Backend Engineer (Score: 9/10)" in rendered
     assert "ML Engineer (Score: 7/10)" in rendered
     assert "Platform Engineer (Score: 5/10)" in rendered
+    assert (
+        "Aspiration fit: Direct fit with the user's aspiration to grow into senior backend platform roles."
+        in rendered
+    )
 
     lines = rendered.split("\n")
     # First entry after header should be highest score

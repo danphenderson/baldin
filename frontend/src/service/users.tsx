@@ -41,19 +41,19 @@ const unwrap = <T,>(
 
 export const getUser = async (token: string): Promise<UserRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/users/me'));
+  return unwrap(await client.GET('/api/v1/users/me'));
 };
 
 export const updateUser = async (token: string, user: UserUpdate): Promise<UserRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PATCH('/users/me', {
+  return unwrap(await client.PATCH('/api/v1/users/me', {
     body: user,
   }));
 };
 
 export const getUserProfile = async (token: string): Promise<UserProfile> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/users/me/profile'));
+  return unwrap(await client.GET('/api/v1/users/me/profile'));
 };
 
 // CONTRACT GAP: GET /users (list all users, superuser only) is not in schema.d.ts typed paths.
@@ -71,12 +71,12 @@ export const getUsers = async (token: string): Promise<UserRead[]> => {
 
 export const seedUsers = async (token: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.POST('/users/seed'));
+  unwrap(await client.POST('/api/v1/users/seed'));
 };
 
 export const updatePlacement = async (token: string, data: PlacementUpdate): Promise<UserRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PATCH('/users/me/placement', {
+  return unwrap(await client.PATCH('/api/v1/users/me/placement', {
     body: data,
   }));
 };

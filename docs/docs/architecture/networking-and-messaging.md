@@ -2,24 +2,26 @@
 sidebar_position: 7
 slug: /architecture/networking-and-messaging
 title: Follow Network Flows
-description: Follow directory, connections, conversations, activity, and action-item flows.
+description: Follow opt-in directory, connections, conversations, personal activity, and action-item flows.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-17 -->
 
 # Follow Network Flows
 
-Baldin is not only a job-search tracker. The codebase also includes a lightweight user-network layer for discovery, connection requests, direct and group conversations, and a personal activity/task surface that ties those features back to the rest of the product.
+This boundary covers Baldin's private-by-default network context: opt-in discovery, connection requests, direct and group conversations, reusable agents, and the personal activity and action-item surfaces that tie those flows back to the rest of the workspace.
+
+It does not describe future listing-observability or anonymized shared-signal features. Current activity surfaces are per-user workflow views, not public listing-health feeds.
 
 ## Feature Map
 
 ```mermaid
 graph TD
     accTitle: Networking Feature Map
-    accDescr: Shows how Directory feeds Connections, which enables Direct conversations; Group conversations and Document versions feed into the Activity feed alongside Applications; and the Activity feed drives Action items.
-    Directory[Directory] --> Connections[Connections]
+    accDescr: Shows how the opt-in Directory feeds Connections, which enables Direct conversations; Group conversations and Document versions feed into the Personal Activity feed alongside Applications; and the activity feed drives Action items.
+    Directory[Opt-in Directory] --> Connections[Connections]
     Connections --> DirectMessages[Direct conversations]
-    DirectMessages --> ActivityFeed[Activity feed]
+    DirectMessages --> ActivityFeed[Personal Activity feed]
     GroupMessages[Group conversations] --> ActivityFeed
     Documents[Document versions] --> ActivityFeed
     Applications[Application status history] --> ActivityFeed
@@ -30,11 +32,12 @@ graph TD
 
 | Route family | Prefix | Primary purpose |
 | --- | --- | --- |
-| `directory` | `/directory` | Discoverable user directory and profile previews |
+| `directory` | `/directory` | Opt-in discoverable user directory and profile previews |
 | `connections` | `/connections` | Connection request lifecycle |
 | `messaging` | `/conversations` | Direct and group conversations, messages, unread counts |
-| `activity-feed` | `/activity-feed` | Aggregated activity stream and dashboard summary |
+| `activity-feed` | `/activity-feed` | Per-user activity stream and dashboard summary |
 | `action-items` | `/action-items` | User-facing tasks linked to applications, leads, documents, or conversations |
+| `agents` | `/agents` | Agent CRUD, supported-model discovery, one-shot runs, persisted chat sessions, streamed replies, and chat export |
 
 ## Data Model
 
@@ -44,12 +47,17 @@ graph TD
 | `conversations` | Direct or group conversation container |
 | `conversation_participants` | Membership, last-read timestamp, and participant role |
 | `messages` | Message body, author, reply threading, edit timestamp |
+| `agents` | User-owned reusable agent definitions with model configuration and instructions |
+| `agent_runs` | One-shot execution history tied to application context and workspace document versions |
+| `agent_chat_sessions` | Persisted per-agent conversations with status, model snapshot, and denormalized message metadata |
+| `agent_chat_messages` | Stored system, user, and assistant chat messages for each session |
 | `action_items` | Per-user tasks with optional links to `applications`, `leads`, `documents`, or `conversations` |
 
-The activity feed is assembled on demand rather than stored in a dedicated table. It pulls from application status history, messages, document versions, connection updates, and completed action items.
+The activity feed is assembled on demand per user rather than stored in a dedicated table. It pulls from application status history, messages, document versions, connection updates, and completed action items. It is not a public stream or listing-health feed.
 
 ## Access and Tier Rules
 
+- Regular users default to `is_discoverable=false`; superusers default to `true`, and both can toggle visibility later.
 - Sending a connection request requires at least the `starter` subscription tier.
 - You cannot message a user directly until the connection is accepted in either direction.
 - Group conversations require `pro`.
@@ -60,7 +68,7 @@ Those rules matter because the UI can render the route, but the backend remains 
 
 ## Conversation Lifecycle
 
-1. A user finds another discoverable user through the directory.
+1. A user finds another opt-in discoverable user through the directory.
 2. They send a connection request.
 3. The addressee accepts or declines.
 4. Once accepted, the requester can open or reuse a direct conversation.
@@ -68,15 +76,28 @@ Those rules matter because the UI can render the route, but the backend remains 
 
 `messages.py` also prevents duplicate direct-message conversations by reusing an existing two-person direct thread when one already exists.
 
+## Agent Interaction Modes
+
+Although the agents UI lives under the Automation route group, the `/agents` backend family is part of the same cross-domain boundary because it links applications, documents, and conversational follow-up.
+
+- `Run Agent` is the one-shot path. `POST /agents/{id}/run` executes against the selected application context and creates or appends to a cell-doc workspace document through an `AgentRun`.
+- `Chat with Agent` starts from `POST /agents/{id}/chat` and `GET /agents/{id}/chat`, which create and list persisted sessions for the current agent.
+- Session reads and lifecycle changes happen through `GET /agents/chat/{session_id}`, `GET /agents/chat/{session_id}/history`, `PATCH /agents/chat/{session_id}`, and `DELETE /agents/chat/{session_id}`.
+- `POST /agents/chat/{session_id}/messages` streams assistant replies as SSE when the client requests `text/event-stream`, with JSON fallback for non-streaming clients.
+- `POST /agents/chat/{session_id}/save-to-document` exports the conversation into a workspace document and records a linked `AgentRun`.
+
 ## Frontend Surfaces
 
 | Route | Page |
 | --- | --- |
-| `/network/directory` | `frontend/src/page/directory.tsx` |
-| `/network/directory/:userId` | `frontend/src/page/user-profile.tsx` |
+| `/network/discover` | `frontend/src/page/directory.tsx` |
+| `/network/discover/:userId` | `frontend/src/page/user-profile.tsx` |
 | `/network/connections` | `frontend/src/page/connections.tsx` |
 | `/network/messages` | `frontend/src/page/messages/conversations-page.tsx` |
 | `/network/messages/:conversationId` | `frontend/src/page/messages/conversation-detail-page.tsx` |
+| `/automation/agents` | `frontend/src/page/agents.tsx` |
+| `/automation/agents/:agentId` | `frontend/src/page/agent-detail.tsx` |
+| `/automation/agents/:agentId/chat/:sessionId` | `frontend/src/page/agent-chat-shell.tsx` |
 
 Supporting UI lives in the component layer:
 
@@ -91,13 +112,16 @@ API client access lives in:
 - `frontend/src/service/activity-feed.tsx`
 - `frontend/src/service/action-items.tsx`
 - `frontend/src/service/directory.tsx`
+- `frontend/src/service/agents.tsx`
+- `frontend/src/service/agent-chat.tsx`
 
 ## Dashboard Coupling
 
-The dashboard summary endpoint reuses networking and activity data to drive homepage counts. That means changes to connection semantics, conversation read tracking, or activity aggregation can affect the homepage even if the visible networking screens still seem correct.
+The dashboard summary endpoint reuses networking and activity data to drive personal homepage counts. That means changes to connection semantics, conversation read tracking, or activity aggregation can affect the homepage even if the visible networking screens still seem correct.
 
 ## Maintenance Notes
 
 - Update this doc when a new connection status, conversation type, or activity source is introduced.
+- Keep the private-by-default interaction language aligned with [Networking & Messaging](../features/networking.md) and [Document Workspace](../features/document-workspace.md).
 - Keep the tier-gate rules in sync with the backend dependencies documented in [Browse API Routes](./api-surface.md).
 - If the activity feed ever moves from derived queries to persisted events, this doc and [Map The Data Model](./data-model.md) should be updated together.

@@ -2,10 +2,12 @@
 
 import { components } from '../schema';
 import { createApiClient } from './api-client';
+import { fetchAllPages, FULL_LIST_PAGE_SIZE } from './pagination';
 
 export type EducationRead = components['schemas']['EducationRead'];
 export type EducationCreate = components['schemas']['EducationCreate'];
 export type EducationUpdate = components['schemas']['EducationUpdate'];
+type EducationListPage = components['schemas']['PaginatedResponse_EducationRead_'];
 
 const unwrap = <T,>(
   result: { data?: T; error?: unknown; response: Response },
@@ -23,39 +25,46 @@ const unwrap = <T,>(
 
 export const getEducations = async (token: string): Promise<EducationRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/education/'));
+  return fetchAllPages<EducationRead>(async (page, pageSize) => unwrap<EducationListPage>(await client.GET('/api/v1/education/', {
+    params: {
+      query: {
+        page,
+        page_size: pageSize,
+      },
+    },
+  })), FULL_LIST_PAGE_SIZE);
 };
 
 export const getEducation = async (token: string, id: string): Promise<EducationRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/education/{education_id}', {
-    params: { query: { id } },
+  return unwrap(await client.GET('/api/v1/education/{id}', {
+    params: { path: { id } },
   }));
 };
 
 export const createEducation = async (token: string, education: EducationCreate): Promise<EducationRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/education/', {
+  return unwrap(await client.POST('/api/v1/education/', {
     body: education,
   }));
 };
 
 export const updateEducation = async (token: string, id: string, education: EducationUpdate): Promise<EducationRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PUT('/education/{education_id}', {
-    params: { query: { id } },
+  return unwrap(await client.PATCH('/api/v1/education/{id}', {
+    params: { path: { id } },
     body: education,
   }));
 };
 
 export const deleteEducation = async (token: string, id: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/education/{education_id}', {
-    params: { query: { id } },
+  unwrap(await client.DELETE('/api/v1/education/{id}', {
+    params: { path: { id } },
   }));
 };
 
 export const seedEducations = async (token: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.POST('/education/seed'));
+  unwrap(await client.POST('/api/v1/education/seed'));
 };

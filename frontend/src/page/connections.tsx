@@ -1,11 +1,15 @@
-import React, { useContext, useEffect, useState, useCallback, useMemo, useDeferredValue } from 'react';
+import React, {
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useDeferredValue,
+} from 'react';
 import {
   Avatar,
   Box,
   Button,
-  Card,
-  CardContent,
-  Chip,
   CircularProgress,
   Pagination as MuiPagination,
   Skeleton,
@@ -28,7 +32,7 @@ import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import {
-  getConnections,
+  getAllConnections,
   acceptConnection,
   declineConnection,
   deleteConnection,
@@ -36,7 +40,12 @@ import {
 } from '../service/connections';
 import { avatarUrl } from '../service/users';
 import { createConversation } from '../service/messages';
-import EmptyState from '../component/common/empty-state';
+import {
+  EmptyState,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+} from '../design-system';
 import { useNotification } from '../context/notification-context';
 
 const PAGE_SIZE = 12;
@@ -50,12 +59,18 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'accepted', label: 'Accepted' },
 ];
 
-const statusChipColor = (status: string): 'warning' | 'success' | 'default' | 'error' => {
+const statusChipColor = (
+  status: string,
+): 'warning' | 'success' | 'default' | 'error' => {
   switch (status) {
-    case 'pending': return 'warning';
-    case 'accepted': return 'success';
-    case 'declined': return 'error';
-    default: return 'default';
+    case 'pending':
+      return 'warning';
+    case 'accepted':
+      return 'success';
+    case 'declined':
+      return 'error';
+    default:
+      return 'default';
   }
 };
 
@@ -79,32 +94,43 @@ const ConnectionsPage: React.FC = () => {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await getConnections(token, { page: 1, page_size: 500 });
-      setConnections(res.items ?? []);
+      const res = await getAllConnections(token);
+      setConnections(res ?? []);
     } catch (e: unknown) {
-      notify(e instanceof Error ? e.message : 'Failed to load connections', 'error');
+      notify(
+        e instanceof Error ? e.message : 'Failed to load connections',
+        'error',
+      );
     }
     setLoading(false);
   }, [token, notify]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   const currentUserId = user?.id;
 
   const filtered = useMemo(() => {
     return connections.filter((c) => {
-      const otherUser = c.requester.user_id === currentUserId ? c.addressee : c.requester;
+      const otherUser =
+        c.requester.user_id === currentUserId ? c.addressee : c.requester;
       const q = deferredSearch.toLowerCase().trim();
-      const matchesSearch = !q || [otherUser.display_name, otherUser.headline, otherUser.city]
-        .some((f) => f?.toLowerCase().includes(q));
+      const matchesSearch =
+        !q ||
+        [otherUser.display_name, otherUser.headline, otherUser.city].some((f) =>
+          f?.toLowerCase().includes(q),
+        );
 
       let matchesFilter = true;
       if (statusFilter === 'accepted') {
         matchesFilter = c.status === 'accepted';
       } else if (statusFilter === 'pending_received') {
-        matchesFilter = c.status === 'pending' && c.addressee.user_id === currentUserId;
+        matchesFilter =
+          c.status === 'pending' && c.addressee.user_id === currentUserId;
       } else if (statusFilter === 'pending_sent') {
-        matchesFilter = c.status === 'pending' && c.requester.user_id === currentUserId;
+        matchesFilter =
+          c.status === 'pending' && c.requester.user_id === currentUserId;
       }
 
       return matchesSearch && matchesFilter;
@@ -113,10 +139,16 @@ const ConnectionsPage: React.FC = () => {
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
-  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const paged = filtered.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE,
+  );
 
   const pendingReceivedCount = useMemo(
-    () => connections.filter((c) => c.status === 'pending' && c.addressee.user_id === currentUserId).length,
+    () =>
+      connections.filter(
+        (c) => c.status === 'pending' && c.addressee.user_id === currentUserId,
+      ).length,
     [connections, currentUserId],
   );
   const acceptedCount = useMemo(
@@ -124,9 +156,14 @@ const ConnectionsPage: React.FC = () => {
     [connections],
   );
 
-  useEffect(() => { setPage(1); }, [deferredSearch, statusFilter]);
+  useEffect(() => {
+    setPage(1);
+  }, [deferredSearch, statusFilter]);
 
-  usePageToolbarHeader('Connections', `${acceptedCount} connected · ${pendingReceivedCount} pending`);
+  usePageToolbarHeader(
+    'Connections',
+    `${acceptedCount} connected · ${pendingReceivedCount} pending`,
+  );
 
   const handleAccept = async (id: string) => {
     if (!token) return;
@@ -177,7 +214,10 @@ const ConnectionsPage: React.FC = () => {
       });
       navigate(`/network/messages/${conv.id}`);
     } catch (e: unknown) {
-      notify(e instanceof Error ? e.message : 'Failed to open conversation', 'error');
+      notify(
+        e instanceof Error ? e.message : 'Failed to open conversation',
+        'error',
+      );
     }
     setActingId(null);
   };
@@ -185,13 +225,24 @@ const ConnectionsPage: React.FC = () => {
   return (
     <Box>
       {/* Search + filter */}
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 3 }} alignItems={{ sm: 'center' }}>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={2}
+        sx={{ mb: 3 }}
+        alignItems={{ sm: 'center' }}
+      >
         <TextField
           size="small"
           placeholder="Search connections…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          slotProps={{ input: { startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} /> } }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+              ),
+            },
+          }}
           sx={{ flexGrow: 1, maxWidth: { sm: 360 } }}
         />
         <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -213,11 +264,18 @@ const ConnectionsPage: React.FC = () => {
           {Array.from({ length: 4 }).map((_, i) => (
             <Grid key={i} size={{ xs: 12, sm: 6 }}>
               <Card sx={{ height: 140 }}>
-                <CardContent sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <CardContent
+                  sx={{ display: 'flex', gap: 2, alignItems: 'center' }}
+                >
                   <Skeleton variant="circular" width={48} height={48} />
                   <Box sx={{ flex: 1 }}>
                     <Skeleton variant="text" width="50%" height={24} />
-                    <Skeleton variant="text" width="70%" height={18} sx={{ mt: 0.5 }} />
+                    <Skeleton
+                      variant="text"
+                      width="70%"
+                      height={18}
+                      sx={{ mt: 0.5 }}
+                    />
                   </Box>
                 </CardContent>
               </Card>
@@ -246,12 +304,23 @@ const ConnectionsPage: React.FC = () => {
       ) : (
         <Grid container spacing={2}>
           {paged.map((connection) => {
-            const otherUser = connection.requester.user_id === currentUserId
-              ? connection.addressee
-              : connection.requester;
-            const location = [otherUser.city, otherUser.state, otherUser.country].filter(Boolean).join(', ');
-            const isPendingReceived = connection.status === 'pending' && connection.addressee.user_id === currentUserId;
-            const isPendingSent = connection.status === 'pending' && connection.requester.user_id === currentUserId;
+            const otherUser =
+              connection.requester.user_id === currentUserId
+                ? connection.addressee
+                : connection.requester;
+            const location = [
+              otherUser.city,
+              otherUser.state,
+              otherUser.country,
+            ]
+              .filter(Boolean)
+              .join(', ');
+            const isPendingReceived =
+              connection.status === 'pending' &&
+              connection.addressee.user_id === currentUserId;
+            const isPendingSent =
+              connection.status === 'pending' &&
+              connection.requester.user_id === currentUserId;
             const isAccepted = connection.status === 'accepted';
             const acting = actingId === connection.id;
             const canMessage = canAccessTier('starter');
@@ -261,18 +330,34 @@ const ConnectionsPage: React.FC = () => {
                 <Card
                   sx={{
                     height: '100%',
-                    border: otherUser.is_superuser ? (theme) => `1px solid ${theme.palette.warning.light}` : undefined,
+                    border: otherUser.is_superuser
+                      ? (theme) => `1px solid ${theme.palette.warning.light}`
+                      : undefined,
                   }}
                 >
                   <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
                     <Stack spacing={1.5}>
                       <Stack direction="row" spacing={1.5} alignItems="center">
-                        <Avatar src={avatarUrl(otherUser.user_id, otherUser.avatar_uri)} sx={{ width: 48, height: 48 }}>
+                        <Avatar
+                          src={avatarUrl(
+                            otherUser.user_id,
+                            otherUser.avatar_uri,
+                          )}
+                          sx={{ width: 48, height: 48 }}
+                        >
                           {otherUser.display_name.charAt(0)}
                         </Avatar>
                         <Box sx={{ minWidth: 0, flex: 1 }}>
-                          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-                            <Typography variant="body1" fontWeight={700} noWrap>{otherUser.display_name}</Typography>
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
+                            flexWrap="wrap"
+                            useFlexGap
+                          >
+                            <Typography variant="body1" fontWeight={700} noWrap>
+                              {otherUser.display_name}
+                            </Typography>
                             {otherUser.is_superuser && (
                               <Chip
                                 icon={<AutoAwesomeIcon fontSize="small" />}
@@ -284,7 +369,13 @@ const ConnectionsPage: React.FC = () => {
                             )}
                           </Stack>
                           {otherUser.headline && (
-                            <Typography variant="body2" color="text.secondary" noWrap>{otherUser.headline}</Typography>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              noWrap
+                            >
+                              {otherUser.headline}
+                            </Typography>
                           )}
                         </Box>
                         <Chip
@@ -296,11 +387,18 @@ const ConnectionsPage: React.FC = () => {
                       </Stack>
 
                       {location && (
-                        <Typography variant="body2" color="text.secondary">{location}</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {location}
+                        </Typography>
                       )}
 
                       {connection.message && (
-                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }} noWrap>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ fontStyle: 'italic' }}
+                          noWrap
+                        >
                           &ldquo;{connection.message}&rdquo;
                         </Typography>
                       )}
@@ -313,7 +411,13 @@ const ConnectionsPage: React.FC = () => {
                               size="small"
                               variant="contained"
                               color="success"
-                              startIcon={acting ? <CircularProgress size={14} color="inherit" /> : <AcceptIcon />}
+                              startIcon={
+                                acting ? (
+                                  <CircularProgress size={14} color="inherit" />
+                                ) : (
+                                  <AcceptIcon />
+                                )
+                              }
                               disabled={acting}
                               onClick={() => handleAccept(connection.id)}
                             >
@@ -323,7 +427,13 @@ const ConnectionsPage: React.FC = () => {
                               size="small"
                               variant="outlined"
                               color="error"
-                              startIcon={acting ? <CircularProgress size={14} color="inherit" /> : <DeclineIcon />}
+                              startIcon={
+                                acting ? (
+                                  <CircularProgress size={14} color="inherit" />
+                                ) : (
+                                  <DeclineIcon />
+                                )
+                              }
                               disabled={acting}
                               onClick={() => handleDecline(connection.id)}
                             >
@@ -336,7 +446,13 @@ const ConnectionsPage: React.FC = () => {
                             size="small"
                             variant="outlined"
                             color="error"
-                            startIcon={acting ? <CircularProgress size={14} color="inherit" /> : <RemoveIcon />}
+                            startIcon={
+                              acting ? (
+                                <CircularProgress size={14} color="inherit" />
+                              ) : (
+                                <RemoveIcon />
+                              )
+                            }
                             disabled={acting}
                             onClick={() => handleRemove(connection.id)}
                           >
@@ -349,7 +465,16 @@ const ConnectionsPage: React.FC = () => {
                               <Button
                                 size="small"
                                 variant="outlined"
-                                startIcon={acting ? <CircularProgress size={14} color="inherit" /> : <MessageIcon />}
+                                startIcon={
+                                  acting ? (
+                                    <CircularProgress
+                                      size={14}
+                                      color="inherit"
+                                    />
+                                  ) : (
+                                    <MessageIcon />
+                                  )
+                                }
                                 disabled={acting}
                                 onClick={() => handleMessage(otherUser.user_id)}
                               >
@@ -360,7 +485,9 @@ const ConnectionsPage: React.FC = () => {
                                 size="small"
                                 variant="outlined"
                                 startIcon={<LockIcon />}
-                                onClick={() => navigate('/settings/subscription')}
+                                onClick={() =>
+                                  navigate('/settings/subscription')
+                                }
                               >
                                 Unlock Messages
                               </Button>
@@ -369,7 +496,13 @@ const ConnectionsPage: React.FC = () => {
                               size="small"
                               variant="outlined"
                               color="error"
-                              startIcon={acting ? <CircularProgress size={14} color="inherit" /> : <RemoveIcon />}
+                              startIcon={
+                                acting ? (
+                                  <CircularProgress size={14} color="inherit" />
+                                ) : (
+                                  <RemoveIcon />
+                                )
+                              }
                               disabled={acting}
                               onClick={() => handleRemove(connection.id)}
                             >

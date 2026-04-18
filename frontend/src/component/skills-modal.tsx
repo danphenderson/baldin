@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
+import { TextField, Button } from '@mui/material';
 import { SkillRead, SkillCreate, SkillUpdate, SkillExtractRequest, SkillExtractResponse, extractSkill  } from '../service/skills';  // Adjust the import path as necessary
 import  FilePicker  from '../component/common/file-picker';
 import { useContext } from 'react';
 import { UserContext } from '../context/user-context';
+import {
+  SurfaceDialog as Dialog,
+  SurfaceDialogActions as DialogActions,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogTitle as DialogTitle,
+} from '../design-system';
 
 interface SkillsModalProps {
   open: boolean;
@@ -16,7 +22,7 @@ const SkillsModal: React.FC<SkillsModalProps> = ({ open, onClose, onSave, initia
   const defaultSkillData: SkillCreate | SkillUpdate = {
     category: '',
     name: '',
-    subskills: '',
+    subskills: [] as string[],
     yoe: null  // Assuming 'yoe' can be null for SkillCreate and SkillUpdate
   };
 
@@ -29,7 +35,7 @@ const SkillsModal: React.FC<SkillsModalProps> = ({ open, onClose, onSave, initia
       const updateData: SkillUpdate = {
         category: initialData.category || '',
         name: initialData.name || '',
-        subskills: initialData.subskills || '',
+        subskills: initialData.subskills || [],
         yoe: initialData.yoe || null
       };
       setSkillData(updateData);

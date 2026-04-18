@@ -47,14 +47,19 @@ password_helper = PasswordHelper()
 _db_ready = False
 
 
-async def _do_ensure_db() -> None:
-    """Unconditionally drop + recreate the test database tables."""
-    global _db_ready
-    if _db_ready:
-        return
+async def _reset_test_db() -> None:
+    """Drop + recreate the test database tables and refresh app bootstrap state."""
     await async_engine.dispose()
     await drop_and_create_db_and_tables()
     app.state.bootstrap_completed = True
+
+
+async def _do_ensure_db(*, force: bool = False) -> None:
+    """Ensure the shared test DB is ready, optionally forcing a fresh reset."""
+    global _db_ready
+    if _db_ready and not force:
+        return
+    await _reset_test_db()
     _db_ready = True
 
 
@@ -69,6 +74,12 @@ async def ensure_db() -> None:
     global _db_ready
     _db_ready = False  # force re-creation per module
     await _do_ensure_db()
+
+
+@pytest.fixture
+async def fresh_db() -> None:
+    """Function-scoped fixture that forces a clean DB reset for the test."""
+    await _do_ensure_db(force=True)
 
 
 # ---------------------------------------------------------------------------
@@ -100,6 +111,13 @@ async def client(ensure_db: None) -> AsyncGenerator[AsyncClient, None]:
         yield c
 
 
+@pytest.fixture
+async def fresh_client(fresh_db: None) -> AsyncGenerator[AsyncClient, None]:
+    """Yield a client backed by a freshly reset DB for each test."""
+    async with async_client_ctx() as c:
+        yield c
+
+
 # ---------------------------------------------------------------------------
 # User creation helpers
 # ---------------------------------------------------------------------------
@@ -108,6 +126,7 @@ async def client(ensure_db: None) -> AsyncGenerator[AsyncClient, None]:
 async def create_user(
     password: str,
     *,
+    email: str | None = None,
     is_superuser: bool = False,
     is_verified: bool = True,
     tier: str | None = None,
@@ -118,6 +137,8 @@ async def create_user(
     ----------
     password:
         Plain-text password (will be hashed before storage).
+    email:
+        Optional email override. When omitted, a random address is used.
     is_superuser:
         Grant superuser flag.
     is_verified:
@@ -125,7 +146,7 @@ async def create_user(
     tier:
         Optional subscription tier (e.g. ``"starter"``, ``"pro"``).
     """
-    email = utils.random_email()
+    email = email or utils.random_email()
     async with session_context() as session:
         user = await utils.create_db_user(
             email,
@@ -158,9 +179,9 @@ async def login_and_get_headers(
     email: str,
     password: str,
 ) -> dict[str, str]:
-    """Log in via ``/auth/jwt/login`` and return Bearer-token headers."""
+    """Log in via the backend auth route and return Bearer-token headers."""
     response = await client.post(
-        "/auth/jwt/login",
+        "/api/v1/auth/jwt/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -177,3 +198,20 @@ async def auth_headers(
     """Return Bearer-token headers for the ``registered_user``."""
     email, _, password = registered_user
     return await login_and_get_headers(client, email, password)
+
+
+# ---------------------------------------------------------------------------
+# Rate-limiter isolation
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter() -> None:
+    """Reset the in-memory rate-limit counters before every test.
+
+    All tests share the same ``127.0.0.1`` key.  Without a reset, the
+    10-per-minute limit on ``/auth/jwt/login`` is exhausted after the
+    first ~10 login calls across the entire suite, causing every
+    subsequent authentication to return 429.
+    """
+    app.state.limiter.reset()

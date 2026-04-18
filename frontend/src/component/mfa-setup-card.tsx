@@ -1,10 +1,28 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import {
-  Box, Card, CardContent, Typography, TextField, Button, Alert,
-  CircularProgress, Stack, useTheme, alpha, Switch, Divider,
-  InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions,
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Alert,
+  CircularProgress,
+  Stack,
+  useTheme,
+  alpha,
+  Switch,
+  Divider,
+  InputAdornment,
+  IconButton,
 } from '@mui/material';
-import { Security as SecurityIcon, Lock } from '@mui/icons-material';
+import {
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogActions as DialogActions,
+} from '../design-system';
+import { Security as SecurityIcon, Lock, Close as CloseIcon } from '@mui/icons-material';
 import { QRCodeSVG } from 'qrcode.react';
 import { UserContext } from '../context/user-context';
 import { mfaStatus, mfaSetup, mfaVerify, mfaDisable, MFASetup } from '../service/auth';
@@ -101,8 +119,8 @@ const MFASetupCard: React.FC = () => {
 
   if (loading || enabled === null) {
     return (
-      <Card sx={{ boxShadow: `0 2px 12px ${alpha('#000', 0.08)}` }}>
-        <CardContent sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+      <Card sx={{ boxShadow: `0 2px 12px ${alpha(theme.palette.common.black, 0.08)}` }}>
+        <CardContent centered density="spacious">
           <CircularProgress size={28} />
         </CardContent>
       </Card>
@@ -111,15 +129,15 @@ const MFASetupCard: React.FC = () => {
 
   return (
     <>
-      <Card sx={{ boxShadow: `0 2px 12px ${alpha('#000', 0.08)}` }}>
+      <Card sx={{ boxShadow: `0 2px 12px ${alpha(theme.palette.common.black, 0.08)}` }}>
         <CardContent sx={{ p: 3 }}>
           <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
             <SecurityIcon sx={{ color: 'primary.main' }} />
             <Typography variant="h6" fontWeight={700}>Two-Factor Authentication</Typography>
           </Stack>
 
-          {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError('')}>{error}</Alert>}
-          {success && <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
+          {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+          {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
 
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Add an extra layer of security to your account by requiring a verification
@@ -149,7 +167,7 @@ const MFASetupCard: React.FC = () => {
           </Stack>
 
           {!enabled && (
-            <Alert severity="warning" sx={{ mt: 2, borderRadius: 2 }}>
+            <Alert severity="warning" sx={{ mt: 2 }}>
               If you lose access to your authenticator app, a Baldin superuser must reset MFA
               before you can sign in again.
             </Alert>
@@ -157,7 +175,7 @@ const MFASetupCard: React.FC = () => {
 
           {/* ── Setup flow ─────────────────────────────────────────── */}
           {setupData && !enabled && (
-            <Box sx={{ mt: 3, p: 2, borderRadius: 2, bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+            <Box sx={{ mt: 3, p: 2, borderRadius: '8px', bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
               <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
                 Set up authenticator app
               </Typography>
@@ -168,7 +186,7 @@ const MFASetupCard: React.FC = () => {
 
               {/* Client-side QR code generation – secret never leaves the browser */}
               <Box sx={{ textAlign: 'center', mb: 2 }}>
-                <Box sx={{ display: 'inline-block', p: 1.5, borderRadius: 2, border: `1px solid ${alpha('#000', 0.08)}`, bgcolor: '#fff' }}>
+                <Box sx={{ display: 'inline-block', p: 1.5, borderRadius: '8px', border: `1px solid ${alpha(theme.palette.common.black, 0.08)}`, bgcolor: 'common.white' }}>
                   <QRCodeSVG value={setupData.provisioning_uri} size={200} />
                 </Box>
               </Box>
@@ -181,9 +199,11 @@ const MFASetupCard: React.FC = () => {
                 <TextField
                   size="small" fullWidth label="6-digit code" value={verifyCode}
                   onChange={(e) => setVerifyCode(sanitizeTotpInput(e.target.value))}
-                  inputProps={{ maxLength: 6, inputMode: 'numeric', pattern: '[0-9]*' }}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><Lock sx={{ fontSize: 18, color: 'text.secondary' }} /></InputAdornment>,
+                  slotProps={{
+                    htmlInput: { maxLength: 6, inputMode: 'numeric', pattern: '[0-9]*' },
+                    input: {
+                      startAdornment: <InputAdornment position="start"><Lock sx={{ fontSize: 18, color: 'text.secondary' }} /></InputAdornment>,
+                    },
                   }}
                 />
                 <Button
@@ -191,7 +211,7 @@ const MFASetupCard: React.FC = () => {
                   onClick={handleVerify}
                   sx={{ minWidth: 100 }}
                 >
-                  {setupLoading ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : 'Verify'}
+                  {setupLoading ? <CircularProgress size={20} sx={{ color: 'common.white' }} /> : 'Verify'}
                 </Button>
               </Stack>
             </Box>
@@ -203,13 +223,27 @@ const MFASetupCard: React.FC = () => {
         open={showRecoveryNotice}
         onClose={() => setShowRecoveryNotice(false)}
       >
-        <DialogTitle>Before you enable two-factor authentication</DialogTitle>
+        <DialogTitle
+          icon={<SecurityIcon />}
+          subtitle="Save your authenticator app before you continue."
+          actions={(
+            <IconButton
+              onClick={() => setShowRecoveryNotice(false)}
+              size="small"
+              aria-label="Close dialog"
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          )}
+        >
+          Before you enable two-factor authentication
+        </DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Save your authenticator app before you verify setup. If you later lose access to
             that app, you cannot recover this account yourself.
           </Typography>
-          <Alert severity="warning" sx={{ borderRadius: 2 }}>
+          <Alert severity="warning">
             A Baldin superuser must reset MFA for your account before you can sign in again.
           </Alert>
         </DialogContent>
@@ -229,7 +263,21 @@ const MFASetupCard: React.FC = () => {
 
       {/* ── Disable confirmation dialog ────────────────────────────── */}
       <Dialog open={showDisable} onClose={() => { setShowDisable(false); setDisableCode(''); setError(''); }}>
-        <DialogTitle>Disable Two-Factor Authentication</DialogTitle>
+        <DialogTitle
+          icon={<SecurityIcon />}
+          subtitle="Enter a valid code from your authenticator app to disable MFA."
+          actions={(
+            <IconButton
+              onClick={() => { setShowDisable(false); setDisableCode(''); setError(''); }}
+              size="small"
+              aria-label="Close dialog"
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          )}
+        >
+          Disable Two-Factor Authentication
+        </DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Enter a code from your authenticator app to confirm.
@@ -238,7 +286,7 @@ const MFASetupCard: React.FC = () => {
           <TextField
             fullWidth label="6-digit code" value={disableCode}
             onChange={(e) => setDisableCode(sanitizeTotpInput(e.target.value))}
-            inputProps={{ maxLength: 6, inputMode: 'numeric', pattern: '[0-9]*' }}
+            slotProps={{ htmlInput: { maxLength: 6, inputMode: 'numeric', pattern: '[0-9]*' } }}
             autoFocus
           />
         </DialogContent>

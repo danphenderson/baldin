@@ -1,20 +1,27 @@
-import React from 'react';
-import { Box } from '@mui/material';
+import React, { useContext, useMemo } from 'react';
 import { Badge as RolesIcon } from '@mui/icons-material';
-import EmptyState from '../../component/common/empty-state';
-import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
+import AspirationsCollection from '../../component/aspirations-collection';
+import { UserContext } from '../../context/user-context';
+import { createApiAdapter } from '../../service/aspirations';
 
 const AspirationRolesPage: React.FC = () => {
-  usePageToolbarHeader('Aspirations', 'Roles are not available yet');
+  const { token } = useContext(UserContext);
+  const adapter = useMemo(() => (token ? createApiAdapter(token) : null), [token]);
+
+  if (!adapter) {
+    return null;
+  }
 
   return (
-    <Box sx={{ maxWidth: 760, mx: 'auto' }}>
-      <EmptyState
-        icon={<RolesIcon />}
-        title="Role aspirations are not available yet"
-        description="Use this space later to track the job titles and role profiles you want Baldin to optimize for."
-      />
-    </Box>
+    <AspirationsCollection
+      kind="role"
+      adapter={adapter}
+      kindLabel="Role"
+      kindIcon={<RolesIcon />}
+      emptyTitle="No role aspirations yet"
+      emptyDescription="Track the job titles and role profiles you want Baldin to optimize for."
+      showSuggestions
+    />
   );
 };
 

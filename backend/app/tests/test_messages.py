@@ -1,68 +1,24 @@
 """Tests for /conversations endpoints (DM, group, messages, unread tracking)."""
 
-from contextlib import asynccontextmanager
 from uuid import UUID
 
 import pytest
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 
-from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
-from app.main import app
-from app.tests import utils
+from app.conftest import (
+    async_client_ctx as _client,
+)
+from app.conftest import (
+    create_user as _create_user,
+)
+from app.conftest import (
+    login_and_get_headers as _auth_headers,
+)
 
-pytestmark = pytest.mark.asyncio(loop_scope="module")
-
-password_helper = PasswordHelper()
-_db_ready = False
-
-
-@asynccontextmanager
-async def _client() -> AsyncClient:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
-        yield client
-
-
-async def _ensure_db_ready() -> None:
-    global _db_ready
-    if _db_ready:
-        return
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
-
-
-async def _create_user(password: str, *, tier: str = "free") -> tuple[str, UUID]:
-    email = utils.random_email()
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash(password),
-            session,
-        )
-        if tier != "free":
-            user.subscription_tier = tier
-        await session.commit()
-    return email, user.id
-
-
-async def _auth_headers(
-    client: AsyncClient, email: str, password: str
-) -> dict[str, str]:
-    response = await client.post(
-        "/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+pytestmark = [
+    pytest.mark.asyncio(loop_scope="module"),
+    pytest.mark.usefixtures("fresh_db"),
+]
 
 
 async def _create_accepted_connection(
@@ -73,14 +29,14 @@ async def _create_accepted_connection(
 ) -> str:
     """Create and accept a connection. Returns connection ID."""
     resp = await client.post(
-        "/connections/",
+        "/api/v1/connections/",
         json={"addressee_id": str(addressee_id)},
         headers=headers_requester,
     )
     assert resp.status_code == 201
     conn_id = resp.json()["id"]
     accept = await client.patch(
-        f"/connections/{conn_id}/accept", headers=headers_addressee
+        f"/api/v1/connections/{conn_id}/accept", headers=headers_addressee
     )
     assert accept.status_code == 200
     return conn_id
@@ -93,7 +49,6 @@ async def _create_accepted_connection(
 
 async def test_create_dm_conversation() -> None:
     """POST /conversations/ creates a DM between connected starter+ users."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-dm-a", tier="starter")
         email_b, uid_b = await _create_user("msg-dm-b", tier="starter")
@@ -103,7 +58,7 @@ async def test_create_dm_conversation() -> None:
         await _create_accepted_connection(client, headers_a, headers_b, uid_b)
 
         response = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={
                 "participant_user_ids": [str(uid_b)],
                 "type": "direct",
@@ -119,7 +74,6 @@ async def test_create_dm_conversation() -> None:
 
 async def test_create_group_conversation_pro_only() -> None:
     """POST /conversations/ with type=group requires pro tier."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-grp-a", tier="pro")
         email_b, uid_b = await _create_user("msg-grp-b", tier="pro")
@@ -129,7 +83,7 @@ async def test_create_group_conversation_pro_only() -> None:
 
         # Pro user can create group
         response = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={
                 "participant_user_ids": [str(uid_b), str(uid_c)],
                 "type": "group",
@@ -151,7 +105,7 @@ async def test_create_group_conversation_pro_only() -> None:
         headers_s = await _auth_headers(client, email_s, "msg-grp-starter")
 
         response = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={
                 "participant_user_ids": [str(uid_t), str(uid_u)],
                 "type": "group",
@@ -165,14 +119,13 @@ async def test_create_group_conversation_pro_only() -> None:
 
 async def test_free_tier_cannot_create_conversation() -> None:
     """Free-tier users get 403 when creating conversations."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_f, uid_f = await _create_user("msg-free-pass", tier="free")
         email_t, uid_t = await _create_user("msg-free-target")
         headers_f = await _auth_headers(client, email_f, "msg-free-pass")
 
         response = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={
                 "participant_user_ids": [str(uid_t)],
                 "type": "direct",
@@ -185,7 +138,6 @@ async def test_free_tier_cannot_create_conversation() -> None:
 
 async def test_dm_without_accepted_connection_fails() -> None:
     """DM creation requires an accepted connection between the users."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-noconn-a", tier="starter")
         email_b, uid_b = await _create_user("msg-noconn-b", tier="starter")
@@ -193,7 +145,7 @@ async def test_dm_without_accepted_connection_fails() -> None:
 
         # No connection exists between users — should fail
         response = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={
                 "participant_user_ids": [str(uid_b)],
                 "type": "direct",
@@ -206,7 +158,6 @@ async def test_dm_without_accepted_connection_fails() -> None:
 
 async def test_dm_deduplication() -> None:
     """Creating a DM between the same two users returns the existing conversation."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-dedup-a", tier="starter")
         email_b, uid_b = await _create_user("msg-dedup-b", tier="starter")
@@ -216,12 +167,12 @@ async def test_dm_deduplication() -> None:
         await _create_accepted_connection(client, headers_a, headers_b, uid_b)
 
         first = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={"participant_user_ids": [str(uid_b)], "type": "direct"},
             headers=headers_a,
         )
         second = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={"participant_user_ids": [str(uid_b)], "type": "direct"},
             headers=headers_a,
         )
@@ -233,7 +184,6 @@ async def test_dm_deduplication() -> None:
 
 async def test_list_conversations() -> None:
     """GET /conversations/ lists the user's conversations."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-list-a", tier="starter")
         email_b, uid_b = await _create_user("msg-list-b", tier="starter")
@@ -243,12 +193,12 @@ async def test_list_conversations() -> None:
         await _create_accepted_connection(client, headers_a, headers_b, uid_b)
 
         await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={"participant_user_ids": [str(uid_b)], "type": "direct"},
             headers=headers_a,
         )
 
-        response = await client.get("/conversations/", headers=headers_a)
+        response = await client.get("/api/v1/conversations/", headers=headers_a)
 
     assert response.status_code == 200
     body = response.json()
@@ -258,7 +208,6 @@ async def test_list_conversations() -> None:
 
 async def test_conversation_detail_with_messages_marks_read() -> None:
     """GET /conversations/{id} returns messages and auto-marks as read."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-det-a", tier="starter")
         email_b, uid_b = await _create_user("msg-det-b", tier="starter")
@@ -268,7 +217,7 @@ async def test_conversation_detail_with_messages_marks_read() -> None:
         await _create_accepted_connection(client, headers_a, headers_b, uid_b)
 
         conv_resp = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={"participant_user_ids": [str(uid_b)], "type": "direct"},
             headers=headers_a,
         )
@@ -276,13 +225,15 @@ async def test_conversation_detail_with_messages_marks_read() -> None:
 
         # Send a message
         await client.post(
-            f"/conversations/{conv_id}/messages",
+            f"/api/v1/conversations/{conv_id}/messages",
             json={"content": "Hello there!"},
             headers=headers_a,
         )
 
         # Other user views conversation → marks as read
-        detail_resp = await client.get(f"/conversations/{conv_id}", headers=headers_b)
+        detail_resp = await client.get(
+            f"/api/v1/conversations/{conv_id}", headers=headers_b
+        )
 
     assert detail_resp.status_code == 200
     body = detail_resp.json()
@@ -292,7 +243,6 @@ async def test_conversation_detail_with_messages_marks_read() -> None:
 
 async def test_send_message() -> None:
     """POST /conversations/{id}/messages sends a message."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-send-a", tier="starter")
         email_b, uid_b = await _create_user("msg-send-b", tier="starter")
@@ -302,14 +252,14 @@ async def test_send_message() -> None:
         await _create_accepted_connection(client, headers_a, headers_b, uid_b)
 
         conv_resp = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={"participant_user_ids": [str(uid_b)], "type": "direct"},
             headers=headers_a,
         )
         conv_id = conv_resp.json()["id"]
 
         msg_resp = await client.post(
-            f"/conversations/{conv_id}/messages",
+            f"/api/v1/conversations/{conv_id}/messages",
             json={"content": "Test message content"},
             headers=headers_a,
         )
@@ -322,7 +272,6 @@ async def test_send_message() -> None:
 
 async def test_edit_own_message() -> None:
     """PATCH /conversations/{id}/messages/{msg_id} edits your own message."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-edit-a", tier="starter")
         email_b, uid_b = await _create_user("msg-edit-b", tier="starter")
@@ -332,28 +281,28 @@ async def test_edit_own_message() -> None:
         await _create_accepted_connection(client, headers_a, headers_b, uid_b)
 
         conv_resp = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={"participant_user_ids": [str(uid_b)], "type": "direct"},
             headers=headers_a,
         )
         conv_id = conv_resp.json()["id"]
 
         msg_resp = await client.post(
-            f"/conversations/{conv_id}/messages",
+            f"/api/v1/conversations/{conv_id}/messages",
             json={"content": "Original"},
             headers=headers_a,
         )
         msg_id = msg_resp.json()["id"]
 
         edit_resp = await client.patch(
-            f"/conversations/{conv_id}/messages/{msg_id}",
+            f"/api/v1/conversations/{conv_id}/messages/{msg_id}",
             json={"content": "Edited"},
             headers=headers_a,
         )
 
         # Other user cannot edit someone else's message
         wrong_edit = await client.patch(
-            f"/conversations/{conv_id}/messages/{msg_id}",
+            f"/api/v1/conversations/{conv_id}/messages/{msg_id}",
             json={"content": "Tampered"},
             headers=headers_b,
         )
@@ -366,7 +315,6 @@ async def test_edit_own_message() -> None:
 
 async def test_delete_own_message() -> None:
     """DELETE /conversations/{id}/messages/{msg_id} deletes your own message."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-del-a", tier="starter")
         email_b, uid_b = await _create_user("msg-del-b", tier="starter")
@@ -376,14 +324,14 @@ async def test_delete_own_message() -> None:
         await _create_accepted_connection(client, headers_a, headers_b, uid_b)
 
         conv_resp = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={"participant_user_ids": [str(uid_b)], "type": "direct"},
             headers=headers_a,
         )
         conv_id = conv_resp.json()["id"]
 
         msg_resp = await client.post(
-            f"/conversations/{conv_id}/messages",
+            f"/api/v1/conversations/{conv_id}/messages",
             json={"content": "To be deleted"},
             headers=headers_a,
         )
@@ -391,14 +339,14 @@ async def test_delete_own_message() -> None:
 
         # Other user cannot delete someone else's message
         wrong_del = await client.delete(
-            f"/conversations/{conv_id}/messages/{msg_id}",
+            f"/api/v1/conversations/{conv_id}/messages/{msg_id}",
             headers=headers_b,
         )
         assert wrong_del.status_code == 403
 
         # Author can delete
         del_resp = await client.delete(
-            f"/conversations/{conv_id}/messages/{msg_id}",
+            f"/api/v1/conversations/{conv_id}/messages/{msg_id}",
             headers=headers_a,
         )
 
@@ -407,7 +355,6 @@ async def test_delete_own_message() -> None:
 
 async def test_unread_count() -> None:
     """GET /conversations/unread returns total unread message count."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-unread-a", tier="starter")
         email_b, uid_b = await _create_user("msg-unread-b", tier="starter")
@@ -417,7 +364,7 @@ async def test_unread_count() -> None:
         await _create_accepted_connection(client, headers_a, headers_b, uid_b)
 
         conv_resp = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={"participant_user_ids": [str(uid_b)], "type": "direct"},
             headers=headers_a,
         )
@@ -425,18 +372,20 @@ async def test_unread_count() -> None:
 
         # User A sends two messages
         await client.post(
-            f"/conversations/{conv_id}/messages",
+            f"/api/v1/conversations/{conv_id}/messages",
             json={"content": "Message 1"},
             headers=headers_a,
         )
         await client.post(
-            f"/conversations/{conv_id}/messages",
+            f"/api/v1/conversations/{conv_id}/messages",
             json={"content": "Message 2"},
             headers=headers_a,
         )
 
         # User B checks unread before reading
-        unread_resp = await client.get("/conversations/unread", headers=headers_b)
+        unread_resp = await client.get(
+            "/api/v1/conversations/unread", headers=headers_b
+        )
 
     assert unread_resp.status_code == 200
     body = unread_resp.json()

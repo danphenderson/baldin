@@ -163,14 +163,15 @@ def _serialize_comment(comment: models.LeadComment) -> schemas.LeadCommentRead:
     )
 
 
-def _serialize_lead(lead: models.Lead, user: schemas.UserRead) -> schemas.LeadRead:
+def _serialize_lead_summary(
+    lead: models.Lead, user: schemas.UserRead
+) -> schemas.LeadSummaryRead:
     viewer_registration = _get_viewer_registration(lead, user.id)
-    return schemas.LeadRead(
+    return schemas.LeadSummaryRead(
         id=lead.id,
         created_at=lead.created_at,
         updated_at=lead.updated_at,
         url=lead.url,
-        canonical_url=lead.canonical_url,
         title=lead.title,
         description=lead.description,
         location=lead.location,
@@ -187,6 +188,14 @@ def _serialize_lead(lead: models.Lead, user: schemas.UserRead) -> schemas.LeadRe
         comment_count=len(lead.comments),
         viewer_is_registered=viewer_registration is not None,
         viewer_permissions=_build_viewer_permissions(user, viewer_registration),
+    )
+
+
+def _serialize_lead(lead: models.Lead, user: schemas.UserRead) -> schemas.LeadRead:
+    summary = _serialize_lead_summary(lead, user)
+    return schemas.LeadRead(
+        **summary.model_dump(),
+        canonical_url=lead.canonical_url,
     )
 
 
@@ -479,9 +488,10 @@ async def read_leads(
     total_count = total_count_result.scalar_one()
 
     return schemas.LeadsPaginatedRead(
-        leads=[_serialize_lead(lead, user) for lead in lead_list],
-        pagination=pagination,
-        total_count=total_count,
+        items=[_serialize_lead_summary(lead, user) for lead in lead_list],
+        total=total_count,
+        page=pagination.page,
+        page_size=pagination.page_size,
     )
 
 

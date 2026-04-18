@@ -18,7 +18,10 @@ from app.schemas import (
     DocumentSearchResult,
     LeadEnrichRequest,
     LeadEnrichResponse,
+    LeadRankedEntryRead,
+    LeadRankInput,
     LeadRankRequest,
+    LeadRankResponse,
 )
 
 _UUID1 = str(uuid4())
@@ -130,13 +133,49 @@ class TestLeadEnrichSchemas:
 class TestLeadRankSchemas:
     def test_valid_request(self):
         req = LeadRankRequest(
-            leads=[{"title": "SWE", "description": "Backend developer"}]
+            leads=[
+                {
+                    "id": _UUID1,
+                    "title": "SWE",
+                    "description": "Backend developer",
+                }
+            ]
         )
         assert len(req.leads) == 1
+        assert isinstance(req.leads[0], LeadRankInput)
 
     def test_empty_leads_rejected(self):
         with pytest.raises(ValidationError):
             LeadRankRequest(leads=[])
+
+    def test_too_many_leads_rejected(self):
+        with pytest.raises(ValidationError):
+            LeadRankRequest(
+                leads=[
+                    {
+                        "id": str(uuid4()),
+                        "title": f"Lead {index}",
+                        "description": "Backend developer",
+                    }
+                    for index in range(21)
+                ]
+            )
+
+    def test_response(self):
+        response = LeadRankResponse(
+            ranking="Lead Rankings",
+            ranked_leads=[
+                LeadRankedEntryRead(
+                    lead_id=_UUID1,
+                    lead_index=1,
+                    title="SWE",
+                    relevance_score=9,
+                    explanation="The role closely matches the backend experience in the user's profile.",
+                    aspiration_alignment="Direct match to the user's backend engineering aspirations.",
+                )
+            ],
+        )
+        assert str(response.ranked_leads[0].lead_id) == _UUID1
 
 
 class TestCompanySummarizeSchemas:
@@ -207,3 +246,71 @@ async def test_pgvector_store_add_texts_flushes_once():
 
     session.flush.assert_awaited_once()
     assert ids == [row.id for row in added_rows]
+
+
+@pytest.mark.asyncio
+async def test_pgvector_store_similarity_search_applies_document_filter_and_returns_document_metadata():
+    from app.core.vector_store import PGVectorStore
+
+    document_id = uuid4()
+    version_id = uuid4()
+    user_id = uuid4()
+    row_id = uuid4()
+    session = MagicMock()
+    session.execute = AsyncMock(
+        return_value=[
+            SimpleNamespace(
+                id=row_id,
+                document_id=document_id,
+                document_version_id=version_id,
+                chunk_index=0,
+                chunk_text="retrieved chunk",
+                document_title="Pinned Resume",
+                document_kind="resume",
+                distance=0.08,
+            )
+        ]
+    )
+
+    store = PGVectorStore(session)
+    store._embeddings = SimpleNamespace(aembed_query=AsyncMock(return_value=[0.1, 0.2]))
+
+    results = await store.similarity_search(
+        "needle",
+        user_id=user_id,
+        k=3,
+        document_ids=[document_id],
+    )
+
+    stmt = session.execute.await_args.args[0]
+    assert "document_embeddings.document_id IN" in str(stmt)
+    assert results == [
+        {
+            "id": row_id,
+            "document_id": document_id,
+            "document_version_id": version_id,
+            "chunk_index": 0,
+            "chunk_text": "retrieved chunk",
+            "document_title": "Pinned Resume",
+            "document_kind": "resume",
+            "score": 0.92,
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_pgvector_store_delete_by_document_scopes_deletes_to_user_when_provided():
+    from app.core.vector_store import PGVectorStore
+
+    document_id = uuid4()
+    user_id = uuid4()
+    session = MagicMock()
+    session.execute = AsyncMock(return_value=SimpleNamespace(rowcount=2))
+
+    store = PGVectorStore(session)
+
+    deleted = await store.delete_by_document(document_id, user_id=user_id)
+
+    stmt = session.execute.await_args.args[0]
+    assert "document_embeddings.user_id" in str(stmt)
+    assert deleted == 2

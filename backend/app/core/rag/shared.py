@@ -240,6 +240,7 @@ async def shared_initialize_run(
     description: str,
     entrypoint: str,
     build_payload_fn=None,
+    pipeline_definition: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     started = perf_counter()
     thread_id = correlation_id.get("") or uuid4().hex
@@ -249,7 +250,8 @@ async def shared_initialize_run(
         db=state["db"],
         user=state["user"],
         description=description,
-        definition={
+        definition=pipeline_definition
+        or {
             "kind": "langgraph",
             "entrypoint": entrypoint,
             "schema_version": 1,

@@ -5,7 +5,7 @@ title: Document Workspace
 description: Versioned documents with rich-text collaboration, sharing, and application attachments.
 ---
 
-<!-- last-verified: 2026-04-10 -->
+<!-- last-verified: 2026-04-12 -->
 
 # Document Workspace
 
@@ -13,7 +13,7 @@ The document workspace lets you create, edit, version, and share rich-text docum
 
 ## Document Kinds
 
-Baldin's versioned document model supports multiple document kinds through a `kind` discriminator field. Documents can represent resumes, cover letters, or free-form notes. Each kind shares the same versioning, collaboration, and sharing infrastructure.
+Baldin's versioned document model supports multiple document kinds through a `kind` discriminator field. Documents can represent resumes, cover letters, free-form notes, or agent-created cell-doc sessions. Each kind shares the same versioning, collaboration, and sharing infrastructure.
 
 The legacy `Resume` and `CoverLetter` tables are retired. The versioned document model is the active material surface for resumes, cover letters, and other working documents.
 
@@ -49,6 +49,17 @@ Shared documents appear in the recipient's workspace alongside their own documen
 ## Application Attachments
 
 Documents can be attached to applications through the `DocumentXApplication` bridge table. The application detail page shows linked documents and allows adding or removing attachments.
+
+## Agent Sessions
+
+Agents can reach the workspace through two related interaction modes:
+
+- `Run Agent` creates or appends to a `cell_doc` session document. Each run produces a new document version, and the `AgentRun` record links back to the specific version it created.
+- `Chat with Agent` keeps the interaction in a persisted session at `/automation/agents/:agentId/chat/:sessionId` until the user chooses save-to-document export. That export creates a new `cell_doc` document and records an `AgentRun` linked back to the originating chat session.
+
+The cell-doc editor footer includes a **Rerun Agent** button when the document was originally created by an agent run with a completed status. This allows in-context iteration without navigating back to the agent detail page.
+
+See [Networking & Messaging](./networking.md#agents) for agent CRUD, runs, and chat sessions, and [Map The Data Model](../architecture/data-model.md) for `Agent`, `AgentRun`, `AgentChatSession`, and `AgentChatMessage`.
 
 ## Frontend Surface
 

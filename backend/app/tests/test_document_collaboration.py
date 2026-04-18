@@ -2,20 +2,24 @@
 
 import asyncio
 import json
-from contextlib import asynccontextmanager
 from uuid import UUID
 
 import pytest
 import y_py as Y
 from fastapi.testclient import TestClient
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from starlette.websockets import WebSocketDisconnect
 
 from app import models
 from app.api.routes.collaboration import COLLABORATION_WEBSOCKET_PROTOCOL
-from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
+from app.conftest import (
+    async_client_ctx,
+    login_and_get_headers,
+)
+from app.conftest import (
+    create_user as _shared_create_user,
+)
+from app.core.db import session_context
 from app.core.document_collaboration import (
     DocumentCollaborationBootstrapClaimStatus,
     DocumentYStore,
@@ -24,47 +28,28 @@ from app.core.document_collaboration import (
     stop_document_collaboration_server,
 )
 from app.main import app
-from app.tests import utils
 
 pytestmark = pytest.mark.asyncio(loop_scope="module")
 
-password_helper = PasswordHelper()
-_db_ready = False
+
+@pytest.fixture(scope="module", autouse=True)
+async def _shared_db_ready(ensure_db: None) -> None:
+    del ensure_db
 
 
 async def _ensure_db_ready() -> None:
-    global _db_ready
-    if _db_ready:
-        return
-
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
-
-
-@asynccontextmanager
-async def _client() -> AsyncClient:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
-        yield client
+    return None
 
 
 async def _create_user(password: str, **fields) -> tuple[str, UUID]:
-    email = utils.random_email()
+    email, user_id = await _shared_create_user(password)
     async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash(password),
-            session,
-        )
+        user = await session.get(models.User, user_id)
+        assert user is not None
         for field, value in fields.items():
             setattr(user, field, value)
         await session.commit()
-    return email, user.id
+    return email, user_id
 
 
 async def _auth_headers(
@@ -72,14 +57,10 @@ async def _auth_headers(
     email: str,
     password: str,
 ) -> dict[str, str]:
-    response = await client.post(
-        "/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    return await login_and_get_headers(client, email, password)
+
+
+_client = async_client_ctx
 
 
 async def _request_collaboration_token(
@@ -88,7 +69,7 @@ async def _request_collaboration_token(
     headers: dict[str, str],
 ) -> str:
     response = await client.post(
-        f"/documents/{document_id}/collaborate/bootstrap",
+        f"/api/v1/documents/{document_id}/collaborate/bootstrap",
         headers=headers,
     )
     assert response.status_code == 200
@@ -131,11 +112,13 @@ async def _create_versioned_document(
     *,
     content: str | None,
     content_format: str,
+    kind: str = "freeform",
+    block_snapshot: list[dict[str, object]] | None = None,
 ) -> UUID:
     async with session_context() as session:
         document = models.Document(
             user_id=user_id,
-            kind="freeform",
+            kind=kind,
             title="Collaboration Doc",
         )
         session.add(document)
@@ -148,6 +131,7 @@ async def _create_versioned_document(
             content=content,
             content_type="custom",
             content_format=content_format,
+            block_snapshot=block_snapshot,
         )
         session.add(version)
         await session.flush()
@@ -219,16 +203,16 @@ async def test_collaboration_bootstrap_claims_rich_text_seed_then_waits_until_re
         )
 
         first_response = await client.post(
-            f"/documents/{document_id}/collaborate/bootstrap",
+            f"/api/v1/documents/{document_id}/collaborate/bootstrap",
             headers=headers,
         )
         second_response = await client.post(
-            f"/documents/{document_id}/collaborate/bootstrap",
+            f"/api/v1/documents/{document_id}/collaborate/bootstrap",
             headers=headers,
         )
         _document_bootstrap_claims[str(document_id)] = 0.0
         third_response = await client.post(
-            f"/documents/{document_id}/collaborate/bootstrap",
+            f"/api/v1/documents/{document_id}/collaborate/bootstrap",
             headers=headers,
         )
 
@@ -253,6 +237,56 @@ async def test_collaboration_bootstrap_claims_rich_text_seed_then_waits_until_re
     assert third_payload["content"] == rich_content
     assert third_payload["content_format"] == "tiptap_json"
     assert third_payload["collaboration_token"]
+
+
+async def test_collaboration_bootstrap_rebuilds_cell_doc_seed_from_block_snapshot() -> (
+    None
+):
+    await _ensure_db_ready()
+
+    async with _client() as client:
+        owner_email, owner_id = await _create_user(
+            "collab-snapshot-pass",
+            first_name="Bela",
+            last_name="Snapshot",
+        )
+        headers = await _auth_headers(client, owner_email, "collab-snapshot-pass")
+        document_id = await _create_versioned_document(
+            owner_id,
+            kind="cell_doc",
+            content=json.dumps({"type": "doc", "content": [{"type": "paragraph"}]}),
+            content_format="tiptap_json",
+            block_snapshot=[
+                {
+                    "id": "00000000-0000-4000-8000-000000000111",
+                    "block_type": "paragraph",
+                    "content": [{"type": "text", "text": "Snapshot seed"}],
+                    "properties": {},
+                    "position": 0,
+                    "children": [],
+                }
+            ],
+        )
+
+        response = await client.post(
+            f"/api/v1/documents/{document_id}/collaborate/bootstrap",
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "seed"
+    assert payload["content_format"] == "tiptap_json"
+    assert json.loads(payload["content"]) == {
+        "type": "doc",
+        "content": [
+            {
+                "type": "paragraph",
+                "attrs": {"blockId": "00000000-0000-4000-8000-000000000111"},
+                "content": [{"type": "text", "text": "Snapshot seed"}],
+            }
+        ],
+    }
 
 
 async def test_collaboration_bootstrap_skips_invalid_or_plain_text_content() -> None:
@@ -309,7 +343,7 @@ async def test_collaboration_websocket_reads_bootstrap_token_from_subprotocol() 
     try:
         with TestClient(app) as client:
             with client.websocket_connect(
-                f"/documents/{document_id}/collaborate",
+                f"/api/v1/documents/{document_id}/collaborate",
                 subprotocols=[
                     COLLABORATION_WEBSOCKET_PROTOCOL,
                     collaboration_token,
@@ -335,7 +369,7 @@ async def test_collaboration_websocket_rejects_missing_subprotocol_token() -> No
         with TestClient(app) as client:
             with pytest.raises(WebSocketDisconnect) as exc_info:
                 with client.websocket_connect(
-                    f"/documents/{document_id}/collaborate",
+                    f"/api/v1/documents/{document_id}/collaborate",
                     subprotocols=[COLLABORATION_WEBSOCKET_PROTOCOL],
                 ):
                     pass

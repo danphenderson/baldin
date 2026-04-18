@@ -1,6 +1,16 @@
 """Tests for app.core.conf – Settings properties and OpenAI helpers."""
 
-from app.core.conf import openai, settings
+import os
+
+import pytest
+
+from app.core import conf
+from app.core.conf import (
+    OpenAIFeatureDisabled,
+    apply_process_environment_hacks,
+    openai,
+    settings,
+)
 
 # ---------------------------------------------------------------------------
 # Settings properties
@@ -73,3 +83,66 @@ def test_get_chunk_size_known():
 
 def test_get_chunk_size_unknown():
     assert openai.get_chunk_size("unknown-model") == int(4_096 * 0.8)
+
+
+def test_require_enabled_raises_503_when_api_key_missing(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(openai, "API_KEY", "")
+
+    with pytest.raises(OpenAIFeatureDisabled) as exc_info:
+        openai.require_enabled("Document generation")
+
+    exc = exc_info.value
+    assert getattr(exc, "status_code", None) == 503
+    assert (
+        getattr(exc, "detail", "")
+        == "Document generation is disabled because OPENAI_API_KEY is not configured."
+    )
+
+
+def test_apply_process_environment_hacks_skips_kmp_outside_local_env(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.delenv("KMP_DUPLICATE_LIB_OK", raising=False)
+    monkeypatch.setattr(settings, "ALLOW_KMP_DUPLICATE_LIB_OK", True)
+    monkeypatch.setattr(settings, "ENVIRONMENT", "PROD")
+
+    apply_process_environment_hacks(settings)
+
+    assert "KMP_DUPLICATE_LIB_OK" not in os.environ
+
+
+def test_apply_process_environment_hacks_sets_kmp_in_dev(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.delenv("KMP_DUPLICATE_LIB_OK", raising=False)
+    monkeypatch.setattr(settings, "ALLOW_KMP_DUPLICATE_LIB_OK", True)
+    monkeypatch.setattr(settings, "ENVIRONMENT", "DEV")
+
+    apply_process_environment_hacks(settings)
+
+    assert os.environ["KMP_DUPLICATE_LIB_OK"] == "TRUE"
+
+
+def test_openai_helpers_pass_api_key_directly(monkeypatch: pytest.MonkeyPatch):
+    chat_model_calls: list[dict[str, object]] = []
+    embedding_calls: list[dict[str, object]] = []
+
+    class FakeChatOpenAI:
+        def __init__(self, **kwargs):
+            chat_model_calls.append(kwargs)
+
+    class FakeOpenAIEmbeddings:
+        def __init__(self, **kwargs):
+            embedding_calls.append(kwargs)
+
+    monkeypatch.setattr(conf, "ChatOpenAI", FakeChatOpenAI)
+    monkeypatch.setattr(conf, "OpenAIEmbeddings", FakeOpenAIEmbeddings)
+
+    local_openai = conf.OpenAI(API_KEY="unit-test-key")
+    local_openai.get_model("gpt-5.4-mini-2026-03-17")
+    local_openai.get_embeddings()
+
+    assert chat_model_calls[0]["api_key"] == "unit-test-key"
+    assert embedding_calls[0]["api_key"] == "unit-test-key"

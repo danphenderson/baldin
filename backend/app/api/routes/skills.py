@@ -1,8 +1,8 @@
 # app/api/routes/skills.py
 from asyncio import gather
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
-from sqlalchemy import select
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
+from sqlalchemy import func, select
 
 from app.api.deps import (
     AsyncSession,
@@ -66,7 +66,7 @@ async def extract_user_skills(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    log.info(f"Skills run extraction request: {payload.dict()}")
+    log.info(f"Skills run extraction request: {payload.model_dump()}")
 
     try:
         extractor = await get_extractor_by_name("skills", db)
@@ -92,16 +92,25 @@ async def extract_user_skills(
     return {"message": "Skills extraction task started"}
 
 
-@router.get("/", response_model=list[schemas.SkillRead])
+@router.get("/", response_model=schemas.PaginatedResponse[schemas.SkillRead])
 async def get_current_user_skills(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
 ):
-    result = await db.execute(
-        select(models.Skill).where(models.Skill.user_id == user.id)
+    base = select(models.Skill).where(models.Skill.user_id == user.id)
+    count_result = await db.execute(select(func.count()).select_from(base.subquery()))
+    total = count_result.scalar_one()
+    offset = (page - 1) * page_size
+    ordered_base = base.order_by(models.Skill.created_at.asc(), models.Skill.id.asc())
+    result = await db.execute(ordered_base.offset(offset).limit(page_size))
+    return schemas.PaginatedResponse[schemas.SkillRead](
+        items=result.scalars().all(),
+        total=total,
+        page=page,
+        page_size=page_size,
     )
-    skills = result.scalars().all()
-    return skills
 
 
 @router.post("/", status_code=201, response_model=schemas.SkillRead)
@@ -110,27 +119,27 @@ async def create_user_skill(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    skill = models.Skill(**payload.dict(), user_id=user.id)
+    skill = models.Skill(**payload.model_dump(), user_id=user.id)
     db.add(skill)
     await db.commit()
     await db.refresh(skill)
     return skill
 
 
-@router.get("/{skill_id}", response_model=schemas.SkillRead)
+@router.get("/{id}", response_model=schemas.SkillRead)
 async def get_user_skill(
     skill: schemas.SkillRead = Depends(get_skill),
 ):
     return skill
 
 
-@router.put("/{skill_id}", response_model=schemas.SkillRead)
+@router.patch("/{id}", response_model=schemas.SkillRead)
 async def update_user_skill(
     payload: schemas.SkillUpdate,
     skill: schemas.SkillRead = Depends(get_skill),
     db: AsyncSession = Depends(get_async_session),
 ):
-    skill_data = payload.dict(exclude_unset=True)
+    skill_data = payload.model_dump(exclude_unset=True)
     for field in skill_data:
         setattr(skill, field, skill_data[field])
     await db.commit()
@@ -138,7 +147,7 @@ async def update_user_skill(
     return skill
 
 
-@router.delete("/{skill_id}", status_code=204, response_model=None)
+@router.delete("/{id}", status_code=204, response_model=None)
 async def delete_user_skill(
     skill: schemas.SkillRead = Depends(get_skill),
     db: AsyncSession = Depends(get_async_session),

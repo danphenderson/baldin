@@ -2,12 +2,13 @@
 
 import { components } from '../schema';
 import { createApiClient } from './api-client';
+import { fetchAllPages, FULL_LIST_PAGE_SIZE, normalizePaginatedResponse, type PaginatedResponse } from './pagination';
 
 // ---------------------------------------------------------------------------
 // Types re-exported from the generated OpenAPI schema
 // ---------------------------------------------------------------------------
 
-export type OrchestrationEventRead = components['schemas']['OrchestrationEventRead-Output'];
+export type OrchestrationEventRead = components['schemas']['OrchestrationEventRead'];
 export type OrchestrationEventCreate = components['schemas']['OrchestrationEventCreate'];
 export type OrchestrationEventUpdate = components['schemas']['OrchestrationEventUpdate'];
 export type OrchestrationEventStatus = components['schemas']['OrchestrationEventStatusType'];
@@ -22,13 +23,10 @@ export type OrchestrationPipelineRead = Omit<RawOrchestrationPipelineRead, 'orch
 };
 export type OrchestrationPipelineCreate = components['schemas']['OrchestrationPipelineCreate'];
 export type OrchestrationPipelineUpdate = components['schemas']['OrchestrationPipelineUpdate'];
+type RawOrchestrationEventPage = components['schemas']['PaginatedResponse_OrchestrationEventRead_'];
+type RawOrchestrationPipelinePage = components['schemas']['PaginatedResponse_OrchestrationPipelineRead_'];
 
-export type OrchestrationEventPaginatedRead = {
-  items: OrchestrationEventRead[];
-  total: number;
-  page: number;
-  page_size: number;
-};
+export type OrchestrationEventPaginatedRead = PaginatedResponse<OrchestrationEventRead>;
 
 /** Filters accepted by the paginated events endpoint. */
 export interface EventQueryParams {
@@ -113,12 +111,12 @@ const normalizePipeline = (
 
 export const createOrchestrationEvent = async (token: string, body: OrchestrationEventCreate): Promise<OrchestrationEventRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/data_orchestration/events', { body }));
+  return unwrap(await client.POST('/api/v1/orchestration-pipelines/events', { body }));
 };
 
 export const getOrchestrationEvent = async (token: string, id: string): Promise<OrchestrationEventRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/data_orchestration/events/{id}', {
+  return unwrap(await client.GET('/api/v1/orchestration-pipelines/events/{id}', {
     params: { path: { id } },
   }));
 };
@@ -128,7 +126,7 @@ export const getOrchestrationEvents = async (
   params?: EventQueryParams,
 ): Promise<OrchestrationEventPaginatedRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/data_orchestration/events', {
+  const page = unwrap<RawOrchestrationEventPage>(await client.GET('/api/v1/orchestration-pipelines/events', {
     params: {
       query: {
         status: params?.status ?? undefined,
@@ -137,12 +135,16 @@ export const getOrchestrationEvents = async (
         page_size: params?.page_size,
       },
     },
-  })) as OrchestrationEventPaginatedRead;
+  }));
+  return normalizePaginatedResponse(page, {
+    page: params?.page ?? 1,
+    page_size: params?.page_size ?? 20,
+  });
 };
 
 export const updateOrchestrationEvent = async (token: string, id: string, body: OrchestrationEventUpdate): Promise<OrchestrationEventRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PUT('/data_orchestration/events/{id}', {
+  return unwrap(await client.PATCH('/api/v1/orchestration-pipelines/events/{id}', {
     params: { path: { id } },
     body,
   }));
@@ -151,7 +153,7 @@ export const updateOrchestrationEvent = async (token: string, id: string, body: 
 export const deleteOrchestrationEvent = async (token: string, id: string): Promise<void> => {
   const client = createApiClient(token);
   // DELETE not exposed in schema for this path; cast to bypass type check
-  unwrap(await (client.DELETE as Function)('/data_orchestration/events/{id}', {
+  unwrap(await (client.DELETE as Function)('/api/v1/orchestration-pipelines/events/{id}', {
     params: { path: { id } },
   }));
 };
@@ -162,13 +164,13 @@ export const deleteOrchestrationEvent = async (token: string, id: string): Promi
 
 export const createOrchestrationPipeline = async (token: string, body: OrchestrationPipelineCreate): Promise<OrchestrationPipelineRead> => {
   const client = createApiClient(token);
-  const pipeline = unwrap(await client.POST('/data_orchestration/pipelines', { body }));
+  const pipeline = unwrap(await client.POST('/api/v1/orchestration-pipelines/pipelines', { body }));
   return normalizePipeline(pipeline);
 };
 
 export const getOrchestrationPipeline = async (token: string, id: string): Promise<OrchestrationPipelineRead> => {
   const client = createApiClient(token);
-  const pipeline = unwrap(await client.GET('/data_orchestration/pipelines/{id}', {
+  const pipeline = unwrap(await client.GET('/api/v1/orchestration-pipelines/pipelines/{id}', {
     params: { path: { id } },
   }));
   return normalizePipeline(pipeline);
@@ -176,7 +178,7 @@ export const getOrchestrationPipeline = async (token: string, id: string): Promi
 
 export const updateOrchestrationPipeline = async (token: string, id: string, body: OrchestrationPipelineUpdate): Promise<OrchestrationPipelineRead> => {
   const client = createApiClient(token);
-  const pipeline = unwrap(await client.PUT('/data_orchestration/pipelines/{id}', {
+  const pipeline = unwrap(await client.PATCH('/api/v1/orchestration-pipelines/pipelines/{id}', {
     params: { path: { id } },
     body,
   }));
@@ -185,20 +187,27 @@ export const updateOrchestrationPipeline = async (token: string, id: string, bod
 
 export const getOrchestrationPipelines = async (token: string): Promise<OrchestrationPipelineRead[]> => {
   const client = createApiClient(token);
-  const pipelines = unwrap(await client.GET('/data_orchestration/pipelines'));
-  return pipelines.map(normalizePipeline);
+  const items = await fetchAllPages<RawOrchestrationPipelineRead>(async (page, pageSize) => unwrap<RawOrchestrationPipelinePage>(await client.GET('/api/v1/orchestration-pipelines/pipelines', {
+    params: {
+      query: {
+        page,
+        page_size: pageSize,
+      },
+    },
+  })), FULL_LIST_PAGE_SIZE);
+  return items.map(normalizePipeline);
 };
 
 export const deleteOrchestrationPipeline = async (token: string, id: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/data_orchestration/pipelines/{id}', {
+  unwrap(await client.DELETE('/api/v1/orchestration-pipelines/pipelines/{id}', {
     params: { path: { id } },
   }));
 };
 
 export const retryOrchestrationEvent = async (token: string, eventId: string): Promise<OrchestrationEventRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/data_orchestration/events/{event_id}/retry', {
+  return unwrap(await client.POST('/api/v1/orchestration-pipelines/events/{event_id}/retry', {
     params: { path: { event_id: eventId } },
   }));
 };

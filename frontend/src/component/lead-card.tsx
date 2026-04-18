@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Card, CardContent, Typography, Button, Chip, Stack, Box, IconButton,
+  Typography, Button, Stack, Box, IconButton,
   Tooltip, Divider, useTheme,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
@@ -11,12 +11,14 @@ import {
   AccessTime as TimeIcon,
   School as EducationIcon, Category as FunctionIcon,
   Groups as GroupsIcon, ChatBubbleOutline as CommentIcon,
-  ArrowForward as ArrowIcon,
+  ArrowForward as ArrowIcon, Stars as AspirationIcon,
 } from '@mui/icons-material';
 import type { LeadRead } from '../service/leads';
 import type { ApplicationCreationIntent } from '../service/applications';
+import { CardShell, StatusChip, getStatusMetaSx, radiusTokens, toRadiusPx } from '../design-system';
 import ApplicationIntentButton from './application-intent-button';
 import { timeAgo } from '../util/format';
+import { brandGradient } from '../design-system';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -25,35 +27,43 @@ import { timeAgo } from '../util/format';
 export interface LeadCardProps {
   lead: LeadRead;
   applying: boolean;
+  ranking?: {
+    relevanceScore: number;
+    message: string;
+  } | null;
+  applicationHandoff?: {
+    state: 'ready' | 'already-applied';
+    message: string;
+    applicationLabel?: string;
+    ctaLabel?: string;
+  } | null;
   onOpen: (lead: LeadRead) => void;
   onEdit: (lead: LeadRead) => void;
   onDelete: (lead: LeadRead) => void;
   onApply: (lead: LeadRead, intent: ApplicationCreationIntent) => void;
 }
 
+type StatusTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
+
 /* ------------------------------------------------------------------ */
 /*  Internal helpers                                                   */
 /* ------------------------------------------------------------------ */
 
 function MetaChip({
-  icon, label, color,
+  icon, label, tone = 'neutral',
 }: {
   icon: React.ReactElement;
   label: string | null | undefined;
-  color?: string;
+  tone?: StatusTone;
 }) {
   if (!label) return null;
   return (
-    <Chip
+    <StatusChip
       icon={icon}
       label={label}
       size="small"
-      variant="outlined"
-      sx={{
-        borderColor: color ? alpha(color, 0.35) : undefined,
-        color: color || 'text.secondary',
-        '& .MuiChip-icon': { color: color || 'text.secondary' },
-      }}
+      tone={tone}
+      emphasis="outline"
     />
   );
 }
@@ -72,53 +82,44 @@ const stopCardClick: React.MouseEventHandler<HTMLElement> = (event) => {
 };
 
 const LeadCard: React.FC<LeadCardProps> = ({
-  lead, applying, onOpen, onEdit, onDelete, onApply,
+  lead, applying, ranking, applicationHandoff, onOpen, onEdit, onDelete, onApply,
 }) => {
   const theme = useTheme();
   const companyName = lead.companies?.[0]?.name;
-  const gradientBg = `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`;
+  const gradientBg = brandGradient(theme);
+  const activityRadius = theme.baldin?.radius.lg ?? radiusTokens.lg;
   const otherInterestCount = getOtherInterestCount(lead);
   const canEdit = Boolean(lead.viewer_permissions?.can_update_shared_fields);
   const canDelete = Boolean(lead.viewer_permissions?.can_delete_shared_lead);
   const isActive = (lead.interest_count ?? 0) > 1 || (lead.comment_count ?? 0) > 0;
+  const hasExistingApplication = applicationHandoff?.state === 'already-applied';
+  const applyButtonLabel = applicationHandoff?.ctaLabel ?? 'Create Application';
+  const applyButtonAriaLabel = hasExistingApplication
+    ? `Existing application for ${lead.title || 'this lead'}`
+    : `Create application for ${lead.title || 'this lead'}`;
+
+  const cardTone = ranking ? 'warning' : 'primary';
 
   return (
-    <Card
-      role="button"
-      tabIndex={0}
+    <CardShell
       aria-label={`Open lead ${lead.title || 'Untitled Position'}`}
       onClick={() => onOpen(lead)}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onOpen(lead);
-        }
-      }}
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        cursor: 'pointer',
-        transition: 'transform 0.2s, border-color 0.2s, box-shadow 0.2s',
-        borderLeft: `3px solid ${alpha(theme.palette.primary.main, 0.5)}`,
-        '&:hover': {
-          transform: 'translateY(-2px)',
-          borderLeftColor: theme.palette.primary.main,
-          boxShadow: `0 10px 24px ${alpha(theme.palette.primary.main, 0.12)}`,
-        },
-        '&:focus-visible': {
-          outline: `2px solid ${alpha(theme.palette.primary.main, 0.6)}`,
-          outlineOffset: 2,
-        },
-      }}
+      interactive
+      tone={cardTone}
     >
-      <CardContent sx={{ p: { xs: 2, sm: 2.5 }, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
           <Box sx={{ minWidth: 0, flexGrow: 1 }}>
             <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
-              {lead.viewer_is_registered && <Chip size="small" color="success" label="Following" />}
-              {isActive && <Chip size="small" color="secondary" label="Active" />}
-              {!lead.viewer_is_registered && lead.viewer_permissions?.can_register && <Chip size="small" variant="outlined" label="Joinable" />}
+              {lead.viewer_is_registered && <StatusChip size="small" tone="success" label="Following" />}
+              {isActive && <StatusChip size="small" tone="info" label="Active" />}
+              {!lead.viewer_is_registered && lead.viewer_permissions?.can_register && (
+                <StatusChip
+                  size="small"
+                  emphasis="outline"
+                  tone="primary"
+                  label="Joinable"
+                />
+              )}
             </Stack>
             <Typography
               variant="body1"
@@ -135,6 +136,46 @@ const LeadCard: React.FC<LeadCardProps> = ({
             >
               {lead.title || 'Untitled Position'}
             </Typography>
+            {ranking && (
+              <Stack
+                data-testid="lead-card-ranking-strip"
+                direction="row"
+                spacing={1}
+                alignItems="flex-start"
+                sx={{
+                  mt: 1,
+                  px: 1.25,
+                  py: 1,
+                  borderRadius: toRadiusPx(theme.baldin?.radius.sm ?? radiusTokens.sm),
+                  backgroundColor: alpha(theme.palette.warning.main, theme.palette.mode === 'dark' ? 0.12 : 0.06),
+                }}
+              >
+                <StatusChip
+                  size="small"
+                  emphasis="solid"
+                  tone="warning"
+                  icon={<AspirationIcon sx={{ fontSize: 14 }} />}
+                  label={`${ranking.relevanceScore}/10`}
+                />
+                {ranking.message && (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      lineHeight: 1.45,
+                      fontStyle: 'italic',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      pt: 0.25,
+                    }}
+                  >
+                    {ranking.message}
+                  </Typography>
+                )}
+              </Stack>
+            )}
           </Box>
           <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0, ml: 0.5 }} onClick={stopCardClick}>
             {lead.url && (
@@ -202,10 +243,10 @@ const LeadCard: React.FC<LeadCardProps> = ({
         )}
 
         <Stack direction="row" sx={{ mt: 1.25, flexWrap: 'wrap', gap: { xs: 0.5, sm: 0.75 } }}>
-          <MetaChip icon={<WorkIcon sx={{ fontSize: 14 }} />} label={lead.employment_type} color={theme.palette.primary.main} />
-          <MetaChip icon={<SeniorityIcon sx={{ fontSize: 14 }} />} label={lead.seniority_level} color={theme.palette.secondary.main} />
-          <MetaChip icon={<FunctionIcon sx={{ fontSize: 14 }} />} label={lead.job_function} />
-          <MetaChip icon={<EducationIcon sx={{ fontSize: 14 }} />} label={lead.education_level} />
+          <MetaChip icon={<WorkIcon sx={{ fontSize: 14 }} />} label={lead.employment_type} tone="primary" />
+          <MetaChip icon={<SeniorityIcon sx={{ fontSize: 14 }} />} label={lead.seniority_level} tone="info" />
+          <MetaChip icon={<FunctionIcon sx={{ fontSize: 14 }} />} label={lead.job_function} tone="neutral" />
+          <MetaChip icon={<EducationIcon sx={{ fontSize: 14 }} />} label={lead.education_level} tone="neutral" />
         </Stack>
 
         {lead.salary && (
@@ -234,17 +275,18 @@ const LeadCard: React.FC<LeadCardProps> = ({
         )}
 
         <Box
+          data-testid="lead-card-collaboration-strip"
           sx={{
             mt: 1.5,
             p: 1.5,
-            borderRadius: 3,
+            borderRadius: toRadiusPx(activityRadius),
             backgroundColor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.12 : 0.06),
           }}
         >
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} justifyContent="space-between">
             <Stack spacing={0.5}>
               <Stack direction="row" spacing={0.75} alignItems="center">
-                <GroupsIcon sx={{ fontSize: 16, color: 'primary.main' }} />
+                <GroupsIcon sx={{ fontSize: 16, ...getStatusMetaSx(theme, 'primary') }} />
                 <Typography variant="body2" fontWeight={700}>{lead.interest_count ?? 0} tracking</Typography>
               </Stack>
               <Typography variant="caption" color="text.secondary">
@@ -259,7 +301,7 @@ const LeadCard: React.FC<LeadCardProps> = ({
             </Stack>
             <Stack spacing={0.5}>
               <Stack direction="row" spacing={0.75} alignItems="center">
-                <CommentIcon sx={{ fontSize: 16, color: 'secondary.main' }} />
+                <CommentIcon sx={{ fontSize: 16, ...getStatusMetaSx(theme, 'secondary') }} />
                 <Typography variant="body2" fontWeight={700}>{lead.comment_count ?? 0} comments</Typography>
               </Stack>
               <Typography variant="caption" color="text.secondary">
@@ -272,6 +314,28 @@ const LeadCard: React.FC<LeadCardProps> = ({
         <Box sx={{ flexGrow: 1 }} />
 
         <Divider sx={{ mt: 1.5, mb: 1.25, opacity: 0.5 }} />
+        {applicationHandoff && (
+          <Box sx={{ mb: 1.25 }}>
+            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mb: 0.75 }}>
+              <StatusChip
+                size="small"
+                emphasis="outline"
+                tone={hasExistingApplication ? 'info' : 'warning'}
+                label={hasExistingApplication ? 'Duplicate guard active' : 'Ready to apply'}
+              />
+              {applicationHandoff.applicationLabel && (
+                <StatusChip
+                  size="small"
+                  tone="success"
+                  label={`Existing application: ${applicationHandoff.applicationLabel}`}
+                />
+              )}
+            </Stack>
+            <Typography variant="body2" color="text.secondary">
+              {applicationHandoff.message}
+            </Typography>
+          </Box>
+        )}
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
           spacing={1}
@@ -283,9 +347,10 @@ const LeadCard: React.FC<LeadCardProps> = ({
               variant="contained"
               onSelect={(intent) => onApply(lead, intent)}
               loading={applying}
-              label="Create Application"
+              disabled={hasExistingApplication}
+              label={applyButtonLabel}
               loadingLabel="Creating..."
-              ariaLabel={`Create application for ${lead.title || 'this lead'}`}
+              ariaLabel={applyButtonAriaLabel}
               sx={{ background: gradientBg, px: 2.5, fontSize: '0.8rem' }}
             />
             <Button size="small" endIcon={<ArrowIcon />} onClick={() => onOpen(lead)}>
@@ -294,15 +359,14 @@ const LeadCard: React.FC<LeadCardProps> = ({
           </Stack>
           <Tooltip title={new Date(lead.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}>
             <Stack direction="row" spacing={0.5} alignItems="center" sx={{ cursor: 'default' }}>
-              <TimeIcon sx={{ fontSize: 13, color: 'text.secondary', opacity: 0.6 }} />
+              <TimeIcon sx={{ fontSize: 13, ...getStatusMetaSx(theme, 'neutral'), opacity: 0.6 }} />
               <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.7 }}>
                 {timeAgo(lead.created_at)}
               </Typography>
             </Stack>
           </Tooltip>
         </Stack>
-      </CardContent>
-    </Card>
+    </CardShell>
   );
 };
 

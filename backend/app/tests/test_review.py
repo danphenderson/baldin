@@ -5,24 +5,28 @@ Covers auth enforcement, listing pending items, approve/reject for
 crawler runs, extraction events, and leads, and batch operations.
 """
 
-from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, patch
-from uuid import UUID
 
 import pytest
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
 
 from app import models
-from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
+from app.conftest import (
+    async_client_ctx as _client,
+)
+from app.conftest import (
+    create_user as _create_user,
+)
+from app.conftest import (
+    login_and_get_headers,
+)
+from app.core.db import session_context
 from app.main import app
 from app.tests import utils
 
-pytestmark = pytest.mark.asyncio(loop_scope="module")
-
-password_helper = PasswordHelper()
-_db_ready = False
+pytestmark = [
+    pytest.mark.asyncio(loop_scope="module"),
+    pytest.mark.usefixtures("fresh_db"),
+]
 
 
 # ---------------------------------------------------------------------------
@@ -30,53 +34,9 @@ _db_ready = False
 # ---------------------------------------------------------------------------
 
 
-@asynccontextmanager
-async def _client():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
-        yield client
-
-
-async def _ensure_db_ready():
-    global _db_ready
-    if _db_ready:
-        return
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
-
-
-async def _create_user(
-    password: str, *, is_superuser: bool = False
-) -> tuple[str, UUID]:
-    email = utils.random_email()
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash(password),
-            session,
-            is_superuser=is_superuser,
-        )
-        await session.commit()
-    return email, user.id
-
-
-async def _auth_headers(
-    client: AsyncClient, email: str, password: str
-) -> dict[str, str]:
+async def _auth_headers(client, email: str, password: str) -> dict[str, str]:
     app.state.limiter.reset()
-    response = await client.post(
-        "/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    return await login_and_get_headers(client, email, password)
 
 
 # ---------------------------------------------------------------------------
@@ -85,14 +45,13 @@ async def _auth_headers(
 
 
 async def test_review_items_empty():
-    """GET /review/items returns empty list when nothing is pending."""
-    await _ensure_db_ready()
+    """GET /review/items returns an empty paginated response when nothing is pending."""
     async with _client() as client:
         email, _ = await _create_user("super-review-empty", is_superuser=True)
         headers = await _auth_headers(client, email, "super-review-empty")
-        resp = await client.get("/review/items", headers=headers)
+        resp = await client.get("/api/v1/review/items", headers=headers)
         assert resp.status_code == 200
-        assert resp.json() == []
+        assert resp.json() == {"items": [], "total": 0, "page": 1, "page_size": 20}
 
 
 # ---------------------------------------------------------------------------
@@ -102,19 +61,17 @@ async def test_review_items_empty():
 
 async def test_review_requires_superuser():
     """Non-superuser gets 403 on review endpoints."""
-    await _ensure_db_ready()
     async with _client() as client:
         email, _ = await _create_user("regular-review")
         headers = await _auth_headers(client, email, "regular-review")
-        resp = await client.get("/review/items", headers=headers)
+        resp = await client.get("/api/v1/review/items", headers=headers)
         assert resp.status_code == 403
 
 
 async def test_review_requires_auth():
     """Unauthenticated gets 401 on review endpoints."""
-    await _ensure_db_ready()
     async with _client() as client:
-        resp = await client.get("/review/items")
+        resp = await client.get("/api/v1/review/items")
         assert resp.status_code == 401
 
 
@@ -125,7 +82,6 @@ async def test_review_requires_auth():
 
 async def test_approve_crawler_run():
     """Approve a pending_review crawler run → status becomes pending."""
-    await _ensure_db_ready()
     async with _client() as client:
         email, user_id = await _create_user("super-approve-run", is_superuser=True)
         headers = await _auth_headers(client, email, "super-approve-run")
@@ -152,9 +108,9 @@ async def test_approve_crawler_run():
             run_id = run.id
 
         # Verify it appears in the queue
-        resp = await client.get("/review/items", headers=headers)
+        resp = await client.get("/api/v1/review/items", headers=headers)
         assert resp.status_code == 200
-        items = resp.json()
+        items = resp.json()["items"]
         run_items = [i for i in items if i["item_id"] == str(run_id)]
         assert len(run_items) == 1
 
@@ -164,7 +120,7 @@ async def test_approve_crawler_run():
             new_callable=AsyncMock,
         ):
             resp = await client.post(
-                f"/review/items/crawler_run/{run_id}/approve", headers=headers
+                f"/api/v1/review/items/crawler_run/{run_id}/approve", headers=headers
             )
             assert resp.status_code == 200
 
@@ -181,7 +137,6 @@ async def test_approve_crawler_run():
 
 async def test_reject_crawler_run():
     """Reject a pending_review crawler run → status becomes cancelled."""
-    await _ensure_db_ready()
     async with _client() as client:
         email, user_id = await _create_user("super-reject-run", is_superuser=True)
         headers = await _auth_headers(client, email, "super-reject-run")
@@ -207,7 +162,7 @@ async def test_reject_crawler_run():
             run_id = run.id
 
         resp = await client.post(
-            f"/review/items/crawler_run/{run_id}/reject", headers=headers
+            f"/api/v1/review/items/crawler_run/{run_id}/reject", headers=headers
         )
         assert resp.status_code == 200
 
@@ -224,7 +179,6 @@ async def test_reject_crawler_run():
 
 async def test_approve_extraction_event():
     """Approve a pending_review extraction event → status becomes success."""
-    await _ensure_db_ready()
     async with _client() as client:
         email, user_id = await _create_user("super-approve-event", is_superuser=True)
         headers = await _auth_headers(client, email, "super-approve-event")
@@ -247,7 +201,7 @@ async def test_approve_extraction_event():
             event_id = event.id
 
         resp = await client.post(
-            f"/review/items/extraction_event/{event_id}/approve", headers=headers
+            f"/api/v1/review/items/extraction_event/{event_id}/approve", headers=headers
         )
         assert resp.status_code == 200
 
@@ -263,7 +217,6 @@ async def test_approve_extraction_event():
 
 async def test_approve_lead():
     """Approve a pending_review lead → review_status becomes approved."""
-    await _ensure_db_ready()
     from app import utils as app_utils
 
     async with _client() as client:
@@ -283,7 +236,7 @@ async def test_approve_lead():
             lead_id = lead.id
 
         resp = await client.post(
-            f"/review/items/lead/{lead_id}/approve", headers=headers
+            f"/api/v1/review/items/lead/{lead_id}/approve", headers=headers
         )
         assert resp.status_code == 200
 
@@ -299,7 +252,6 @@ async def test_approve_lead():
 
 async def test_batch_review():
     """Batch approve one item and reject another."""
-    await _ensure_db_ready()
     from app import utils as app_utils
 
     async with _client() as client:
@@ -331,7 +283,7 @@ async def test_batch_review():
             lead2_id = lead2.id
 
         resp = await client.post(
-            "/review/items/batch",
+            "/api/v1/review/items/batch",
             json={
                 "items": [
                     {

@@ -1,10 +1,30 @@
 import React, { useContext, useEffect, useState, useCallback, useRef } from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, Button, TextField, Box, Typography,
-  Alert, List, ListItem, ListItemText, IconButton, Select, MenuItem,
-  Stack, Divider, CircularProgress, alpha, useTheme, type SelectChangeEvent,
-  Avatar, ListItemAvatar,
+  Button,
+  TextField,
+  Box,
+  Typography,
+  Alert,
+  List,
+  ListItem,
+  ListItemText,
+  IconButton,
+  Select,
+  MenuItem,
+  Stack,
+  Divider,
+  CircularProgress,
+  alpha,
+  useTheme,
+  type SelectChangeEvent,
+  Avatar,
+  ListItemAvatar,
 } from '@mui/material';
+import {
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+} from '../design-system';
 import { PersonAdd as PersonAddIcon, Delete as DeleteIcon, Share as ShareIcon } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
 import {
@@ -208,7 +228,7 @@ const ShareDocumentDialog: React.FC<ShareDocumentDialogProps> = ({
         {(searchResults.length > 0 || searching) && !selectedUser && (
           <Box sx={{
             border: `1px solid ${theme.palette.divider}`,
-            borderRadius: 1, mb: 2, maxHeight: 200, overflow: 'auto',
+            borderRadius: '4px', mb: 2, maxHeight: 200, overflow: 'auto',
             background: theme.palette.background.paper,
           }}>
             {searching ? (
@@ -286,7 +306,7 @@ const ShareDocumentDialog: React.FC<ShareDocumentDialogProps> = ({
                   </IconButton>
                 }
                 sx={{
-                  borderRadius: 1, mb: 0.5,
+                  borderRadius: '4px', mb: 0.5,
                   border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
                 }}
               >

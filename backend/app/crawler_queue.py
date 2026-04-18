@@ -77,6 +77,40 @@ async def enqueue_job(job: dict[str, Any]) -> bool:
         await client.aclose()
 
 
+async def get_queue_health() -> tuple[bool, bool, str | None]:
+    """Return queue configured state, reachability, and an optional detail message."""
+    if not _queue_enabled():
+        return False, False, "Crawler queue is disabled"
+
+    import redis.asyncio as aioredis
+
+    client = aioredis.from_url(conf.settings.REDIS_URL)
+    try:
+        result = await client.ping()
+        return True, bool(result), None if result else "Redis ping returned false"
+    except Exception as exc:
+        return True, False, str(exc)
+    finally:
+        await client.aclose()
+
+
+async def get_queue_backlog() -> int | None:
+    """Return the current Redis queue depth when worker mode is enabled."""
+    if not _queue_enabled():
+        return None
+
+    import redis.asyncio as aioredis
+
+    client = aioredis.from_url(conf.settings.REDIS_URL)
+    try:
+        return int(await client.llen(conf.settings.CRAWLER_QUEUE_NAME))
+    except Exception as exc:
+        await log.warning("Unable to inspect crawler queue backlog: %s", exc)
+        return None
+    finally:
+        await client.aclose()
+
+
 async def dequeue_job(timeout: int = 5) -> Optional[dict[str, Any]]:
     """Block until a job arrives or *timeout* seconds elapse."""
     if not _queue_enabled():

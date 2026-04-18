@@ -8,7 +8,7 @@ export const SKILL_FIELDS: FieldConfig[] = [
   { key: 'name', label: 'Skill Name' },
   { key: 'category', label: 'Category' },
   { key: 'yoe', label: 'Years of Experience', type: 'number' },
-  { key: 'subskills', label: 'Sub-skills' },
+  { key: 'subskills', label: 'Sub-skills', isArray: true },
 ];
 
 export const EXPERIENCE_FIELDS: FieldConfig[] = [
@@ -18,17 +18,17 @@ export const EXPERIENCE_FIELDS: FieldConfig[] = [
   { key: 'start_date', label: 'Start Date', type: 'date' },
   { key: 'end_date', label: 'End Date', type: 'date' },
   { key: 'description', label: 'Description', multiline: true, rows: 3 },
-  { key: 'projects', label: 'Projects', multiline: true, rows: 2 },
+  { key: 'projects', label: 'Projects', multiline: true, rows: 2, isArray: true },
 ];
 
 export const EDUCATION_FIELDS: FieldConfig[] = [
   { key: 'degree', label: 'Degree' },
   { key: 'university', label: 'University' },
-  { key: 'gradePoint', label: 'GPA' },
+  { key: 'grade_point', label: 'GPA' },
   { key: 'start_date', label: 'Start Date', type: 'date' },
   { key: 'end_date', label: 'End Date', type: 'date' },
-  { key: 'activities', label: 'Activities', multiline: true, rows: 2 },
-  { key: 'achievements', label: 'Achievements', multiline: true, rows: 2 },
+  { key: 'activities', label: 'Activities', multiline: true, rows: 2, isArray: true },
+  { key: 'achievements', label: 'Achievements', multiline: true, rows: 2, isArray: true },
 ];
 
 export const CERTIFICATE_FIELDS: FieldConfig[] = [
@@ -64,9 +64,9 @@ export const SECTION_LABELS: Record<SectionKey, string> = {
 };
 
 export const BLANK_TEMPLATES: Record<SectionKey, EditableItem> = {
-  skills: { name: '', category: '', yoe: 0, subskills: '' },
-  experiences: { title: '', company: '', location: '', start_date: '', end_date: '', description: '', projects: '' },
-  education: { university: '', degree: '', gradePoint: '', start_date: '', end_date: '', activities: '', achievements: '' },
+  skills: { name: '', category: '', yoe: 0, subskills: [] as string[] },
+  experiences: { title: '', company: '', location: '', start_date: '', end_date: '', description: '', projects: [] as string[] },
+  education: { university: '', degree: '', grade_point: '', start_date: '', end_date: '', activities: [] as string[], achievements: [] as string[] },
   certificates: { title: '', issuer: '', issued_date: '', expiration_date: '' },
   contacts: { first_name: '', last_name: '', email: '', phone_number: '', time_zone: '', notes: '' },
 };

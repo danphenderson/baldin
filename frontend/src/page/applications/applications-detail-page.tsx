@@ -1,10 +1,22 @@
 import React, { useContext, useEffect, useState, useCallback } from 'react';
 import {
-  Box, Typography, Chip, Stack, Button, useTheme, alpha,
-  Select, MenuItem, FormControl, InputLabel, IconButton, Tooltip,
-  Skeleton, Alert, LinearProgress, Divider, useMediaQuery,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-} from '@mui/material';
+  Box,
+  Typography,
+  Stack,
+  Button,
+  useTheme,
+  alpha,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  IconButton,
+  Tooltip,
+  LinearProgress,
+  Divider,
+  useMediaQuery,
+  TextField,
+  } from '@mui/material';
 import {
   ArrowBack as BackIcon,
   Delete as DeleteIcon,
@@ -15,34 +27,62 @@ import {
   OpenInNew as OpenIcon,
   Warning as WarningIcon,
   PlaylistAdd as PlaylistAddIcon,
-} from '@mui/icons-material';
-import { useParams, useNavigate } from 'react-router-dom';
+  } from '@mui/icons-material';
+import { useParams,
+  useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import {
-  getApplication, updateApplication, deleteApplication,
-  getApplicationDocuments, addApplicationDocument, detachApplicationDocument,
-  type ApplicationRead,
-} from '../../service/applications';
+  getApplication,
+  updateApplication,
+  deleteApplication,
+  getApplicationDocuments,
+  addApplicationDocument,
+  detachApplicationDocument,
+  type ApplicationDetailRead,
+  } from '../../service/applications';
 import {
-  getDocuments, downloadDocument, generateDocument,
-  type DocumentRead, type DocumentGenerateRequest,
-} from '../../service/documents';
-import { ALL_STATUS_COLUMNS, relativeDate } from './use-applications';
+  getDocuments,
+  downloadDocument,
+  generateDocument,
+  type DocumentRead,
+  type DocumentGenerateRequest,
+  } from '../../service/documents';
+import { useStageColumns,
+  relativeDate,
+  type Column } from './use-applications';
+import { InlineFeedback,
+  LoadingState,
+  PageTitle,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogActions as DialogActions,
+} from '../../design-system';
 import CreateActionItemDialog from '../../component/create-action-item-dialog';
+import RunAgentMenu from '../../component/run-agent-menu';
+import ChatAgentMenu from '../../component/chat-agent-menu';
+import type { AgentRunRead } from '../../service/agents';
 import type { ActionItemRead, ActionItemCreate } from '../../service/action-items';
+import { AgentEnabledMultilineField } from '../../component/agent-surface';
+import { radiusTokens, toRadiusPx } from '../../design-system/tokens/radius';
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
 interface StatusHistoryEntry {
-  from?: ApplicationRead['status'] | null;
-  to: NonNullable<ApplicationRead['status']>;
+  id: string;
+  application_id: string;
+  stage: string;
+  outcome?: string | null;
+  changed_by_user_id?: string | null;
   changed_at: string;
+  note?: string | null;
 }
 
-type ApplicationDetailRecord = ApplicationRead & {
+type ApplicationDetailRecord = ApplicationDetailRead & {
   outcome_reason?: string | null;
   status_history?: StatusHistoryEntry[] | null;
 };
@@ -64,9 +104,9 @@ function isTerminalStatus(status: string | null | undefined): boolean {
   return status === 'rejected' || status === 'withdrawn';
 }
 
-function statusLabel(status: string | null | undefined): string {
+function statusLabel(status: string | null | undefined, columns: Column[]): string {
   if (!status) return 'Unknown';
-  return ALL_STATUS_COLUMNS.find((column) => column.key === status)?.label ?? status.replace(/_/g, ' ');
+  return columns.find((column) => column.key === status)?.label ?? status.replace(/_/g, ' ');
 }
 
 function formatTimelineTimestamp(iso: string): string {
@@ -100,16 +140,19 @@ function formatTimelineDuration(startIso: string, endIso?: string): string {
 
 function buildTimelineEntries(history: StatusHistoryEntry[] | null | undefined) {
   const entries = (history ?? [])
-    .filter((entry): entry is StatusHistoryEntry => Boolean(entry?.to && entry?.changed_at))
+    .filter((entry): entry is StatusHistoryEntry => Boolean(entry?.changed_at))
     .slice()
     .sort((left, right) => new Date(left.changed_at).getTime() - new Date(right.changed_at).getTime());
 
   return entries.map((entry, index) => {
     const nextEntry = entries[index + 1];
+    const prevEntry = index > 0 ? entries[index - 1] : null;
+    const label = entry.outcome ?? entry.stage;
+    const prevLabel = prevEntry ? (prevEntry.outcome ?? prevEntry.stage) : null;
     return {
-      key: `${entry.changed_at}-${entry.to}-${index}`,
-      from: entry.from ?? null,
-      to: entry.to,
+      key: `${entry.changed_at}-${label}-${index}`,
+      from: prevLabel ?? null,
+      to: label,
       changedAt: entry.changed_at,
       durationLabel: formatTimelineDuration(entry.changed_at, nextEntry?.changed_at),
       isCurrent: index === entries.length - 1,
@@ -123,6 +166,7 @@ const ApplicationDetailPage: React.FC = () => {
   const theme = useTheme();
   const isNarrow = useMediaQuery(theme.breakpoints.down('md'));
   const { token } = useContext(UserContext);
+  const { allStatusColumns: ALL_STATUS_COLUMNS } = useStageColumns();
 
   /* application state */
   const [app, setApp] = useState<ApplicationDetailRecord | null>(null);
@@ -152,7 +196,7 @@ const ApplicationDetailPage: React.FC = () => {
 
   const lead = app?.lead;
 
-  usePageToolbarHeader('Application', lead?.title || 'Loading\u2026');
+  usePageToolbarHeader('Application', lead?.title || 'Loading…');
 
   /* ---------------------------------------------------------------- */
   /*  Fetch application                                                */
@@ -231,29 +275,34 @@ const ApplicationDetailPage: React.FC = () => {
     return () => clearTimeout(id);
   }, []);
 
+  const renderDocumentLoadingState = () => (
+    <LoadingState kind="list" count={2} itemHeight={40} />
+  );
+
   /* status change */
-  const handleStatusChange = async (newStatus: ApplicationRead['status']) => {
+  const handleStatusChange = async (newStatus: string) => {
     if (!token || !app) return;
-    const prev = app.status;
-    const shouldReopen = isTerminalStatus(app.outcome ?? app.status) && !isTerminalStatus(newStatus);
-    setApp((a) => a ? { ...a, status: newStatus } : a);
+    const prev = { stage: app.stage, outcome: app.outcome };
+    const shouldReopen = isTerminalStatus(app.outcome ?? '') && !isTerminalStatus(newStatus as string);
+    const isOutcome = newStatus === 'rejected' || newStatus === 'withdrawn';
+    setApp((a) => a ? { ...a, stage: isOutcome ? a.stage : newStatus as any, outcome: isOutcome ? newStatus as any : null } : a);
     try {
       const updated = await updateApplication(token, app.id, {
-        status: newStatus,
+        ...(isOutcome ? { outcome: newStatus as ApplicationDetailRead['outcome'] } : { stage: newStatus as ApplicationDetailRead['stage'], outcome: null }),
         ...(shouldReopen ? { reopen: true } : {}),
       } as ApplicationUpdatePayload);
       setApp(updated as ApplicationDetailRecord);
       setLocalOutcomeReason((updated as ApplicationDetailRecord).outcome_reason ?? '');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to update status');
-      setApp((a) => a ? { ...a, status: prev } : a);
+      setApp((a) => a ? { ...a, ...prev } : a);
     }
   };
 
   /* save notes on blur */
   const handleNotesSave = async () => {
     if (!token || !app || localNotes === (app.notes ?? '')) return;
-    showSuccess('Saving\u2026');
+    showSuccess('Saving…');
     try {
       const updated = await updateApplication(token, app.id, { notes: localNotes });
       setApp(updated);
@@ -266,7 +315,7 @@ const ApplicationDetailPage: React.FC = () => {
   /* save next step on blur */
   const handleNextStepSave = async () => {
     if (!token || !app || localNextStep === (app.next_step ?? '')) return;
-    showSuccess('Saving\u2026');
+    showSuccess('Saving…');
     try {
       const updated = await updateApplication(token, app.id, { next_step: localNextStep || null });
       setApp(updated);
@@ -282,7 +331,7 @@ const ApplicationDetailPage: React.FC = () => {
     const newVal = localNextStepDue || null;
     const curVal = app.next_step_due ? app.next_step_due.slice(0, 10) : null;
     if (newVal === curVal) return;
-    showSuccess('Saving\u2026');
+    showSuccess('Saving…');
     try {
       const updated = await updateApplication(token, app.id, { next_step_due: newVal ? `${newVal}T00:00:00` : null });
       setApp(updated);
@@ -293,12 +342,12 @@ const ApplicationDetailPage: React.FC = () => {
   };
 
   const handleOutcomeReasonSave = async () => {
-    if (!token || !app || !isTerminalStatus(app.outcome ?? app.status)) return;
+    if (!token || !app || !isTerminalStatus(app.outcome ?? '')) return;
     const nextValue = localOutcomeReason.trim() || null;
     const currentValue = (app.outcome_reason ?? '').trim() || null;
     if (nextValue === currentValue) return;
 
-    showSuccess('Saving\u2026');
+    showSuccess('Saving…');
     try {
       const updated = await updateApplication(token, app.id, {
         outcome_reason: nextValue,
@@ -383,6 +432,22 @@ const ApplicationDetailPage: React.FC = () => {
     setGenerating(false);
   };
 
+  /* run agent -> navigate to session */
+  const handleAgentSessionCreated = async (run: AgentRunRead) => {
+    if (run.session_document_id && token) {
+      // Backend already attaches the session document to the application
+      // during POST /agents/{id}/run, so just refresh the doc list.
+      try {
+        const docs = await getApplicationDocuments(token, app!.id);
+        setAppDocuments(docs || []);
+      } catch {
+        // non-blocking: the session exists, refresh just failed
+      }
+      showSuccess('Agent session created');
+      navigate(`/workspace/${run.session_document_id}`);
+    }
+  };
+
   const appResumes = appDocuments.filter((d) => d.kind === 'resume');
   const appCoverLetters = appDocuments.filter((d) => d.kind === 'cover_letter');
   const availableResumes = allDocuments.filter(
@@ -430,12 +495,7 @@ const ApplicationDetailPage: React.FC = () => {
         <Button startIcon={<BackIcon />} onClick={() => navigate('/applications')} sx={{ mb: 3, textTransform: 'none' }}>
           Back to Applications
         </Button>
-        <Stack spacing={2}>
-          <Skeleton variant="rounded" height={40} width="60%" />
-          <Skeleton variant="rounded" height={24} width="40%" />
-          <Skeleton variant="rounded" height={200} />
-          <Skeleton variant="rounded" height={200} />
-        </Stack>
+        <LoadingState kind="section" />
       </Box>
     );
   }
@@ -447,7 +507,7 @@ const ApplicationDetailPage: React.FC = () => {
   if (error && !app) {
     return (
       <Box sx={{ py: 2 }}>
-        <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
+        <InlineFeedback tone="error" sx={{ mb: 3 }}>{error}</InlineFeedback>
         <Button variant="outlined" startIcon={<BackIcon />} onClick={() => navigate('/applications')}>
           Back to Applications
         </Button>
@@ -462,9 +522,9 @@ const ApplicationDetailPage: React.FC = () => {
   /* ---------------------------------------------------------------- */
 
   const companyName = lead?.companies?.[0]?.name;
-  const column = ALL_STATUS_COLUMNS.find((c) => c.key === (app.status || 'applied').toLowerCase()) ?? ALL_STATUS_COLUMNS[0];
-  const isClosedApplication = isTerminalStatus(app.outcome ?? app.status);
-  const currentOutcomeLabel = statusLabel(app.outcome ?? app.status);
+  const column = ALL_STATUS_COLUMNS.find((c) => c.key === (app.outcome ?? app.stage ?? 'applied').toLowerCase()) ?? ALL_STATUS_COLUMNS[0];
+  const isClosedApplication = isTerminalStatus(app.outcome ?? '');
+  const currentOutcomeLabel = statusLabel(app.outcome ?? app.stage, ALL_STATUS_COLUMNS);
   const timelineEntries = buildTimelineEntries(app.status_history);
 
   return (
@@ -487,16 +547,16 @@ const ApplicationDetailPage: React.FC = () => {
       </Box>
 
       {/* Alerts */}
-      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
-      {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
+      {error && <InlineFeedback tone="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</InlineFeedback>}
+      {success && <InlineFeedback tone="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</InlineFeedback>}
 
       {/* Main content */}
-      <Stack spacing={0} divider={<Divider />} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3, overflow: 'hidden', bgcolor: theme.palette.background.paper }}>
+      <Stack spacing={0} divider={<Divider />} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: toRadiusPx(radiusTokens.lg), overflow: 'hidden', bgcolor: theme.palette.background.paper }}>
         {/* -------- Overview -------- */}
         <Box sx={{ px: 3, py: 3 }}>
-          <Typography variant="h5" fontWeight={700} gutterBottom>
+          <PageTitle gutterBottom>
             {lead?.title || 'Untitled Position'}
-          </Typography>
+          </PageTitle>
           {companyName && (
             <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
               {companyName}
@@ -509,7 +569,7 @@ const ApplicationDetailPage: React.FC = () => {
               <Select
                 labelId="detail-status-label"
                 label="Stage"
-                value={app.status || 'applied'}
+                value={app.outcome ?? app.stage ?? 'applied'}
                 onChange={(e) => handleStatusChange(e.target.value)}
               >
                 {ALL_STATUS_COLUMNS.map((c) => (
@@ -568,13 +628,20 @@ const ApplicationDetailPage: React.FC = () => {
           <Typography variant="subtitle1" fontWeight={700} gutterBottom>
             Notes
           </Typography>
-          <TextField
+          <AgentEnabledMultilineField
             multiline
             minRows={3}
             fullWidth
-            placeholder="Add notes about this application\u2026"
+            placeholder="Add notes about this application…"
+            surfaceId={app.id}
+            fieldKey="application_notes"
+            entityRefs={[
+              { kind: 'application', id: app.id, label: lead?.title ?? 'Application' },
+              ...(lead?.id ? [{ kind: 'lead', id: lead.id, label: lead.title ?? 'Lead' }] : []),
+            ]}
+            applicationId={app.id}
             value={localNotes}
-            onChange={(e) => setLocalNotes(e.target.value)}
+            onChange={setLocalNotes}
             onBlur={handleNotesSave}
             variant="outlined"
             size="small"
@@ -643,17 +710,24 @@ const ApplicationDetailPage: React.FC = () => {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, maxWidth: 640 }}>
               Capture why this application ended so the closure is still understandable when you review the history later.
             </Typography>
-            <TextField
+            <AgentEnabledMultilineField
               multiline
               minRows={2}
               fullWidth
               label="Outcome reason"
+              surfaceId={app.id}
+              fieldKey="application_outcome_reason"
+              entityRefs={[
+                { kind: 'application', id: app.id, label: lead?.title ?? 'Application' },
+                ...(lead?.id ? [{ kind: 'lead', id: lead.id, label: lead.title ?? 'Lead' }] : []),
+              ]}
+              applicationId={app.id}
               placeholder={app.outcome === 'withdrawn'
                 ? 'e.g. Accepted another offer before the final round'
                 : 'e.g. Team closed the role after the onsite'
               }
               value={localOutcomeReason}
-              onChange={(e) => setLocalOutcomeReason(e.target.value)}
+              onChange={setLocalOutcomeReason}
               onBlur={handleOutcomeReasonSave}
               variant="outlined"
               size="small"
@@ -704,7 +778,7 @@ const ApplicationDetailPage: React.FC = () => {
                     <Box
                       sx={{
                         border: `1px solid ${alpha(col.color, 0.16)}`,
-                        borderRadius: 2.5,
+                        borderRadius: toRadiusPx(radiusTokens.md),
                         px: 2,
                         py: 1.5,
                         bgcolor: alpha(col.color, theme.palette.mode === 'dark' ? 0.08 : 0.04),
@@ -713,7 +787,7 @@ const ApplicationDetailPage: React.FC = () => {
                       <Stack direction={isNarrow ? 'column' : 'row'} justifyContent="space-between" alignItems={isNarrow ? 'flex-start' : 'center'} gap={1}>
                         <Box>
                           <Typography variant="body2" fontWeight={600}>
-                            {entry.from ? `${statusLabel(entry.from)} → ${statusLabel(entry.to)}` : `Created in ${statusLabel(entry.to)}`}
+                            {entry.from ? `${statusLabel(entry.from, ALL_STATUS_COLUMNS)} → ${statusLabel(entry.to, ALL_STATUS_COLUMNS)}` : `Created in ${statusLabel(entry.to, ALL_STATUS_COLUMNS)}`}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {formatTimelineTimestamp(entry.changedAt)} · {relativeDate(entry.changedAt)}
@@ -722,8 +796,8 @@ const ApplicationDetailPage: React.FC = () => {
                         <Chip
                           size="small"
                           label={entry.isCurrent
-                            ? `In ${statusLabel(entry.to)} for ${entry.durationLabel}`
-                            : `Stayed in ${statusLabel(entry.to)} for ${entry.durationLabel}`
+                            ? `In ${statusLabel(entry.to, ALL_STATUS_COLUMNS)} for ${entry.durationLabel}`
+                            : `Stayed in ${statusLabel(entry.to, ALL_STATUS_COLUMNS)} for ${entry.durationLabel}`
                           }
                           sx={{
                             alignSelf: isNarrow ? 'flex-start' : 'center',
@@ -758,9 +832,7 @@ const ApplicationDetailPage: React.FC = () => {
             </Button>
           </Stack>
 
-          {loadingDocs ? (
-            <Stack spacing={1}>{[0, 1].map((i) => <Skeleton key={i} variant="rounded" height={40} />)}</Stack>
-          ) : appDocuments.length === 0 ? (
+          {loadingDocs ? renderDocumentLoadingState() : appDocuments.length === 0 ? (
             <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.6 }}>
               No documents attached yet
             </Typography>
@@ -771,7 +843,7 @@ const ApplicationDetailPage: React.FC = () => {
                   key={doc.id}
                   sx={{
                     display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1,
-                    borderRadius: 2, border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: toRadiusPx(radiusTokens.sm), border: `1px solid ${theme.palette.divider}`,
                     bgcolor: alpha(doc.kind === 'resume' ? theme.palette.primary.main : theme.palette.secondary.main, 0.03),
                   }}
                 >
@@ -818,9 +890,7 @@ const ApplicationDetailPage: React.FC = () => {
             Resumes
           </Typography>
 
-          {loadingDocs ? (
-            <Stack spacing={1}>{[0, 1].map((i) => <Skeleton key={i} variant="rounded" height={40} />)}</Stack>
-          ) : appResumes.length === 0 ? (
+          {loadingDocs ? renderDocumentLoadingState() : appResumes.length === 0 ? (
             <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.6 }}>
               No resumes attached yet
             </Typography>
@@ -831,7 +901,7 @@ const ApplicationDetailPage: React.FC = () => {
                   key={r.id}
                   sx={{
                     display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1,
-                    borderRadius: 2, border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: toRadiusPx(radiusTokens.sm), border: `1px solid ${theme.palette.divider}`,
                     bgcolor: alpha(theme.palette.primary.main, 0.03),
                   }}
                 >
@@ -872,9 +942,7 @@ const ApplicationDetailPage: React.FC = () => {
             Cover Letters
           </Typography>
 
-          {loadingDocs ? (
-            <Stack spacing={1}>{[0, 1].map((i) => <Skeleton key={i} variant="rounded" height={40} />)}</Stack>
-          ) : appCoverLetters.length === 0 ? (
+          {loadingDocs ? renderDocumentLoadingState() : appCoverLetters.length === 0 ? (
             <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.6 }}>
               No cover letters attached yet
             </Typography>
@@ -885,7 +953,7 @@ const ApplicationDetailPage: React.FC = () => {
                   key={cl.id}
                   sx={{
                     display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1,
-                    borderRadius: 2, border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: toRadiusPx(radiusTokens.sm), border: `1px solid ${theme.palette.divider}`,
                     bgcolor: alpha(theme.palette.secondary.main, 0.03),
                   }}
                 >
@@ -927,8 +995,17 @@ const ApplicationDetailPage: React.FC = () => {
                 disabled={generating || templates.length === 0}
                 sx={{ whiteSpace: 'nowrap' }}
               >
-                {generating ? 'Generating\u2026' : 'AI Generate'}
+                {generating ? 'Generating…' : 'AI Generate'}
               </Button>
+              <RunAgentMenu
+                applicationId={app.id}
+                onSessionCreated={handleAgentSessionCreated}
+                disabled={generating}
+              />
+              <ChatAgentMenu
+                applicationId={app.id}
+                disabled={generating}
+              />
               {availableCoverLetters.length > 0 && (
                 <FormControl size="small" sx={{ minWidth: 220 }}>
                   <InputLabel id="detail-attach-cl">Attach cover letter</InputLabel>
@@ -949,7 +1026,7 @@ const ApplicationDetailPage: React.FC = () => {
               )}
             </Stack>
           )}
-          {generating && <LinearProgress sx={{ mt: 1.5, borderRadius: 1 }} />}
+          {generating && <LinearProgress sx={{ mt: 1.5, borderRadius: '4px' }} />}
         </Box>
       </Stack>
 

@@ -5,7 +5,7 @@ title: Boot The Stack
 description: Boot the local stack quickly, then jump to workflow, API access, and configuration details.
 ---
 
-<!-- last-verified: 2026-04-09 -->
+<!-- last-verified: 2026-04-17 -->
 
 # Boot The Stack
 
@@ -27,7 +27,19 @@ Optional local toolchain if you want to work outside containers:
 
 1. **Clone** the repository.
 
-2. **Create your environment file.** Copy `backend/.env.example` to `backend/.env` and review the values:
+2. **Review the tracked environment defaults.** The repo already includes safe local-default `backend/.env` and `frontend/.env` files for every worktree.
+
+3. **Provide real secrets outside tracked files.** Use ignored `.env.local` overrides for your normal Compose-backed setup, or shell exports when you intentionally want a one-off launch override:
+
+   ```bash
+   export OPENAI_API_KEY=your-key-here
+
+   # Optional ignored local overrides for non-Codex development
+   cp backend/.env backend/.env.local
+   cp frontend/.env frontend/.env.local
+   ```
+
+   For the backend containers, Compose loads `backend/.env` first, then `backend/.env.local`, and finally applies any explicitly exported shell override you launched `docker-compose` with. Keep real secrets out of the tracked `.env` files.
 
    | Variable | Purpose |
    |----------|---------|
@@ -37,24 +49,28 @@ Optional local toolchain if you want to work outside containers:
    | `FIRST_SUPERUSER_EMAIL` | Bootstrap admin email for local stack |
    | `FIRST_SUPERUSER_PASSWORD` | Bootstrap admin password for local stack |
 
-3. **Start the local stack** from the repository root:
+4. **Start the local stack** from the repository root:
 
    ```bash
-   docker-compose up --build
+   docker-compose up --build --watch
    ```
 
-4. **Open the local services:**
+   By default, the published ports bind to `localhost` only. If another device on your LAN needs access, start the stack with `DOCKER_PUBLISH_HOST=0.0.0.0 docker-compose up --build --watch` instead.
+
+5. **Open the local services:**
 
    | Service | URL |
    |---------|-----|
    | Frontend | [http://localhost:5173](http://localhost:5173) |
+   | Admin SPA | [http://localhost:5173/admin/](http://localhost:5173/admin/) |
+   | Operator design reference | [http://localhost:5174](http://localhost:5174) |
    | Product docs | [http://localhost:3001/baldin/docs](http://localhost:3001/baldin/docs) |
    | API | [http://localhost:8004](http://localhost:8004) |
    | Swagger UI | [http://localhost:8004/docs](http://localhost:8004/docs) |
    | ReDoc | [http://localhost:8004/redoc](http://localhost:8004/redoc) |
-   | Admin | [http://localhost:8004/admin](http://localhost:8004/admin) |
+   | Legacy Admin | [http://localhost:8004/admin](http://localhost:8004/admin) |
 
-   The Admin UI expects the email and password from `FIRST_SUPERUSER_EMAIL` / `FIRST_SUPERUSER_PASSWORD`.
+   The operator-design surface is a standalone, reference-only redesign app. The Admin SPA and the legacy backend admin both expect the email and password from `FIRST_SUPERUSER_EMAIL` / `FIRST_SUPERUSER_PASSWORD`.
 
 ## Resetting the Local Database
 
@@ -64,7 +80,7 @@ If you hit schema drift after pulling breaking model changes, reset the develope
 ./scripts/reset_local_db.sh
 ```
 
-This stops Docker Compose, clears the `backend/public/db` and `backend/public/test_db` volumes, and restarts the stack with fresh databases.
+This stops Docker Compose, removes the Compose-managed `db-data` and `test-db-data` volumes, clears any legacy `backend/public/db` / `backend/public/test_db` bind-mount directories left by older setups, and restarts the stack with fresh databases in the standard Compose Watch loop. If you intentionally want a one-shot detached restart instead, run `BALDIN_RESET_DB_MODE=detached ./scripts/reset_local_db.sh`.
 
 If you instead see a PostgreSQL `collation version mismatch` warning and want to preserve local data, use `./scripts/repair_local_db_collation.sh` from the repo root.
 
@@ -72,11 +88,13 @@ If you instead see a PostgreSQL `collation version mismatch` warning and want to
 
 The backend starts in `DEV` mode and:
 
-1. Creates database tables automatically via `create_db_and_tables()`.
+1. Applies Alembic migrations by default through `create_db_and_tables()` (`alembic upgrade head`).
 2. Bootstraps the default superuser from `backend/.env`.
-3. Starts background helpers according to runtime settings such as `CRAWLER_SCHEDULER_ENABLED` and `RUN_REAPER_ENABLED`.
+3. Starts local helpers according to runtime settings such as `CRAWLER_SCHEDULER_ENABLED` and `RUN_REAPER_ENABLED`.
 
-The admin UI uses its own browser session under `/admin` and expects email-based sign-in.
+If you intentionally need the old metadata bootstrap for local recovery, `LEGACY_BOOTSTRAP=1` re-enables that temporary escape hatch in `DEV` and `PYTEST` only. It is ignored outside those environments.
+
+The Admin SPA lives under the frontend service at `/admin/` and reuses the normal JWT + MFA sign-in flow with a superuser check. The legacy Starlette Admin UI remains available at `http://localhost:8004/admin` as a backend fallback surface with its own browser session.
 
 ## Start Here Next
 

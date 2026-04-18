@@ -29,7 +29,9 @@ The frontend consumes the same contract through generated types in `frontend/src
 
 ## Admin Interface
 
-The Starlette Admin UI is available at [http://localhost:8004/admin](http://localhost:8004/admin). It uses its own browser session scoped to `/admin` and expects the bootstrap superuser's email and password (`FIRST_SUPERUSER_EMAIL` / `FIRST_SUPERUSER_PASSWORD` from `backend/.env`).
+The dedicated Admin SPA is available at [http://localhost:5173/admin/](http://localhost:5173/admin/). It reuses the frontend auth flow and only allows superusers.
+
+The legacy Starlette Admin UI remains available at [http://localhost:8004/admin](http://localhost:8004/admin). It uses its own browser session scoped to `/admin` and expects the same bootstrap superuser email and password (`FIRST_SUPERUSER_EMAIL` / `FIRST_SUPERUSER_PASSWORD` from `backend/.env`).
 
 ## MFA Recovery
 

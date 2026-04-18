@@ -5,17 +5,17 @@ title: Map The Data Model
 description: Map how profile, search, document, automation, and networking entities fit together.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-13 -->
 
 # Map The Data Model
 
-Baldin's SQLAlchemy model layer is organized around a single authenticated `User` record and six operational domains built on top of it: profile data, job-search state, versioned documents, automation, networking, and user-facing work tracking.
+Baldin's SQLAlchemy model layer is organized around a single authenticated `User` record and seven operational domains built on top of it: profile data, job-search state, versioned documents, automation, agents, networking, and user-facing work tracking.
 
 Every entity inherits `id`, `created_at`, and `updated_at` from the shared `Base` model in `backend/app/models.py`. `User` also inherits the authentication fields from `SQLAlchemyBaseUserTableUUID`.
 
 ## Current Entity Map
 
-The diagrams below are intentionally structural rather than field-complete. The six domain diagrams that follow correspond directly to the Domain Breakdown section and show only the ownership links that matter when navigating the codebase.
+The diagrams below are intentionally structural rather than field-complete. The seven domain diagrams that follow correspond directly to the Domain Breakdown section and show only the ownership links that matter when navigating the codebase.
 
 ### User Profile Entities
 
@@ -63,7 +63,7 @@ erDiagram
 ```mermaid
 erDiagram
 	accTitle: Job Search Pipeline Entities
-	accDescr: Shows COMPANY, LEAD, LEAD_X_COMPANY bridge, LEAD_REGISTRATION, LEAD_COMMENT, and APPLICATION and how USER relates to each.
+	accDescr: Shows COMPANY, LEAD, LEAD_X_COMPANY bridge, LEAD_REGISTRATION, LEAD_COMMENT, APPLICATION, APPLICATION_STATUS_HISTORY, and ASPIRATION and how USER relates to each.
 	USER {
 		uuid id PK
 	}
@@ -94,7 +94,22 @@ erDiagram
 		uuid id PK
 		uuid user_id FK
 		uuid lead_id FK
-		enum status
+		enum stage
+		enum outcome
+	}
+	APPLICATION_STATUS_HISTORY {
+		uuid id PK
+		uuid application_id FK
+		enum stage
+		enum outcome
+		datetime changed_at
+	}
+	ASPIRATION {
+		uuid id PK
+		uuid user_id FK
+		string kind
+		string label
+		int priority
 	}
 
 	COMPANY ||--o{ LEAD_X_COMPANY : linked_to
@@ -105,16 +120,18 @@ erDiagram
 	USER ||--o{ APPLICATION : submits
 	USER ||--o{ LEAD_REGISTRATION : registers
 	USER ||--o{ LEAD_COMMENT : authors
+	USER ||--o{ ASPIRATION : owns
+	APPLICATION ||--o{ APPLICATION_STATUS_HISTORY : transitions
 ```
 
-*Figure 2 — LEAD is the hub of the job-search pipeline. COMPANY and LEAD are linked through a many-to-many bridge. USER registers interest, comments, and submits applications against a LEAD.*
+*Figure 2 — LEAD is the hub of the job-search pipeline. COMPANY and LEAD are linked through a many-to-many bridge. USER registers interest, comments, and submits applications against a LEAD. ASPIRATION records user-owned role or company goals used for lead ranking. APPLICATION_STATUS_HISTORY tracks each stage/outcome transition.*
 
 ### Document and Attachment Entities
 
 ```mermaid
 erDiagram
 	accTitle: Document and Attachment Entities
-	accDescr: Shows DOCUMENT and its child records — DOCUMENT_VERSION, DOCUMENT_SHARE, DOCUMENT_ACTIVITY, and DOCUMENT_X_APPLICATION bridge — plus the deprecated RESUME and COVER_LETTER tables and their application attachment bridges.
+	accDescr: Shows DOCUMENT and its child records — DOCUMENT_VERSION, DOCUMENT_BLOCK, DOCUMENT_SHARE, DOCUMENT_ACTIVITY, DOCUMENT_EMBEDDING, and DOCUMENT_X_APPLICATION bridge — plus the deprecated RESUME and COVER_LETTER tables and their application attachment bridges.
 	USER {
 		uuid id PK
 	}
@@ -133,6 +150,14 @@ erDiagram
 		int version_number
 		string content_format
 	}
+	DOCUMENT_BLOCK {
+		uuid id PK
+		uuid document_id FK
+		uuid parent_block_id FK
+		string block_type
+		json content
+		int position
+	}
 	DOCUMENT_X_APPLICATION {
 		uuid application_id PK_FK
 		uuid document_id PK_FK
@@ -150,6 +175,13 @@ erDiagram
 		uuid document_id FK
 		uuid actor_user_id FK
 		string activity_type
+	}
+	DOCUMENT_EMBEDDING {
+		uuid id PK
+		uuid document_id FK
+		uuid document_version_id FK
+		int chunk_index
+		vector embedding
 	}
 	RESUME["RESUME (deprecated)"] {
 		uuid id PK
@@ -178,14 +210,16 @@ erDiagram
 	APPLICATION ||--o{ RESUME_X_APPLICATION : uses
 	APPLICATION ||--o{ COVER_LETTER_X_APPLICATION : uses
 	DOCUMENT ||--o{ DOCUMENT_VERSION : versions
+	DOCUMENT ||--o{ DOCUMENT_BLOCK : blocks
 	DOCUMENT ||--o{ DOCUMENT_X_APPLICATION : attached_to
 	DOCUMENT ||--o{ DOCUMENT_SHARE : shares
 	DOCUMENT ||--o{ DOCUMENT_ACTIVITY : activity
+	DOCUMENT ||--o{ DOCUMENT_EMBEDDING : embeddings
 	RESUME ||--o{ RESUME_X_APPLICATION : attached_to
 	COVER_LETTER ||--o{ COVER_LETTER_X_APPLICATION : attached_to
 ```
 
-*Figure 3 — DOCUMENT is the live material model with versioning, sharing, and activity tracking. RESUME and COVER_LETTER exist only as deprecated bridges; new material flows use DOCUMENT filtered by `kind`.*
+*Figure 3 — DOCUMENT is the live material model with versioning, blocks, sharing, activity tracking, and vector embeddings. RESUME and COVER_LETTER exist only as deprecated bridges; new material flows use DOCUMENT filtered by `kind`.*
 
 ### Automation and Review Entities
 
@@ -242,6 +276,74 @@ erDiagram
 
 *Figure 4 — Extraction, orchestration, and crawler automation entities. EXTRACTOR and ORCHESTRATION_PIPELINE are user-owned. CRAWLER_PIPELINE is superuser-managed.*
 
+### Agent and Session Entities
+
+```mermaid
+erDiagram
+	accTitle: Agent and Session Entities
+	accDescr: Shows AGENT owned by USER, with AGENT_CHAT_SESSION and AGENT_CHAT_MESSAGE storing conversational history, and AGENT_RUN recording either one-shot execution or chat-export history. Runs link to an APPLICATION context and produce a DOCUMENT session with a specific DOCUMENT_VERSION.
+	USER {
+		uuid id PK
+	}
+	APPLICATION {
+		uuid id PK
+	}
+	DOCUMENT {
+		uuid id PK
+		string kind
+	}
+	DOCUMENT_VERSION {
+		uuid id PK
+		uuid document_id FK
+		int version_number
+	}
+	AGENT {
+		uuid id PK
+		uuid user_id FK
+		string name
+		string model
+		string instructions
+	}
+	AGENT_CHAT_SESSION {
+		uuid id PK
+		uuid agent_id FK
+		uuid user_id FK
+		uuid application_id FK
+		string title
+		string model_name
+		string status
+	}
+	AGENT_CHAT_MESSAGE {
+		uuid id PK
+		uuid session_id FK
+		string role
+		json metadata
+	}
+	AGENT_RUN {
+		uuid id PK
+		uuid agent_id FK
+		uuid application_id FK
+		uuid chat_session_id FK
+		uuid session_document_id FK
+		uuid session_version_id FK
+		string status
+		string error_summary
+	}
+
+	USER ||--o{ AGENT : owns
+	USER ||--o{ AGENT_CHAT_SESSION : chats
+	AGENT ||--o{ AGENT_RUN : runs
+	AGENT ||--o{ AGENT_CHAT_SESSION : chats
+	APPLICATION ||--o{ AGENT_RUN : context_for
+	APPLICATION ||--o{ AGENT_CHAT_SESSION : chat_context
+	AGENT_CHAT_SESSION ||--o{ AGENT_CHAT_MESSAGE : messages
+	AGENT_CHAT_SESSION ||--o{ AGENT_RUN : export_runs
+	DOCUMENT ||--o{ AGENT_RUN : session_document
+	DOCUMENT_VERSION ||--o{ AGENT_RUN : session_version
+```
+
+*Figure 5 — AGENT is user-owned. `Run Agent` writes `AgentRun` records that point at cell-doc document versions, while `Chat with Agent` persists `AgentChatSession` and `AgentChatMessage` history. Save-to-document exports create linked `AgentRun` records back to the originating chat session.*
+
 ### Networking and Messaging Entities
 
 ```mermaid
@@ -290,7 +392,7 @@ erDiagram
 	MESSAGE ||--o{ MESSAGE : replies
 ```
 
-*Figure 5 — Networking and messaging entities. CONNECTION is a peer relationship. CONVERSATION holds both direct and group threads. ACTION_ITEM links tasks back to applications, leads, documents, or conversations.*
+*Figure 6 — Networking and messaging entities. CONNECTION is a peer relationship. CONVERSATION holds both direct and group threads. ACTION_ITEM links tasks back to applications, leads, documents, or conversations.*
 
 ## Domain Breakdown
 
@@ -314,17 +416,21 @@ erDiagram
 | `leads_x_companies` | Many-to-many bridge between leads and companies |
 | `lead_registrations` | Per-user registration or interest in a lead |
 | `lead_comments` | Lead discussion thread with single-level replies |
-| `applications` | User application state, notes, next steps, and status history |
+| `applications` | User application stage, outcome, notes, next steps |
+| `application_status_history` | Audit trail of stage/outcome transitions per application |
+| `aspirations` | User-owned role or company goals with priority, reason, and extracted attributes used for lead ranking |
 
 ### Documents and Attachments
 
 | Tables | Purpose |
 | --- | --- |
-| `documents` | Versioned multi-kind document record with status, pinning, and persisted Yjs state. Supports `kind` values: resume, cover_letter, follow_up, reference_sheet, freeform. |
+| `documents` | Versioned multi-kind document record with status, pinning, and persisted Yjs state. Supports `kind` values including `resume`, `cover_letter`, `follow_up`, `reference_sheet`, `freeform`, and `cell_doc`. |
 | `document_versions` | Immutable snapshots of document content |
+| `document_blocks` | Authoring blocks with type, content JSON, properties, position, and optional parent nesting |
 | `documents_x_applications` | Application attachment bridge for versioned documents |
 | `document_shares` | Per-user viewer/editor access grants |
 | `document_activities` | Audit-style document events |
+| `document_embeddings` | Vector embeddings (pgvector 1536-dim) of document chunks for RAG search |
 
 The unified `Document` model is the only remaining material model. Frontend document and application-material flows use the Document API exclusively, filtering by `kind` (resume, cover_letter, etc.) where needed, and bootstrap schema sync drops the removed legacy resume and cover-letter tables when present in older local databases.
 
@@ -339,6 +445,15 @@ The unified `Document` model is the only remaining material model. Frontend docu
 | `orchestration_events` | Execution history for orchestration pipelines |
 | `crawler_pipelines` | Superuser-managed crawler definitions and policies |
 | `crawler_runs` | Individual crawler execution records |
+
+### Agents
+
+| Tables | Purpose |
+| --- | --- |
+| `agents` | User-owned reusable AI assistant definitions with model, instructions, and generation parameters |
+| `agent_runs` | One-shot execution or chat-export history recording application context, originating chat session when present, produced document version, status, and error summary |
+| `agent_chat_sessions` | Persisted conversational sessions per user/agent pair with model snapshot, status, message count, and last-message metadata |
+| `agent_chat_messages` | Ordered system, user, and assistant messages stored for each agent chat session |
 
 ### Networking and Messaging
 
@@ -362,14 +477,15 @@ The activity feed shown in the frontend is not backed by a dedicated event-log t
 - `documents.head_version_id` points at the current immutable `document_versions` row instead of mutating content in place.
 - `documents.yjs_state` stores the authoritative collaboration snapshot once real-time editing has persisted changes.
 - `users.subscription_tier` and `users.placement_status` drive several route-level guards in `backend/app/api/deps.py`.
-- `applications.status` uses a Postgres-native enum (`ApplicationStatus`: applied, screening, interview, offer, rejected, withdrawn).
+- `applications.stage` uses a Postgres-native enum (`ApplicationStage`: registered, applied, screening, interview, offer) and `applications.outcome` uses a separate enum (`ApplicationOutcome`: rejected, withdrawn). An outcome is only valid when a stage is set.
 - `leads.review_status` uses a Postgres-native enum (`LeadReviewStatus`: pending_review, approved, rejected).
 - `crawler_runs.status` uses a Postgres-native enum (`CrawlerRunStatus`: pending, running, success, failed, cancelled, paused, pending_review).
-- `applications.status_history` is JSONB and doubles as an input to the activity feed.
+- `application_status_history` is a dedicated audit table recording each stage/outcome transition, and it doubles as an input to the activity feed.
+- `agent_chat_sessions.message_count` and `agent_chat_sessions.last_message_at` are denormalized to keep session lists efficient.
+- `agent_chat_messages.metadata` stores assistant response metadata such as the resolved model name and usage details.
+- `agent_runs.chat_session_id` links save-to-document exports back to the originating chat session when a conversation becomes a workspace artifact.
 - `action_items` uses nullable foreign keys to support multiple parent types without introducing one table per task context. A CHECK constraint (`ck_action_items_exactly_one_fk`) ensures exactly one FK is non-null.
 
 ## Schema Management
 
-The repo does not currently use Alembic migrations. Local startup still relies on SQLAlchemy `create_all`, and `backend/app/core/db.py` also repairs additive schema drift by adding missing columns to existing local tables.
-
-That bootstrap behavior is convenient for a persisted local Postgres volume, but it is also explicitly called out as a release blocker. See [Track Release Readiness](../engineering/release-roadmap.md) for the current migration and runtime-hardening work.
+The repo uses Alembic migrations bootstrapped under `backend/alembic/`. Local startup runs `alembic upgrade head` by default, while `LEGACY_BOOTSTRAP=1` activates the older `create_all` path. Test fixtures still use `metadata.create_all` for speed.

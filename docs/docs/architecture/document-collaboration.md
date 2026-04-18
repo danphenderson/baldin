@@ -5,7 +5,7 @@ title: Understand Document Collaboration
 description: Understand versioned documents, sharing, and the Yjs bootstrap protocol.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-12 -->
 
 # Understand Document Collaboration
 
@@ -21,6 +21,7 @@ Baldin's rich-text document editor is built around a versioned backend `Document
 | Frontend hook | `frontend/src/component/use-collaborative-editor.ts` | Bootstrap polling, Yjs doc creation, websocket provider lifecycle, presence state |
 | Frontend bootstrap helper | `frontend/src/component/collaboration-bootstrap.ts` | Retry timing and TipTap JSON -> Yjs seeding |
 | Editor UI | `frontend/src/component/rich-text-editor.tsx` | TipTap editor shell bound to Yjs |
+| Cell-doc extensions | `frontend/src/component/cell-doc/extensions/index.ts` | Shared extension factory for base and cell-doc schemas |
 
 ## Collaboration Bootstrap Protocol
 
@@ -103,6 +104,10 @@ That storage layer is the durable file path contract for document uploads and ex
 - The hook does not connect until bootstrap has resolved to `connect` or `seed`.
 - `buildCollaborationSocketConfig()` converts the configured API base URL to a websocket base URL.
 - The editor keeps user presence metadata (`name`, `color`) in Yjs awareness state for collaborator badges and cursors.
+
+### Extension-Aware Seeding
+
+`seedCollaborationDocument()` accepts an optional `extensions` parameter. When omitted it defaults to `buildBaseDocumentExtensions()`, which is correct for plain rich-text documents. Cell-doc editors pass `buildCellDocExtensions()` instead so that task lists, callouts, toggles, tables, block identity, mention blocks, embed blocks, and slash commands are registered in the TipTap schema before Yjs seeding. This prevents content loss when the first collaborator seeds a cell-doc that contains node types absent from the base schema.
 
 ## When To Touch Which Layer
 

@@ -5,7 +5,7 @@ import { getExperiences, createExperience, updateExperience, deleteExperience, t
 import { getEducations as getEducation, createEducation, updateEducation, deleteEducation, type EducationRead } from '../../../service/education';
 import { getCertificates, createCertificate, updateCertificate, deleteCertificate, type CertificateRead } from '../../../service/certificates';
 import { getContacts, createContact, updateContact, deleteContact, type ContactRead } from '../../../service/contacts';
-import { SECTION_LABELS, BLANK_TEMPLATES } from '../constants';
+import { SECTION_LABELS, BLANK_TEMPLATES, SECTION_FIELDS } from '../constants';
 import type { SectionKey, EditableItem, DeleteTarget } from '../types';
 
 export interface UseProfileDataReturn {
@@ -178,7 +178,15 @@ export function useProfileData(
     if (!token || !editItem) return;
     setEditSaving(true);
     try {
-      const isUpdate = 'id' in editItem && !!editItem.id;
+      // Convert comma-separated text back to string[] for array fields
+      const payload = { ...editItem };
+      for (const f of SECTION_FIELDS[editSection]) {
+        if (f.isArray && typeof payload[f.key] === 'string') {
+          payload[f.key] = (payload[f.key] as string).split(',').map(s => s.trim()).filter(Boolean);
+        }
+      }
+
+      const isUpdate = 'id' in payload && !!payload.id;
       const ops = {
         skills: { create: createSkill, update: updateSkill },
         experiences: { create: createExperience, update: updateExperience },
@@ -188,9 +196,9 @@ export function useProfileData(
       } as const;
       const op = ops[editSection];
       if (isUpdate) {
-        await (op.update as (t: string, id: string, data: unknown) => Promise<unknown>)(token, editItem.id as string, editItem);
+        await (op.update as (t: string, id: string, data: unknown) => Promise<unknown>)(token, payload.id as string, payload);
       } else {
-        await (op.create as (t: string, data: unknown) => Promise<unknown>)(token, editItem);
+        await (op.create as (t: string, data: unknown) => Promise<unknown>)(token, payload);
       }
       setEditOpen(false);
       setEditItem(null);

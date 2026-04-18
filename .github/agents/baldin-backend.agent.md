@@ -1,7 +1,7 @@
 ---
 description: "Use when working on Baldin backend features, FastAPI routes, auth, admin, ETL flows, extraction logic, SQLAlchemy models, backend tests, or other backend-only robustness work that should stay inside ./backend."
 name: "Baldin Backend Agent"
-tools: [vscode/askQuestions, vscode/memory, vscode/resolveMemoryFileUri, vscode/getProjectSetupInfo, vscode/runCommand, search/changes, search/codebase, search/fileSearch, search/listDirectory, search/textSearch, search/usages, read/readFile, read/viewImage, read/problems, read/getNotebookSummary, read/readNotebookCellOutput, read/terminalSelection, read/terminalLastCommand, edit/createFile, edit/createDirectory, edit/editFiles, edit/rename, execute/runInTerminal, execute/getTerminalOutput, execute/awaitTerminal, execute/killTerminal, execute/createAndRunTask, execute/runTests, execute/testFailure, execute/runNotebookCell, web/fetch, ms-python.python/*, ms-azuretools.vscode-containers/containerToolsConfig, ms-toolsai.jupyter/*, github.vscode-pull-request-github/*, vscode.mermaid-chat-features/renderMermaidDiagram, todo]
+tools: [vscode/getProjectSetupInfo, vscode/installExtension, vscode/memory, vscode/newWorkspace, vscode/resolveMemoryFileUri, vscode/runCommand, vscode/switchAgent, vscode/vscodeAPI, vscode/extensions, vscode/askQuestions, execute/runNotebookCell, execute/testFailure, execute/getTerminalOutput, execute/killTerminal, execute/createAndRunTask, execute/runInTerminal, execute/runTests, read/getNotebookSummary, read/problems, read/readFile, read/viewImage, read/readNotebookCellOutput, read/terminalSelection, read/terminalLastCommand, edit/createDirectory, edit/createFile, edit/editFiles, edit/rename, search/changes, search/codebase, search/fileSearch, search/listDirectory, search/textSearch, search/usages, web/fetch, pylance-mcp-server/pylanceDocString, pylance-mcp-server/pylanceDocuments, pylance-mcp-server/pylanceFileSyntaxErrors, pylance-mcp-server/pylanceImports, pylance-mcp-server/pylanceInstalledTopLevelModules, pylance-mcp-server/pylanceInvokeRefactoring, pylance-mcp-server/pylancePythonEnvironments, pylance-mcp-server/pylanceRunCodeSnippet, pylance-mcp-server/pylanceSettings, pylance-mcp-server/pylanceSyntaxErrors, pylance-mcp-server/pylanceUpdatePythonEnvironment, pylance-mcp-server/pylanceWorkspaceRoots, pylance-mcp-server/pylanceWorkspaceUserFiles, vscode.mermaid-chat-features/renderMermaidDiagram, ms-azuretools.vscode-containers/containerToolsConfig, ms-python.python/getPythonEnvironmentInfo, ms-python.python/getPythonExecutableCommand, ms-python.python/installPythonPackage, ms-python.python/configurePythonEnvironment, todo]
 argument-hint: "Backend feature, FastAPI/API change, auth fix, ETL or extractor change, model or schema update, backend test work, or developer-preview robustness task."
 user-invocable: true
 ---
@@ -27,7 +27,8 @@ Inherits repo posture, boundaries, generated-artifact rules, and validation defa
 - Startup: `./backend/app/main.py`.
 - Admin templates: `./backend/app/admin_templates`.
 - Config: `./backend/pyproject.toml`, `./backend/Pipfile`.
-- Local default path: keep `docker-compose up --build` running and use the mounted `web` container for hot reload while you iterate.
+- Local default path: keep `docker-compose up --build --watch` running and use Compose Watch as the supported live-edit loop while you iterate.
+- Backend pytest should use `./scripts/run_backend_pytest.sh` by default. For intentional host-side loops, use `./scripts/run_backend_pytest_host.sh` or `cd backend && pipenv run pytest ...` instead of probing bare `pytest`.
 
 ## Scope
 - Default to backend-only changes within ./backend/app, ./backend/etl, and ./backend/app/tests.
@@ -67,6 +68,7 @@ Inherits repo posture, boundaries, generated-artifact rules, and validation defa
 
 ## Validation
 - Run the most relevant targeted backend tests available for the scope.
+- Prefer `./scripts/run_backend_pytest.sh` for DB-backed backend pytest. If you intentionally validate from the host, use `pipenv run pytest` or the host wrapper rather than assuming bare `pytest` is on `PATH`.
 - Treat full backend coverage runs as pre-push confidence checks, not the default first step for routine local fixes.
 - Preserve FastAPI and OpenAPI correctness.
 - Keep the change consistent with backend formatting and lint expectations.

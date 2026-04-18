@@ -1,7 +1,7 @@
 # app/api/routes/education.py
 
-from fastapi import APIRouter, BackgroundTasks, Depends
-from sqlalchemy import select
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from sqlalchemy import func, select
 
 from app.api.deps import (
     AsyncSession,
@@ -30,19 +30,27 @@ EDUCATION_SEED_OPERATION = SeedOperation(
 )
 
 
-@router.get("/", response_model=list[schemas.EducationRead])
+@router.get("/", response_model=schemas.PaginatedResponse[schemas.EducationRead])
 async def read_current_user_educations(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
 ):
-    result = await db.execute(
-        select(models.Education).where(models.Education.user_id == user.id)
+    base = select(models.Education).where(models.Education.user_id == user.id)
+    count_result = await db.execute(select(func.count()).select_from(base.subquery()))
+    total = count_result.scalar_one()
+    offset = (page - 1) * page_size
+    result = await db.execute(base.offset(offset).limit(page_size))
+    return schemas.PaginatedResponse[schemas.EducationRead](
+        items=result.scalars().all(),
+        total=total,
+        page=page,
+        page_size=page_size,
     )
-    educations = result.scalars().all()
-    return educations
 
 
-@router.get("/{education_id}", response_model=schemas.EducationRead)
+@router.get("/{id}", response_model=schemas.EducationRead)
 async def read_user_education(
     education: schemas.EducationRead = Depends(get_education),
 ):
@@ -55,14 +63,14 @@ async def create_user_education(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    education = models.Education(**payload.dict(), user_id=user.id)
+    education = models.Education(**payload.model_dump(), user_id=user.id)
     db.add(education)
     await db.commit()
     await db.refresh(education)
     return education
 
 
-@router.put("/{education_id}", response_model=schemas.EducationRead)
+@router.patch("/{id}", response_model=schemas.EducationRead)
 async def update_user_education(
     payload: schemas.EducationUpdate,
     education: schemas.EducationRead = Depends(get_education),
@@ -75,7 +83,7 @@ async def update_user_education(
     return education
 
 
-@router.delete("/{education_id}", response_model=schemas.EducationRead)
+@router.delete("/{id}", response_model=schemas.EducationRead)
 async def delete_user_education(
     education: schemas.EducationRead = Depends(get_education),
     db: AsyncSession = Depends(get_async_session),

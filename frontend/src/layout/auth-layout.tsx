@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { Box, useTheme, alpha } from '@mui/material';
+import { Box, useTheme } from '@mui/material';
+import { authBackgroundGradient } from '../design-system';
 
 const AuthLayout: React.FC = () => {
   const theme = useTheme();
@@ -11,14 +12,12 @@ const AuthLayout: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: theme.palette.mode === 'dark'
-          ? `radial-gradient(ellipse at 20% 50%, ${alpha(theme.palette.primary.dark, 0.15)} 0%, transparent 50%),
-             radial-gradient(ellipse at 80% 20%, ${alpha(theme.palette.secondary.dark, 0.1)} 0%, transparent 50%),
-             ${theme.palette.background.default}`
-          : theme.palette.background.default,
+        background: authBackgroundGradient(theme),
       }}
     >
-      <Outlet />
+      <Box sx={{ mx: 'auto', width: '100%' }}>
+        <Outlet />
+      </Box>
     </Box>
   );
 };

@@ -1,34 +1,83 @@
 import React, { useContext, useEffect, useState, useCallback, useRef } from 'react';
 import {
-  Box, Card, CardContent, Typography, Button, Chip, Stack, TextField,
-  useTheme, alpha, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-  Tooltip, Skeleton, Alert, InputAdornment, Divider, Collapse, List, ListItem,
-  ListItemText, ListItemIcon, CircularProgress, useMediaQuery,
-} from '@mui/material';
+  Box,
+  Typography,
+  Button,
+  Stack,
+  TextField,
+  useTheme,
+  alpha,
+  IconButton,
+  Tooltip,
+  Skeleton,
+  Alert,
+  InputAdornment,
+  Divider,
+  Collapse,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  CircularProgress,
+  useMediaQuery,
+  } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
-  Business as CompanyIcon, Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon,
-  Search as SearchIcon, AutoAwesome as AIIcon, LocationOn as LocationIcon,
-  People as SizeIcon, Category as IndustryIcon, Work as LeadIcon,
-  ExpandMore, ExpandLess, OpenInNew as OpenIcon, Refresh as RefreshIcon,
-  WarningAmber as WarningIcon, Schedule as TimeIcon,
-} from '@mui/icons-material';
+  Business as CompanyIcon,
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Search as SearchIcon,
+  AutoAwesome as AIIcon,
+  LocationOn as LocationIcon,
+  People as SizeIcon,
+  Category as IndustryIcon,
+  Work as LeadIcon,
+  ExpandMore,
+  ExpandLess,
+  OpenInNew as OpenIcon,
+  Refresh as RefreshIcon,
+  WarningAmber as WarningIcon,
+  Schedule as TimeIcon,
+  } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import {
-  getCompanies, createCompany, updateCompany, deleteCompany, getCompanyLeads, extractCompany,
-  type CompanyRead, type CompanyCreate, type CompanyUpdate,
-} from '../service/companies';
+  getCompanies,
+  createCompany,
+  updateCompany,
+  deleteCompany,
+  getCompanyLeads,
+  extractCompany,
+  type CompanyRead,
+  type CompanyCreate,
+  type CompanyUpdate,
+  } from '../service/companies';
 import {
   createApplication,
   findExistingApplicationForLead,
   getApplicationStateLabel,
   type ApplicationCreationIntent,
-} from '../service/applications';
+  } from '../service/applications';
 import { components } from '../schema';
-import { timeAgo, monogram, monogramColor } from '../util/format';
-import EmptyState from '../component/common/empty-state';
+import { timeAgo,
+  monogram,
+  monogramColor } from '../util/format';
 import ApplicationIntentButton from '../component/application-intent-button';
+import { AgentEnabledMultilineField } from '../component/agent-surface';
+import {
+  EmptyState,
+  accentGradient,
+  displayFontFamily,
+  softBrandGradient,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogActions as DialogActions,
+} from '../design-system';
 
 type LeadRead = components['schemas']['LeadRead'];
 
@@ -49,7 +98,7 @@ const duplicateApplicationMessage = (title: string, statusLabel: string): string
 const CompaniesPage: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const { token } = useContext(UserContext);
+  const { token, user } = useContext(UserContext);
 
   // Data
   const [companies, setCompanies] = useState<CompanyRead[]>([]);
@@ -117,7 +166,7 @@ const CompaniesPage: React.FC = () => {
     try {
       await extractCompany(token, extractUrl);
       setExtractUrl('');
-      showSuccess('Company extracted via AI — added to your list.');
+      showSuccess('Company extracted via AI and added to the shared directory.');
       refresh();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Extraction failed');
@@ -224,7 +273,7 @@ const CompaniesPage: React.FC = () => {
         return;
       }
       setError('');
-      await createApplication(token, { lead_id: lead.id, status: intent });
+      await createApplication(token, { lead_id: lead.id, stage: intent });
       showSuccess(creationSuccessMessage(intent, title));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Application failed');
@@ -250,7 +299,7 @@ const CompaniesPage: React.FC = () => {
     return matchesSearch && matchesIndustry;
   });
 
-  usePageToolbarHeader('Companies', `${companies.length} tracked`);
+  usePageToolbarHeader('Companies', `${companies.length} shared companies`);
 
   /* ================================================================ */
   /*  Render                                                          */
@@ -262,12 +311,20 @@ const CompaniesPage: React.FC = () => {
       <Collapse in={!!error}><Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }} role="alert">{error}</Alert></Collapse>
       <Collapse in={!!warning}><Alert severity="warning" onClose={() => setWarning('')} sx={{ mb: 2 }} role="alert">{warning}</Alert></Collapse>
       <Collapse in={!!success}><Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }} role="status" aria-live="polite">{success}</Alert></Collapse>
+      <Alert severity="info" sx={{ mb: 2.5 }}>
+        Shared company directory: everyone can browse these records. Only the creator or an admin can edit or delete a company.
+      </Alert>
 
       {/* -------- AI Extraction Bar -------------------------------- */}
       <Card
         sx={{
           mb: 3,
-          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.07)}, ${alpha(theme.palette.secondary.main, 0.07)})`,
+          background: softBrandGradient(theme, {
+            startTone: 'main',
+            endTone: 'main',
+            startOpacity: 0.07,
+            endOpacity: 0.07,
+          }),
           border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
         }}
       >
@@ -303,7 +360,7 @@ const CompaniesPage: React.FC = () => {
             />
 
             <Button
-              variant="contained"
+              variant="brand"
               onClick={handleExtract}
               disabled={extracting || !extractUrl.trim()}
               startIcon={extracting ? <CircularProgress size={16} color="inherit" /> : undefined}
@@ -311,7 +368,6 @@ const CompaniesPage: React.FC = () => {
                 px: 3,
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
-                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
               }}
             >
               {extracting ? 'Extracting…' : 'Extract'}
@@ -338,9 +394,11 @@ const CompaniesPage: React.FC = () => {
               <RefreshIcon />
             </IconButton>
           </Tooltip>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
-            Add Company
-          </Button>
+          {(loading || companies.length > 0) && (
+            <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
+              Add Company
+            </Button>
+          )}
         </Stack>
       </Stack>
 
@@ -353,7 +411,7 @@ const CompaniesPage: React.FC = () => {
             variant={activeIndustry === null ? 'filled' : 'outlined'}
             color={activeIndustry === null ? 'primary' : 'default'}
             onClick={() => setActiveIndustry(null)}
-            sx={{ fontWeight: 600 }}
+            sx={{ fontWeight: activeIndustry === null ? 600 : 400 }}
           />
           {Object.entries(industryStats)
             .sort(([, a], [, b]) => b - a)
@@ -399,7 +457,7 @@ const CompaniesPage: React.FC = () => {
         <Grid container spacing={2} aria-busy="true" aria-label="Loading companies">
           {[1, 2, 3, 4].map(i => (
             <Grid size={{ xs: 12, md: 6 }} key={i}>
-              <Skeleton variant="rounded" height={180} sx={{ borderRadius: 3 }} />
+              <Skeleton variant="rounded" height={180} sx={{ borderRadius: '12px' }} />
             </Grid>
           ))}
         </Grid>
@@ -409,7 +467,7 @@ const CompaniesPage: React.FC = () => {
           <EmptyState
             icon={<CompanyIcon />}
             title="No companies discovered"
-            description="Companies are captured automatically when you import leads."
+            description="Companies are shared across the directory and can be added manually or when leads are imported."
             action={{ label: 'Add a Company', onClick: openCreateDialog, icon: <AddIcon /> }}
           />
         ) : (
@@ -424,6 +482,13 @@ const CompaniesPage: React.FC = () => {
         <Grid container spacing={2}>
           {filtered.map(company => {
             const mc = monogramColor(company.name);
+            const managementLabel = company.can_manage
+              ? company.creator_user_id === user?.id
+                ? 'Added by you'
+                : 'Admin access'
+              : company.creator_user_id
+                ? 'Shared directory'
+                : 'Admin-managed';
             const isExpanded = expandedId === company.id;
             const leads = companyLeads[company.id] ?? [];
             const leadsLoading = loadingLeads === company.id;
@@ -451,10 +516,10 @@ const CompaniesPage: React.FC = () => {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          background: `linear-gradient(135deg, ${alpha(mc, 0.15)}, ${alpha(mc, 0.05)})`,
+                          background: accentGradient(mc, { startOpacity: 0.15, endOpacity: 0.05 }),
                           border: `1px solid ${alpha(mc, 0.2)}`,
                           color: mc,
-                          fontFamily: '"Space Grotesk", sans-serif',
+                          fontFamily: displayFontFamily,
                           fontWeight: 700,
                           fontSize: '0.95rem',
                           letterSpacing: '0.04em',
@@ -472,34 +537,42 @@ const CompaniesPage: React.FC = () => {
                             {company.name || 'Unnamed Company'}
                           </Typography>
 
-                          <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0, ml: 1 }}>
-                            <Tooltip title="Edit company">
-                              <IconButton
-                                size="small"
-                                aria-label={`Edit ${company.name ?? 'company'}`}
-                                onClick={() => openEditDialog(company)}
-                              >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Delete company">
-                              <IconButton
-                                size="small"
-                                aria-label={`Delete ${company.name ?? 'company'}`}
-                                onClick={() => confirmDelete(company)}
-                                sx={{
-                                  color: theme.palette.text.secondary,
-                                  '&:hover': { color: theme.palette.error.main },
-                                }}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </Stack>
+                          {company.can_manage && (
+                            <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0, ml: 1 }}>
+                              <Tooltip title="Edit company">
+                                <IconButton
+                                  size="small"
+                                  aria-label={`Edit ${company.name ?? 'company'}`}
+                                  onClick={() => openEditDialog(company)}
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Delete company">
+                                <IconButton
+                                  size="small"
+                                  aria-label={`Delete ${company.name ?? 'company'}`}
+                                  onClick={() => confirmDelete(company)}
+                                  sx={{
+                                    color: theme.palette.text.secondary,
+                                    '&:hover': { color: theme.palette.error.main },
+                                  }}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </Stack>
+                          )}
                         </Stack>
 
                         {/* Metadata chips */}
                         <Stack direction="row" sx={{ mt: 0.75, flexWrap: 'wrap', gap: 0.5 }}>
+                          <Chip
+                            label={managementLabel}
+                            size="small"
+                            color={company.can_manage ? 'primary' : 'default'}
+                            variant={company.can_manage ? 'filled' : 'outlined'}
+                          />
                           {company.industry && (
                             <Chip
                               icon={<IndustryIcon sx={{ fontSize: 14 }} />}
@@ -595,7 +668,7 @@ const CompaniesPage: React.FC = () => {
                             <ListItem
                               key={lead.id}
                               sx={{
-                                borderRadius: 1.5,
+                                borderRadius: '6px',
                                 mb: 0.25,
                                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) },
                               }}
@@ -691,11 +764,14 @@ const CompaniesPage: React.FC = () => {
               value={editItem?.location ?? ''}
               onChange={e => setEditItem(prev => prev ? { ...prev, location: e.target.value } : prev)}
             />
-            <TextField
+            <AgentEnabledMultilineField
               fullWidth
               label="Description"
+              surfaceId={editItem?.id ?? 'company-edit-dialog'}
+              fieldKey="company_description"
+              entityRefs={editItem?.id ? [{ kind: 'company', id: editItem.id, label: editItem.name || 'Company' }] : []}
               value={editItem?.description ?? ''}
-              onChange={e => setEditItem(prev => prev ? { ...prev, description: e.target.value } : prev)}
+              onChange={nextValue => setEditItem(prev => prev ? { ...prev, description: nextValue } : prev)}
               multiline
               rows={3}
             />
@@ -729,7 +805,7 @@ const CompaniesPage: React.FC = () => {
         <DialogContent>
           <Typography variant="body2" color="text.secondary">
             Are you sure you want to delete <strong>{deleteTarget?.name || 'this company'}</strong>?
-            This action cannot be undone and will remove all associated data.
+            This action cannot be undone and will remove it from the shared directory.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5 }}>

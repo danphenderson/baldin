@@ -5,12 +5,6 @@ from typing import Any, Sequence
 
 from fastapi import HTTPException
 from jsonschema import Draft202012Validator, exceptions
-
-try:
-    from langchain_text_splitters import TokenTextSplitter
-except ImportError:  # pragma: no cover
-    from langchain.text_splitter import TokenTextSplitter
-
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import chain
@@ -20,6 +14,8 @@ from app.core.conf import openai, settings
 from app.logging import console_log
 from app.models import ExtractorExample
 from app.utils import update_json_schema
+
+TokenTextSplitter = None
 
 
 def _cast_example_to_dict(example: ExtractorExample) -> dict[str, Any]:
@@ -117,9 +113,16 @@ def get_examples_from_extractor(
     ]
 
 
-def _get_token_text_splitter(llm_name: str) -> TokenTextSplitter:
+def _get_token_text_splitter(llm_name: str) -> Any:
     """Build a token splitter without relying on model-name auto-detection."""
-    return TokenTextSplitter(
+    splitter_cls = TokenTextSplitter
+    if splitter_cls is None:
+        try:
+            from langchain_text_splitters import TokenTextSplitter as splitter_cls
+        except ImportError:  # pragma: no cover
+            from langchain.text_splitter import TokenTextSplitter as splitter_cls
+
+    return splitter_cls(
         chunk_size=openai.get_chunk_size(llm_name),
         chunk_overlap=20,
         encoding_name=openai.get_tokenizer_encoding(llm_name),

@@ -3,11 +3,13 @@
 import { components } from '../schema';
 import { createApiClient } from './api-client';
 import { API_URL } from '../config/env';
+import { fetchAllPages, FULL_LIST_PAGE_SIZE } from './pagination';
 
 export type SkillRead = components['schemas']['SkillRead'];
 export type SkillCreate = components['schemas']['SkillCreate'];
 export type SkillUpdate = components['schemas']['SkillUpdate'];
-type SkillExtractBody = components['schemas']['Body_extract_user_skills_skills_extract_post'];
+type SkillExtractBody = components['schemas']['Body_extract_user_skills_api_v1_skills_extract_post'];
+type SkillListPage = components['schemas']['PaginatedResponse_SkillRead_'];
 export type SkillExtractRequest = Omit<SkillExtractBody, 'file'> & {
   file?: File | null;
 };
@@ -29,35 +31,42 @@ const unwrap = <T,>(
 
 export const getSkills = async (token: string): Promise<SkillRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/skills/'));
+  return fetchAllPages<SkillRead>(async (page, pageSize) => unwrap<SkillListPage>(await client.GET('/api/v1/skills/', {
+    params: {
+      query: {
+        page,
+        page_size: pageSize,
+      },
+    },
+  })), FULL_LIST_PAGE_SIZE);
 };
 
 export const getSkill = async (token: string, id: string): Promise<SkillRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/skills/{skill_id}', {
-    params: { query: { id } },
+  return unwrap(await client.GET('/api/v1/skills/{id}', {
+    params: { path: { id } },
   }));
 };
 
 export const createSkill = async (token: string, skill: SkillCreate): Promise<SkillRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/skills/', {
+  return unwrap(await client.POST('/api/v1/skills/', {
     body: skill,
   }));
 };
 
 export const updateSkill = async (token: string, id: string, skill: SkillUpdate): Promise<SkillRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PUT('/skills/{skill_id}', {
-    params: { query: { id } },
+  return unwrap(await client.PATCH('/api/v1/skills/{id}', {
+    params: { path: { id } },
     body: skill,
   }));
 };
 
 export const deleteSkill = async (token: string, id: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/skills/{skill_id}', {
-    params: { query: { id } },
+  unwrap(await client.DELETE('/api/v1/skills/{id}', {
+    params: { path: { id } },
   }));
 };
 
@@ -94,5 +103,5 @@ export const extractSkill = async (token: string, data: SkillExtractRequest): Pr
 
 export const seedSkills = async (token: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.POST('/skills/seed'));
+  unwrap(await client.POST('/api/v1/skills/seed'));
 };

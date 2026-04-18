@@ -1,9 +1,25 @@
 import { components } from '../schema';
 import { API_URL } from '../config/env';
+import {
+  fetchAllPages,
+  FULL_LIST_PAGE_SIZE,
+  normalizePaginatedResponse,
+  type PaginatedResponse,
+} from './pagination';
 
 export type UserDirectoryRead = components['schemas']['UserDirectoryRead'];
-export type UserDirectoryPaginatedRead = components['schemas']['UserDirectoryPaginatedRead'];
-export type UserPublicProfileRead = components['schemas']['UserPublicProfileRead'];
+export type UserDirectoryPaginatedRead = PaginatedResponse<UserDirectoryRead>;
+export type UserPublicProfileRead =
+  components['schemas']['UserPublicProfileRead'];
+
+export interface DirectoryListParams {
+  q?: string;
+  placement_status?: string;
+  location?: string;
+  superusers_only?: boolean;
+  page?: number;
+  page_size?: number;
+}
 
 type DirectoryErrorDetail = unknown;
 
@@ -22,11 +38,15 @@ export class DirectoryServiceError extends Error {
   }
 }
 
-export const isDirectoryServiceError = (error: unknown): error is DirectoryServiceError => (
-  error instanceof DirectoryServiceError
-);
+export const isDirectoryServiceError = (
+  error: unknown,
+): error is DirectoryServiceError => error instanceof DirectoryServiceError;
 
-const buildRequest = (token: string, method: string, body?: unknown): RequestInit => {
+const buildRequest = (
+  token: string,
+  method: string,
+  body?: unknown,
+): RequestInit => {
   if (!token) {
     throw new Error('Authorization token is required');
   }
@@ -59,7 +79,8 @@ const stringifyDetail = (detail: unknown, fallback: string): string => {
   }
 
   if (detail && typeof detail === 'object') {
-    const maybeMessage = (detail as { message?: unknown; detail?: unknown }).message;
+    const maybeMessage = (detail as { message?: unknown; detail?: unknown })
+      .message;
     if (typeof maybeMessage === 'string' && maybeMessage.trim()) {
       return maybeMessage;
     }
@@ -79,7 +100,9 @@ const stringifyDetail = (detail: unknown, fallback: string): string => {
   return fallback;
 };
 
-const parseError = async (response: Response): Promise<DirectoryServiceError> => {
+const parseError = async (
+  response: Response,
+): Promise<DirectoryServiceError> => {
   let detail: unknown = null;
 
   try {
@@ -95,13 +118,18 @@ const parseError = async (response: Response): Promise<DirectoryServiceError> =>
     detail = null;
   }
 
-  const fallback = response.status === 403
-    ? 'You do not have permission to browse the directory.'
-    : response.status === 404
-      ? 'That user profile could not be found.'
-      : 'Directory request failed.';
+  const fallback =
+    response.status === 403
+      ? 'You do not have permission to browse the directory.'
+      : response.status === 404
+        ? 'That user profile could not be found.'
+        : 'Directory request failed.';
 
-  return new DirectoryServiceError(stringifyDetail(detail, fallback), response.status, detail);
+  return new DirectoryServiceError(
+    stringifyDetail(detail, fallback),
+    response.status,
+    detail,
+  );
 };
 
 const fetchAPI = async <T,>(url: string, options: RequestInit): Promise<T> => {
@@ -125,31 +153,48 @@ const fetchAPI = async <T,>(url: string, options: RequestInit): Promise<T> => {
 
 export const getDirectoryUsers = async (
   token: string,
-  params?: {
-    q?: string;
-    placement_status?: string;
-    location?: string;
-    superusers_only?: boolean;
-    page?: number;
-    page_size?: number;
-  },
+  params?: DirectoryListParams,
 ): Promise<UserDirectoryPaginatedRead> => {
+  const page = params?.page ?? 1;
+  const pageSize = params?.page_size ?? 20;
   const requestOptions = buildRequest(token, 'GET');
   const query = new URLSearchParams();
   if (params?.q) query.set('q', params.q);
-  if (params?.placement_status) query.set('placement_status', params.placement_status);
+  if (params?.placement_status)
+    query.set('placement_status', params.placement_status);
   if (params?.location) query.set('location', params.location);
   if (params?.superusers_only) query.set('superusers_only', 'true');
-  if (params?.page !== undefined) query.set('page', String(params.page));
-  if (params?.page_size !== undefined) query.set('page_size', String(params.page_size));
+  query.set('page', String(page));
+  query.set('page_size', String(pageSize));
   const suffix = query.toString() ? `/?${query.toString()}` : '/';
-  return fetchAPI<UserDirectoryPaginatedRead>(`${BASE_URL}${suffix}`, requestOptions);
+  const response = await fetchAPI<UserDirectoryPaginatedRead>(
+    `${BASE_URL}${suffix}`,
+    requestOptions,
+  );
+  return normalizePaginatedResponse(response, { page, page_size: pageSize });
 };
+
+export const getAllDirectoryUsers = async (
+  token: string,
+  params?: Omit<DirectoryListParams, 'page' | 'page_size'>,
+): Promise<UserDirectoryRead[]> =>
+  fetchAllPages<UserDirectoryRead>(
+    (page, pageSize) =>
+      getDirectoryUsers(token, {
+        ...params,
+        page,
+        page_size: pageSize,
+      }),
+    FULL_LIST_PAGE_SIZE,
+  );
 
 export const getDirectoryProfile = async (
   token: string,
   userId: string,
 ): Promise<UserPublicProfileRead> => {
   const requestOptions = buildRequest(token, 'GET');
-  return fetchAPI<UserPublicProfileRead>(`${BASE_URL}/${userId}`, requestOptions);
+  return fetchAPI<UserPublicProfileRead>(
+    `${BASE_URL}/${userId}`,
+    requestOptions,
+  );
 };

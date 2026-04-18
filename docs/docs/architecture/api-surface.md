@@ -5,11 +5,11 @@ title: Browse API Routes
 description: Browse FastAPI route groups, access rules, and contract boundaries.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-14 -->
 
 # Browse API Routes
 
-Baldin exposes a FastAPI JSON API with OpenAPI 3.1 generated directly from the backend. The full contract is committed at the repo root as `openapi.json` and is also used to generate `frontend/src/schema.d.ts`.
+Baldin exposes a FastAPI API with OpenAPI 3.1 generated directly from the backend. Most routes are standard JSON over HTTP; the agent chat send route can also stream `text/event-stream` SSE responses. The full contract is committed at the repo root as `openapi.json` and is also used to generate `frontend/src/schema.d.ts`.
 
 ## Route Map
 
@@ -30,14 +30,15 @@ graph TD
 	Search --> S3[/skills]
 	Search --> S4[/experiences]
 	Search --> S5[/education]
-	Search --> S6[/certificate]
+	Search --> S6[/certificates]
 	Search --> S7[/companies]
 	Search --> S8[/leads]
 	Search --> S9[/applications]
+	Search --> S10[/aspirations]
 	Docs --> D1[/documents]
 	Docs --> D2[/documents/{id}/collaborate*]
-	Automation --> AU1[/extractor]
-	Automation --> AU2[/data_orchestration]
+	Automation --> AU1[/extractors]
+	Automation --> AU2[/orchestration-pipelines]
 	Automation --> AU3[/crawlers]
 	Automation --> AU4[/review]
 	Network --> N1[/directory]
@@ -45,6 +46,7 @@ graph TD
 	Network --> N3[/conversations]
 	Network --> N4[/action-items]
 	Network --> N5[/activity-feed]
+	Network --> N6[/agents]
 	Ops --> O1[/db-management]
 ```
 
@@ -65,10 +67,18 @@ graph TD
 | `skills` | `/skills` | Skill CRUD |
 | `experiences` | `/experiences` | Experience CRUD |
 | `education` | `/education` | Education CRUD |
-| `certificate` | `/certificate` | Certificate CRUD |
+| `certificates` | `/certificates` | Certificate CRUD |
 | `companies` | `/companies` | Company CRUD and lead associations |
 | `leads` | `/leads` | Lead CRUD, registration, comments, extraction, and related views |
 | `applications` | `/applications` | Application queue, board, detail, and status-history updates |
+| `aspirations` | `/aspirations` | Aspiration CRUD, profile-based suggestion generation, and aspiration-aware lead matching |
+
+#### Aspirations Public Surfaces
+
+- `GET /aspirations` and `POST /aspirations` provide paginated listing and creation of user aspirations, scoped with a `kind` enum (`role` or `company`).
+- `GET /aspirations/{id}`, `PATCH /aspirations/{id}`, and `DELETE /aspirations/{id}` manage individual aspirations.
+- `POST /aspirations/suggest` uses the user's profile to generate LLM-based aspiration suggestions (rate-limited, returns 400 when no usable profile signal exists).
+- `POST /aspirations/match` performs RAG-backed matching of aspirations against a set of leads, returning `aspiration_alignment` and `relevance_score` per lead entry.
 
 ### Documents and Collaboration
 
@@ -83,12 +93,12 @@ The document surface is now the canonical API for resumes, cover letters, and ot
 
 | Tag | Prefix | Purpose |
 | --- | --- | --- |
-| `extractor` | `/extractor` | Extractor CRUD, examples, versioning, and extraction operations |
-| `data_orchestration` | `/data_orchestration` | Orchestration pipeline CRUD and event history |
+| `extractors` | `/extractors` | Extractor CRUD, examples, versioning, and extraction operations |
+| `orchestration-pipelines` | `/orchestration-pipelines` | Orchestration pipeline CRUD and event history |
 | `crawlers` | `/crawlers` | Superuser-managed crawler pipelines and runs |
 | `review` | `/review` | Superuser review queue for pending automation output |
 
-### Networking, Activity, and Tasks
+### Networking, Activity, Tasks, and Agents
 
 | Tag | Prefix | Purpose |
 | --- | --- | --- |
@@ -97,12 +107,33 @@ The document surface is now the canonical API for resumes, cover letters, and ot
 | `messaging` | `/conversations` | Direct and group conversations, messages, unread counts |
 | `action-items` | `/action-items` | Cross-entity user task management |
 | `activity-feed` | `/activity-feed` | Aggregated activity stream and dashboard summary |
+| `agents` | `/agents` | Agent CRUD, supported-model discovery, one-shot runs, persisted chat sessions, streamed replies, chat export, and run history |
+
+#### Agents Public Surfaces
+
+- `GET /agents/models` returns the supported model list the frontend uses for agent configuration and chat model display.
+- `POST /agents/{id}/run` is the one-shot execution path that creates or appends to a cell-doc workspace artifact.
+- `POST /agents/{id}/chat` and `GET /agents/{id}/chat` create and list persisted chat sessions for a specific agent.
+- `GET /agents/chat/{session_id}` and `GET /agents/chat/{session_id}/history` load session metadata and paginated message history.
+- `POST /agents/chat/{session_id}/messages` accepts JSON input and returns either JSON or streamed `text/event-stream` SSE output, depending on the `Accept` header.
+- `PATCH /agents/chat/{session_id}` and `DELETE /agents/chat/{session_id}` update or remove a saved session.
+- `POST /agents/chat/{session_id}/save-to-document` exports a conversation into a new cell-doc document and creates a linked `AgentRun`.
 
 ### Operational Helpers
 
 | Tag | Prefix | Purpose |
 | --- | --- | --- |
-| `db-management` | `/db-management` | Database inspection and reset helpers used in local or admin workflows |
+| `db-management` | `/db-management` | Superuser-only database inspection, admin cleanup previews, destructive user cleanup, and local diagnostics helpers |
+
+#### DB Management Public Surfaces
+
+- `GET /db-management/status` reports the current stamped Alembic revision, repo head revision, whether the database is at head, and the number of public tables.
+- `GET /db-management/tables` and `GET /db-management/tables/{table_name}` provide exact row counts and column metadata for public-schema tables.
+- `GET /db-management/users` is the admin discovery surface for cleanup workflows, with search and superuser/active filters plus capped pagination.
+- `GET /db-management/users/{user_id}/cleanup-preview` previews what `purge` or `delete` would affect, including the selected cleanup domains plus separate delete and purge safeguard signals.
+- `PATCH /db-management/users/{user_id}/purge` now accepts optional repeated `domains` query params to run a scoped purge instead of the legacy full purge; omitting `domains` preserves the existing full-purge behavior.
+- `PATCH /db-management/users/{user_id}/purge` and `DELETE /db-management/users/{user_id}` emit structured admin audit log records for successful and blocked destructive operations.
+- `GET /db-management/list-tables` and `GET /db-management/table-details/{table_name}` remain available for compatibility but are now deprecated in favor of the richer `/tables*` routes.
 
 ## Access Model
 
@@ -127,6 +158,7 @@ Most routes require a JWT bearer token obtained through `POST /auth/jwt/login`. 
 ## Integration Contracts
 
 - The frontend should consume the generated `schema.d.ts` types rather than hand-writing payload contracts.
+- Agent chat clients need to handle both JSON request/response flows and the SSE event stream returned by `POST /agents/chat/{session_id}/messages`.
 - Backend API or schema changes should be followed by `./scripts/update_frontend_schemas.sh`.
 - OpenAPI is the canonical machine-readable contract; Swagger and ReDoc are the canonical interactive views.
 

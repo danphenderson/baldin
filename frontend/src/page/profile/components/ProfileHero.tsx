@@ -1,15 +1,35 @@
 import React, { useRef } from 'react';
 import {
-  Box, Card, CardContent, Typography, Chip, Stack, Button, TextField,
-  useTheme, alpha, Avatar, IconButton, Tooltip, CircularProgress,
-} from '@mui/material';
+  Box,
+  Typography,
+  Stack,
+  Button,
+  TextField,
+  useTheme,
+  alpha,
+  Avatar,
+  IconButton,
+  Tooltip,
+  CircularProgress,
+  } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
-  Edit as EditIcon, Close as CloseIcon, Save as SaveIcon,
-  CameraAlt as CameraIcon, FileUpload as ImportIcon,
-} from '@mui/icons-material';
-import type { UserRead, UserUpdate } from '../../../service/users';
+  Edit as EditIcon,
+  Close as CloseIcon,
+  Save as SaveIcon,
+  CameraAlt as CameraIcon,
+  FileUpload as ImportIcon,
+  } from '@mui/icons-material';
+import type { UserRead,
+  UserUpdate } from '../../../service/users';
 import { avatarUrl } from '../../../service/users';
+import { PageTitle,
+  brandGradient,
+  softBrandGradient,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+} from '../../../design-system';
 
 export interface SectionCounts {
   skills: number;
@@ -80,9 +100,10 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
     <Card
       sx={{
         mb: 3,
-        background: theme.palette.mode === 'dark'
-          ? `linear-gradient(135deg, ${alpha(theme.palette.primary.dark, 0.12)}, ${alpha(theme.palette.secondary.dark, 0.06)})`
-          : `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.06)}, ${alpha(theme.palette.secondary.light, 0.04)})`,
+        background: softBrandGradient(theme, {
+          startOpacity: theme.palette.mode === 'dark' ? 0.12 : 0.06,
+          endOpacity: theme.palette.mode === 'dark' ? 0.06 : 0.04,
+        }),
       }}
     >
       <CardContent sx={{ p: { xs: 2.5, sm: 4 } }}>
@@ -162,7 +183,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
                   width: 72, height: 72, fontSize: '1.75rem', fontWeight: 800,
                   background: resolvedAvatarSrc
                     ? undefined
-                    : `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                    : brandGradient(theme),
                   flexShrink: 0,
                 }}
               >
@@ -173,6 +194,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
                   onClick={handleAvatarClick}
                   disabled={avatarUploading}
                   size="small"
+                  aria-label="Change profile picture"
                   sx={{
                     position: 'absolute',
                     bottom: -4,
@@ -195,9 +217,9 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1, flexWrap: 'wrap' }}>
                 <Box>
-                  <Typography variant="h5" fontWeight={700} sx={{ lineHeight: 1.2 }}>
+                  <PageTitle sx={{ lineHeight: 1.2 }}>
                     {fullName}
-                  </Typography>
+                  </PageTitle>
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
                     {profile?.email}
                   </Typography>

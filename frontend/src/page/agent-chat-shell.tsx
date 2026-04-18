@@ -1,0 +1,681 @@
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  Alert, Box, Button, CircularProgress, Skeleton, Snackbar, Stack,
+} from '@mui/material';
+import {
+  ChatBubbleOutline as ChatIcon,
+  ErrorOutline as ErrorIcon,
+  Refresh as RefreshIcon,
+} from '@mui/icons-material';
+import { UserContext } from '../context/user-context';
+import { useNotification } from '../context/notification-context';
+import { usePageToolbarHeader } from '../layout/toolbar-header-context';
+import { getAgent } from '../service/agents';
+import { getApplicationDocuments } from '../service/applications';
+import {
+  getChatHistory,
+  getChatSession,
+  saveChatToDocument,
+  sendChatMessage,
+  updateChatSession,
+} from '../service/agent-chat';
+import type {
+  AgentChatMessageCreate,
+  AgentChatMessageRead,
+  AgentChatSessionRead,
+} from '../service/agent-chat';
+import { getPinnedDocuments, type DocumentRead } from '../service/documents';
+import ChatComposer, { type ChatComposerError } from '../component/agent-chat/chat-composer';
+import ChatThread from '../component/agent-chat/chat-thread';
+import ChatSessionHeader from '../component/agent-chat/chat-session-header';
+import type { ChatDisplayMessage } from '../component/agent-chat/chat-message-bubble';
+import { EmptyState } from '../design-system';
+import { getAgentModelDisplayLabel } from '../util/agent-models';
+
+interface StreamState {
+  controller: AbortController;
+  assistantMessageId: string;
+  content: string;
+}
+
+interface RetryState extends ChatComposerError {
+  mode: 'resend' | 'reload';
+  payload: AgentChatMessageCreate | null;
+}
+
+interface SavedDocumentState {
+  documentId: string;
+}
+
+interface SourceDocumentOption {
+  id: string;
+  title: string;
+  kind: DocumentRead['kind'];
+  tags: string[];
+}
+
+const DEFAULT_SESSION_LIMIT = 50;
+const NEAR_BOTTOM_THRESHOLD = 72;
+const DEFAULT_RETRIEVAL_K = 5;
+
+const createLocalMessageId = (prefix: string, sequence: number): string => `${prefix}-${sequence}`;
+
+const isLocalMessageId = (messageId: string): boolean => messageId.startsWith('local-');
+
+const compareChatMessages = (
+  left: Pick<ChatDisplayMessage, 'id' | 'created_at'>,
+  right: Pick<ChatDisplayMessage, 'id' | 'created_at'>,
+): number => {
+  const createdAtDelta = new Date(left.created_at).getTime() - new Date(right.created_at).getTime();
+  if (createdAtDelta !== 0) {
+    return createdAtDelta;
+  }
+
+  if (isLocalMessageId(left.id) || isLocalMessageId(right.id)) {
+    return 0;
+  }
+
+  return left.id.localeCompare(right.id);
+};
+
+const dedupeMessages = (
+  messages: ReadonlyArray<AgentChatMessageRead | ChatDisplayMessage>,
+): ChatDisplayMessage[] => {
+  const seen = new Set<string>();
+  return [...messages]
+    .sort(compareChatMessages)
+    .reduceRight<ChatDisplayMessage[]>((deduped, message) => {
+      if (seen.has(message.id)) {
+        return deduped;
+      }
+      seen.add(message.id);
+      deduped.unshift(message);
+      return deduped;
+    }, []);
+};
+
+const countCanonicalMessages = (messages: ChatDisplayMessage[]): number => (
+  messages.filter((message) => !isLocalMessageId(message.id)).length
+);
+
+const mergeCanonicalMessages = (
+  current: ChatDisplayMessage[],
+  incoming: AgentChatMessageRead[],
+): ChatDisplayMessage[] => {
+  const retained = current.filter((message) => !isLocalMessageId(message.id));
+  return dedupeMessages([...retained, ...incoming]);
+};
+
+const mergeSourceDocuments = (
+  pinnedDocuments: DocumentRead[],
+  applicationDocuments: DocumentRead[],
+): SourceDocumentOption[] => {
+  const merged = new Map<string, SourceDocumentOption>();
+
+  const addOption = (document: DocumentRead, tag: string) => {
+    const existing = merged.get(document.id);
+    if (existing) {
+      if (!existing.tags.includes(tag)) {
+        existing.tags = [...existing.tags, tag];
+      }
+      return;
+    }
+
+    merged.set(document.id, {
+      id: document.id,
+      title: document.title,
+      kind: document.kind,
+      tags: [tag],
+    });
+  };
+
+  pinnedDocuments.forEach((document) => addOption(document, 'Pinned Resume'));
+  applicationDocuments.forEach((document) => addOption(document, 'Application Doc'));
+
+  return [...merged.values()].sort((left, right) => left.title.localeCompare(right.title));
+};
+
+const AgentChatShellPage: React.FC = () => {
+  const { agentId, sessionId } = useParams<{ agentId: string; sessionId: string }>();
+  const { token } = useContext(UserContext);
+  const { notify } = useNotification();
+  const navigate = useNavigate();
+
+  const [session, setSession] = useState<AgentChatSessionRead | null>(null);
+  const [agentName, setAgentName] = useState('Agent');
+  const [messages, setMessages] = useState<ChatDisplayMessage[]>([]);
+  const [draft, setDraft] = useState('');
+  const [streamState, setStreamState] = useState<StreamState | null>(null);
+  const [composerError, setComposerError] = useState<RetryState | null>(null);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
+  const [olderCursor, setOlderCursor] = useState<string | null>(null);
+  const [showJumpToBottom, setShowJumpToBottom] = useState(false);
+  const [stickToBottom, setStickToBottom] = useState(true);
+  const [savingTitle, setSavingTitle] = useState(false);
+  const [savingDocument, setSavingDocument] = useState(false);
+  const [savedDocument, setSavedDocument] = useState<SavedDocumentState | null>(null);
+  const [sourceOptions, setSourceOptions] = useState<SourceDocumentOption[]>([]);
+  const [loadingSourceOptions, setLoadingSourceOptions] = useState(false);
+  const [useDocuments, setUseDocuments] = useState(false);
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
+  const [lookupUrl, setLookupUrl] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
+  const messageSequenceRef = useRef(0);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const messagesRef = useRef<ChatDisplayMessage[]>([]);
+
+  const title = useMemo(() => session?.title?.trim() || 'Untitled chat', [session?.title]);
+  const systemMessages = useMemo(
+    () => messages.filter((message) => message.role === 'system'),
+    [messages],
+  );
+  const conversationMessages = useMemo(
+    () => messages.filter((message) => message.role !== 'system'),
+    [messages],
+  );
+  const hasAssistantMessage = useMemo(
+    () => messages.some((message) => message.role === 'assistant' && Boolean(message.content.trim())),
+    [messages],
+  );
+  const hasOlderMessages = olderCursor !== null;
+  const canUseDocumentSources = selectedDocumentIds.length > 0;
+
+  usePageToolbarHeader(title, 'Agent chat');
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior, block: 'end' });
+  }, []);
+
+  const syncSession = useCallback(async (limit?: number) => {
+    if (!token || !sessionId) {
+      return null;
+    }
+
+    const currentCanonicalCount = countCanonicalMessages(messagesRef.current);
+    const result = await getChatSession(
+      token,
+      sessionId,
+      limit ?? Math.max(DEFAULT_SESSION_LIMIT, currentCanonicalCount + 5),
+    );
+
+    if (agentId && result.agent_id !== agentId) {
+      navigate(`/automation/agents/${result.agent_id}/chat/${result.id}`, { replace: true });
+      return null;
+    }
+
+    setSession(result);
+    setOlderCursor(result.message_history?.next_before ?? null);
+    setMessages((current) => mergeCanonicalMessages(current, result.messages ?? []));
+    return result;
+  }, [agentId, navigate, sessionId, token]);
+
+  const refresh = useCallback(async () => {
+    if (!token || !sessionId) {
+      setOlderCursor(null);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setLoadError(null);
+    setNotFound(false);
+    try {
+      const result = await syncSession(DEFAULT_SESSION_LIMIT);
+      if (!result) {
+        return;
+      }
+      try {
+        const agent = await getAgent(token, result.agent_id);
+        setAgentName(agent.name.trim() || 'Agent');
+      } catch {
+        setAgentName('Agent');
+      }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to load chat session';
+      setSession(null);
+      setOlderCursor(null);
+      setMessages([]);
+      if (/not found/i.test(message)) {
+        setNotFound(true);
+      } else {
+        setLoadError(message);
+        notify(message, 'error');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [notify, sessionId, syncSession, token]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    if (!token || !session?.id) {
+      setLoadingSourceOptions(false);
+      setSourceOptions([]);
+      setSelectedDocumentIds([]);
+      setUseDocuments(false);
+      return;
+    }
+
+    let isActive = true;
+    setLoadingSourceOptions(true);
+
+    void (async () => {
+      const [pinnedResult, applicationResult] = await Promise.allSettled([
+        getPinnedDocuments(token),
+        session.application_id ? getApplicationDocuments(token, session.application_id) : Promise.resolve([]),
+      ]);
+
+      if (!isActive) {
+        return;
+      }
+
+      if (pinnedResult.status === 'rejected') {
+        notify(
+          pinnedResult.reason instanceof Error
+            ? pinnedResult.reason.message
+            : 'Failed to load pinned documents',
+          'error',
+        );
+      }
+      if (applicationResult.status === 'rejected') {
+        notify(
+          applicationResult.reason instanceof Error
+            ? applicationResult.reason.message
+            : 'Failed to load application documents',
+          'error',
+        );
+      }
+
+      const pinnedResume = (
+        pinnedResult.status === 'fulfilled'
+          ? pinnedResult.value.filter((document) => document.kind === 'resume')
+          : []
+      );
+      const applicationDocuments = applicationResult.status === 'fulfilled'
+        ? applicationResult.value
+        : [];
+      const nextOptions = mergeSourceDocuments(pinnedResume, applicationDocuments);
+      const defaultSelectedIds = session.application_id
+        ? []
+        : nextOptions.slice(0, 1).map((option) => option.id);
+
+      setSourceOptions(nextOptions);
+      setSelectedDocumentIds((current) => {
+        const validCurrent = current.filter((documentId) => nextOptions.some((option) => option.id === documentId));
+        return validCurrent.length > 0 ? validCurrent : defaultSelectedIds;
+      });
+      setLoadingSourceOptions(false);
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [notify, session?.application_id, session?.id, token]);
+
+  useEffect(() => {
+    if (selectedDocumentIds.length === 0 && useDocuments) {
+      setUseDocuments(false);
+    }
+  }, [selectedDocumentIds, useDocuments]);
+
+  useEffect(() => {
+    if (stickToBottom) {
+      scrollToBottom(streamState ? 'auto' : 'smooth');
+    }
+  }, [messages, scrollToBottom, stickToBottom, streamState]);
+
+  const handleThreadScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const element = event.currentTarget;
+    const nearBottom = element.scrollHeight - element.scrollTop - element.clientHeight < NEAR_BOTTOM_THRESHOLD;
+    setStickToBottom(nearBottom);
+    setShowJumpToBottom(!nearBottom);
+  };
+
+  const handleLoadOlderMessages = useCallback(async () => {
+    if (!token || !sessionId || !session || !olderCursor) {
+      return;
+    }
+
+    setLoadingOlderMessages(true);
+    try {
+      const page = await getChatHistory(token, sessionId, {
+        before: olderCursor,
+        limit: DEFAULT_SESSION_LIMIT,
+      });
+      setMessages((current) => dedupeMessages([...page.items, ...current]));
+      setOlderCursor(page.next_before ?? null);
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Failed to load earlier messages', 'error');
+    } finally {
+      setLoadingOlderMessages(false);
+    }
+  }, [notify, olderCursor, session, sessionId, token]);
+
+  const handleSaveTitle = useCallback(async (nextTitle: string) => {
+    if (!token || !session) {
+      return;
+    }
+    setSavingTitle(true);
+    try {
+      const updated = await updateChatSession(token, session.id, { title: nextTitle });
+      setSession((current) => current ? { ...current, ...updated } : updated);
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Failed to update chat title', 'error');
+      throw error;
+    } finally {
+      setSavingTitle(false);
+    }
+  }, [notify, session, token]);
+
+  const buildMessagePayload = useCallback((contentOverride?: string): AgentChatMessageCreate | null => {
+    const content = (contentOverride ?? draft).trim();
+    if (!content) {
+      return null;
+    }
+
+    const trimmedLookupUrl = lookupUrl.trim();
+    const retrieval = useDocuments || trimmedLookupUrl
+      ? {
+        document_ids: useDocuments ? selectedDocumentIds : [],
+        lookup_url: trimmedLookupUrl || null,
+        k: DEFAULT_RETRIEVAL_K,
+      }
+      : undefined;
+
+    return {
+      content,
+      retrieval,
+    };
+  }, [draft, lookupUrl, selectedDocumentIds, useDocuments]);
+
+  const handleSubmitMessage = useCallback((payloadOverride?: AgentChatMessageCreate | null) => {
+    if (!token || !sessionId || !session) {
+      return;
+    }
+
+    const payload = payloadOverride ?? buildMessagePayload();
+    const content = payload?.content.trim() ?? '';
+    if (!payload || !content || streamState || session.status === 'archived') {
+      return;
+    }
+
+    const now = new Date().toISOString();
+    messageSequenceRef.current += 1;
+    const userMessageId = createLocalMessageId('local-user', messageSequenceRef.current);
+    messageSequenceRef.current += 1;
+    const assistantMessageId = createLocalMessageId('local-assistant', messageSequenceRef.current);
+
+    const optimisticUser: ChatDisplayMessage = {
+      id: userMessageId,
+      role: 'user',
+      content,
+      created_at: now,
+      metadata: {},
+    };
+    const optimisticAssistant: ChatDisplayMessage = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+      created_at: new Date(Date.now() + 1).toISOString(),
+      metadata: {},
+      isStreaming: true,
+    };
+
+    let sawDelta = false;
+
+    setComposerError(null);
+    setDraft('');
+    setMessages((current) => [...current, optimisticUser, optimisticAssistant]);
+
+    const controller = sendChatMessage(
+      token,
+      sessionId,
+      payload,
+      (chunk) => {
+        sawDelta = true;
+        setMessages((current) => current.map((message) => (
+          message.id === assistantMessageId
+            ? { ...message, content: `${message.content}${chunk}`, isStreaming: true }
+            : message
+        )));
+      },
+      (message) => {
+        setStreamState(null);
+        setMessages((current) => current.map((entry) => (
+          entry.id === assistantMessageId
+            ? { ...message, isStreaming: false }
+            : entry
+        )));
+        void syncSession();
+      },
+      (error) => {
+        setStreamState(null);
+        setMessages((current) => current.filter((entry) => entry.id !== assistantMessageId));
+        setComposerError({
+          message: error,
+          mode: sawDelta ? 'reload' : 'resend',
+          payload,
+        });
+        void syncSession().catch(() => {});
+      },
+    );
+
+    setStreamState({ controller, assistantMessageId, content });
+  }, [buildMessagePayload, session, sessionId, streamState, syncSession, token]);
+
+  const handleCancelStreaming = useCallback(() => {
+    if (!streamState) {
+      return;
+    }
+
+    streamState.controller.abort();
+    setMessages((current) => current.flatMap((message) => {
+      if (message.id !== streamState.assistantMessageId) {
+        return [message];
+      }
+      if (!message.content.trim()) {
+        return [];
+      }
+      return [{ ...message, isStreaming: false, isCancelled: true }];
+    }));
+    setStreamState(null);
+  }, [streamState]);
+
+  const handleRetry = useCallback(() => {
+    if (!composerError) {
+      return;
+    }
+    if (composerError.mode === 'resend' && composerError.payload) {
+      handleSubmitMessage(composerError.payload);
+      setComposerError(null);
+      return;
+    }
+    void syncSession();
+    setComposerError(null);
+  }, [composerError, handleSubmitMessage, syncSession]);
+
+  const handleSaveDocument = useCallback(async () => {
+    if (!token || !session) {
+      return;
+    }
+
+    setSavingDocument(true);
+    try {
+      const saved = await saveChatToDocument(token, session.id, {});
+      setSavedDocument({ documentId: saved.document_id });
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Failed to save chat as a document', 'error');
+    } finally {
+      setSavingDocument(false);
+    }
+  }, [notify, session, token]);
+
+  if (loading) {
+    return (
+      <Box sx={{ maxWidth: 960, mx: 'auto' }}>
+        <Skeleton variant="text" width={220} height={40} sx={{ mb: 1 }} />
+        <Skeleton variant="text" width={160} height={28} sx={{ mb: 1.5 }} />
+        <Skeleton variant="rounded" height={560} />
+      </Box>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <Box sx={{ maxWidth: 960, mx: 'auto' }}>
+        <EmptyState
+          icon={<ErrorIcon />}
+          title="Unable to load chat session"
+          description={loadError}
+          action={{ label: 'Retry', onClick: refresh, icon: <RefreshIcon /> }}
+        />
+      </Box>
+    );
+  }
+
+  if (notFound || !session || !agentId) {
+    return (
+      <Box sx={{ maxWidth: 960, mx: 'auto' }}>
+        <EmptyState
+          icon={<ChatIcon />}
+          title="Chat session not found"
+          description="This chat session may have been deleted."
+          action={{ label: 'Back to Agent', onClick: () => navigate(`/automation/agents/${agentId ?? ''}`) }}
+        />
+      </Box>
+    );
+  }
+
+  return (
+    <>
+      <Box
+        sx={{
+          maxWidth: 960,
+          mx: 'auto',
+          minHeight: 'calc(100vh - 180px)',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <Stack
+          spacing={2}
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: '16px',
+            bgcolor: 'background.default',
+            p: { xs: 1.5, sm: 2 },
+          }}
+        >
+          <ChatSessionHeader
+            agentName={agentName}
+            title={title}
+            status={session.status}
+            modelLabel={getAgentModelDisplayLabel(session.model_name ?? null)}
+            applicationId={session.application_id}
+            isSavingTitle={savingTitle}
+            isSavingDocument={savingDocument}
+            canSaveDocument={!streamState && !savingDocument && hasAssistantMessage}
+            onBack={() => navigate(`/automation/agents/${agentId}`)}
+            onSaveTitle={handleSaveTitle}
+            onSaveDocument={() => {
+              void handleSaveDocument();
+            }}
+          />
+          <Box sx={{ minHeight: 0, flex: 1 }}>
+            <ChatThread
+              systemMessages={systemMessages}
+              messages={conversationMessages}
+              hasOlderMessages={hasOlderMessages}
+              loadingOlderMessages={loadingOlderMessages}
+              onLoadOlderMessages={handleLoadOlderMessages}
+              onScroll={handleThreadScroll}
+              scrollContainerRef={scrollContainerRef}
+              messagesEndRef={messagesEndRef}
+              showJumpToBottom={showJumpToBottom}
+              onJumpToBottom={() => {
+                setStickToBottom(true);
+                setShowJumpToBottom(false);
+                scrollToBottom();
+              }}
+            />
+          </Box>
+          {loadingOlderMessages && (
+            <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
+              <CircularProgress size={16} />
+              <Alert severity="info" sx={{ py: 0 }}>
+                Loading more chat history…
+              </Alert>
+            </Stack>
+          )}
+          <ChatComposer
+            surfaceId={session.id}
+            value={draft}
+            onChange={setDraft}
+            onSubmit={() => handleSubmitMessage()}
+            onCancel={handleCancelStreaming}
+            onRetry={handleRetry}
+            streaming={Boolean(streamState)}
+            archived={session.status === 'archived'}
+            error={composerError}
+            sourceOptions={sourceOptions}
+            loadingSourceOptions={loadingSourceOptions}
+            useDocuments={useDocuments}
+            canUseDocuments={canUseDocumentSources}
+            selectedDocumentIds={selectedDocumentIds}
+            lookupUrl={lookupUrl}
+            onToggleUseDocuments={setUseDocuments}
+            onChangeSelectedDocumentIds={setSelectedDocumentIds}
+            onChangeLookupUrl={setLookupUrl}
+            entityRefs={[{
+              kind: 'conversation',
+              id: session.id,
+              label: title,
+            }]}
+            applicationId={session.application_id}
+          />
+        </Stack>
+      </Box>
+      <Snackbar
+        open={Boolean(savedDocument)}
+        autoHideDuration={6000}
+        onClose={() => setSavedDocument(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          severity="success"
+          variant="filled"
+          onClose={() => setSavedDocument(null)}
+          action={savedDocument ? (
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => {
+                navigate(`/workspace/${savedDocument.documentId}/edit`);
+                setSavedDocument(null);
+              }}
+            >
+              Open document
+            </Button>
+          ) : undefined}
+        >
+          Chat saved as a document.
+        </Alert>
+      </Snackbar>
+    </>
+  );
+};
+
+export default AgentChatShellPage;

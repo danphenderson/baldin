@@ -112,8 +112,9 @@ class LinkedInCrawler(CrawlerBase):
         page_end: int = 5,
         headless: bool = True,
         max_retries: int = DEFAULT_MAX_RETRIES,
+        proxy_config: dict | None = None,
     ) -> None:
-        super().__init__(headless=headless)
+        super().__init__(headless=headless, proxy_config=proxy_config)
         self.keywords = keywords or []
         self.location = location
         self.page_start = page_start

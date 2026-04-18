@@ -1,6 +1,6 @@
 # app/api/routes/contacts.py
-from fastapi import APIRouter, BackgroundTasks, Depends
-from sqlalchemy import select
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from sqlalchemy import func, select
 
 from app.api.deps import (
     AsyncSession,
@@ -29,16 +29,24 @@ CONTACT_SEED_OPERATION = SeedOperation(
 )
 
 
-@router.get("/", response_model=list[schemas.ContactRead])
+@router.get("/", response_model=schemas.PaginatedResponse[schemas.ContactRead])
 async def get_current_user_contacts(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
 ):
-    result = await db.execute(
-        select(models.Contact).where(models.Contact.user_id == user.id)
+    base = select(models.Contact).where(models.Contact.user_id == user.id)
+    count_result = await db.execute(select(func.count()).select_from(base.subquery()))
+    total = count_result.scalar_one()
+    offset = (page - 1) * page_size
+    result = await db.execute(base.offset(offset).limit(page_size))
+    return schemas.PaginatedResponse[schemas.ContactRead](
+        items=result.scalars().all(),
+        total=total,
+        page=page,
+        page_size=page_size,
     )
-    contacts = result.scalars().all()
-    return contacts
 
 
 @router.post("/", status_code=201, response_model=schemas.ContactRead)
@@ -47,27 +55,27 @@ async def create_user_contact(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    contact = models.Contact(**payload.dict(), user_id=user.id)
+    contact = models.Contact(**payload.model_dump(), user_id=user.id)
     db.add(contact)
     await db.commit()
     await db.refresh(contact)
     return contact
 
 
-@router.get("/{contact_id}", response_model=schemas.ContactRead)
+@router.get("/{id}", response_model=schemas.ContactRead)
 async def get_user_contact(
     contact: schemas.ContactRead = Depends(get_contact),
 ):
     return contact
 
 
-@router.put("/{contact_id}", response_model=schemas.ContactRead)
+@router.patch("/{id}", response_model=schemas.ContactRead)
 async def update_user_contact(
     payload: schemas.ContactUpdate,
     contact: schemas.ContactRead = Depends(get_contact),
     db: AsyncSession = Depends(get_async_session),
 ):
-    contact_data = payload.dict(exclude_unset=True)
+    contact_data = payload.model_dump(exclude_unset=True)
     for field in contact_data:
         setattr(contact, field, contact_data[field])
     await db.commit()
@@ -75,7 +83,7 @@ async def update_user_contact(
     return contact
 
 
-@router.delete("/{contact_id}", status_code=204)
+@router.delete("/{id}", status_code=204)
 async def delete_user_contact(
     contact: schemas.ContactRead = Depends(get_contact),
     db: AsyncSession = Depends(get_async_session),

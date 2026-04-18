@@ -1,26 +1,106 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Box, Typography, Chip, Stack, Button, useTheme, alpha, TextField,
-  Alert, Paper, Divider, List, ListItemButton, ListItemText, MenuItem,
-  Select, FormControl, InputLabel, type SelectChangeEvent,
-  ToggleButtonGroup, ToggleButton,
+  Box,
+  Typography,
+  Stack,
+  Button,
+  useTheme,
+  alpha,
+  TextField,
+  Alert,
+  Paper,
+  Divider,
+  List,
+  ListItemButton,
+  ListItemText,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  type SelectChangeEvent,
+  ToggleButtonGroup,
+  ToggleButton,
 } from '@mui/material';
+import { StatusChip as Chip } from '../../design-system';
 import Grid from '@mui/material/Grid';
+import type { Editor } from '@tiptap/core';
 import {
   ArrowBack as BackIcon, Save as SaveIcon,
   Article as ResumeIcon, Mail as LetterIcon, Replay as FollowUpIcon,
   MenuBook as RefSheetIcon, TextSnippet as FreeformIcon,
+  Description as CellDocIcon,
 } from '@mui/icons-material';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
-import RichTextEditor, { type ContentFormat } from '../../component/rich-text-editor';
-import { normalizeDocumentContent } from '../../component/document-content';
+import RichTextEditor, {
+  type ContentFormat,
+  type RichTextEditorPlainTextSurfaceConfig,
+} from '../../component/rich-text-editor';
+import CellDocEditor from '../../component/cell-doc/cell-doc-editor';
+import RerunAgentButton from '../../component/rerun-agent-button';
+import {
+  normalizeDocumentContent,
+  plainTextToTiptapDocument,
+} from '../../component/document-content';
+import {
+  AgentTaskComposer,
+  createAgentTaskComposerDraft,
+  type AgentSurfaceRunRecord,
+  type AgentTaskComposerDraft,
+  type AgentTaskComposerPendingAction,
+  type AgentSurfaceApplyResult,
+} from '../../component/agent-surface';
+import type { AgentTaskEvent } from '../../component/cell-doc/extensions';
 import {
   getDocument, createDocument, createVersion, getVersions,
   type DocumentDetailRead, type DocumentVersionRead, type DocumentKind,
   type DocumentCreate, type DocumentVersionCreate,
 } from '../../service/documents';
+import {
+  applyAgentSurfaceRun,
+  createAgentSurfaceRun,
+  dismissAgentSurfaceRun,
+  getFilteredAgentRuns,
+} from '../../service/agents';
+
+type DocumentTaskState = {
+  taskId: string;
+  surfaceKind: AgentTaskEvent['surfaceKind'];
+  draft: AgentTaskComposerDraft;
+  run: AgentSurfaceRunRecord | null;
+  pendingAction: AgentTaskComposerPendingAction | null;
+  errorMessage: string | null;
+};
+
+type LocatedAgentTaskNode = {
+  nodeSize: number;
+  pos: number;
+};
+
+function findAgentTaskNode(editor: Editor, taskId: string): LocatedAgentTaskNode | null {
+  let match: LocatedAgentTaskNode | null = null;
+
+  editor.state.doc.descendants((node, pos) => {
+    if (node.type.name !== 'agentTask') return true;
+    if (node.attrs.taskId !== taskId) return true;
+    match = {
+      nodeSize: node.nodeSize,
+      pos,
+    };
+    return false;
+  });
+
+  return match;
+}
+
+function mapRunToTaskStatus(run: AgentSurfaceRunRecord): 'running' | 'completed' | 'failed' | 'applied' | 'dismissed' {
+  if (run.apply_status === 'applied') return 'applied';
+  if (run.apply_status === 'dismissed') return 'dismissed';
+  if (run.status === 'failed') return 'failed';
+  if (run.status === 'pending' || run.status === 'running') return 'running';
+  return 'completed';
+}
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -32,6 +112,7 @@ const KIND_OPTIONS: { value: DocumentKind; label: string; icon: React.ReactEleme
   { value: 'follow_up',       label: 'Follow-up',       icon: <FollowUpIcon fontSize="small" /> },
   { value: 'reference_sheet', label: 'Reference Sheet', icon: <RefSheetIcon fontSize="small" /> },
   { value: 'freeform',        label: 'Freeform',        icon: <FreeformIcon fontSize="small" /> },
+  { value: 'cell_doc',        label: 'Cell Doc',        icon: <CellDocIcon fontSize="small" /> },
 ];
 
 const CONTENT_TYPE_OPTIONS = [
@@ -46,6 +127,7 @@ const KIND_HINTS: Record<string, { placeholder: string; defaultContentType: stri
   follow_up:       { placeholder: 'Draft your follow-up message…\n\nHi [Name],\n\nI wanted to follow up on…', defaultContentType: 'custom' },
   reference_sheet: { placeholder: 'List your references…\n\nName | Title | Company | Email | Phone | Relationship', defaultContentType: 'custom' },
   freeform:        { placeholder: 'Start writing…', defaultContentType: 'custom' },
+  cell_doc:        { placeholder: "Type '/' for commands", defaultContentType: 'custom' },
 };
 
 /* ------------------------------------------------------------------ */
@@ -84,6 +166,7 @@ function getSourceFileName(sourceFile?: string | null): string | null {
 
 const DocumentEditorPage: React.FC = () => {
   const theme = useTheme();
+  const location = useLocation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { token, user } = useContext(UserContext);
@@ -106,6 +189,9 @@ const DocumentEditorPage: React.FC = () => {
   const [contentFormat, setContentFormat] = useState<ContentFormat>('tiptap_json');
   const [changeSummary, setChangeSummary] = useState('');
   const [externalContentKey, setExternalContentKey] = useState(0);
+  const [activeEditor, setActiveEditor] = useState<Editor | null>(null);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [taskStates, setTaskStates] = useState<Record<string, DocumentTaskState>>({});
 
   const headVersionNumber = doc?.head_version?.version_number ?? 0;
   const viewerRole = doc?.viewer_role;
@@ -129,6 +215,63 @@ const DocumentEditorPage: React.FC = () => {
     setContentFormat(nextFormat);
     setExternalContentKey(currentKey => currentKey + 1);
   }, []);
+
+  const updateTaskState = useCallback((taskId: string, updater: (current: DocumentTaskState | undefined) => DocumentTaskState) => {
+    setTaskStates((current) => ({
+      ...current,
+      [taskId]: updater(current[taskId]),
+    }));
+  }, []);
+
+  const updateAgentTaskNode = useCallback((editor: Editor, taskId: string, attrs: Record<string, unknown>) => {
+    const located = findAgentTaskNode(editor, taskId);
+    if (!located) return;
+
+    const node = editor.state.doc.nodeAt(located.pos);
+    if (!node) return;
+
+    const tr = editor.state.tr.setNodeMarkup(
+      located.pos,
+      undefined,
+      {
+        ...node.attrs,
+        ...attrs,
+      },
+      node.marks,
+    );
+    editor.view.dispatch(tr);
+  }, []);
+
+  const loadLatestTaskRun = useCallback(async (editor: Editor, taskId: string) => {
+    if (!token || !id) return;
+
+    try {
+      const response = await getFilteredAgentRuns(token, {
+        source_document_id: id,
+        source_route: location.pathname,
+        source_anchor_id: taskId,
+        page: 1,
+        page_size: 1,
+      });
+      const latestRun = response.items[0] ?? null;
+      if (!latestRun) return;
+
+      updateTaskState(taskId, (current) => ({
+        taskId,
+        surfaceKind: current?.surfaceKind ?? 'rich_text_editor',
+        draft: current?.draft ?? createAgentTaskComposerDraft(),
+        run: latestRun,
+        pendingAction: null,
+        errorMessage: null,
+      }));
+      updateAgentTaskNode(editor, taskId, {
+        status: mapRunToTaskStatus(latestRun),
+        summary: latestRun.suggested_edit?.summary ?? latestRun.error_summary ?? null,
+      });
+    } catch {
+      // Ignore best-effort recovery failures and keep the local task state.
+    }
+  }, [id, location.pathname, token, updateAgentTaskNode, updateTaskState]);
 
   /* fetch for edit mode -------------------------------------------- */
   const loadDocument = useCallback(async () => {
@@ -157,6 +300,291 @@ const DocumentEditorPage: React.FC = () => {
   useEffect(() => {
     if (!isCreate) loadDocument();
   }, [isCreate, loadDocument]);
+
+  const persistAppliedSuggestion = useCallback(async (
+    editor: Editor,
+    run: AgentSurfaceRunRecord,
+  ): Promise<AgentSurfaceApplyResult> => {
+    if (!token || !id) {
+      throw new Error('Save the document before applying agent suggestions.');
+    }
+
+    const nextJson = JSON.stringify(editor.getJSON());
+    const nextText = editor.getText();
+    setContent(nextJson);
+    setPlainText(nextText);
+
+    const version = await createVersion(token, id, {
+      content: nextJson || undefined,
+      content_type: contentType as DocumentVersionCreate['content_type'],
+      change_summary: changeSummary.trim() || run.suggested_edit?.summary || 'Applied agent task suggestion',
+      content_format: 'tiptap_json',
+    });
+
+    setDoc((current) => (current ? { ...current, head_version: version } : current));
+    setVersions((current) => [version, ...current.filter((item) => item.id !== version.id)]
+      .sort((left, right) => right.version_number - left.version_number));
+
+    return {
+      sessionDocumentId: id,
+      sessionVersionId: version.id,
+    };
+  }, [changeSummary, contentType, id, token]);
+
+  const runDocumentTask = useCallback(async (
+    taskId: string,
+    surfaceKind: AgentTaskEvent['surfaceKind'],
+    editor: Editor,
+    payload: { agentId: string; agentName: string; promptText: string },
+  ) => {
+    if (!token || !id) {
+      updateTaskState(taskId, (current) => ({
+        taskId,
+        surfaceKind,
+        draft: current?.draft ?? createAgentTaskComposerDraft({ agentId: payload.agentId, promptText: payload.promptText }),
+        run: current?.run ?? null,
+        pendingAction: null,
+        errorMessage: 'Save the document before running agent tasks.',
+      }));
+      return;
+    }
+
+    updateTaskState(taskId, (current) => ({
+      taskId,
+      surfaceKind,
+      draft: {
+        agentId: payload.agentId,
+        promptText: payload.promptText,
+      },
+      run: current?.run ?? null,
+      pendingAction: 'run',
+      errorMessage: null,
+    }));
+    updateAgentTaskNode(editor, taskId, {
+      agentId: payload.agentId,
+      agentLabel: payload.agentName,
+      promptText: payload.promptText,
+      status: 'running',
+      summary: null,
+    });
+
+    try {
+      const createdRun = await createAgentSurfaceRun(token, payload.agentId, {
+        surface_kind: surfaceKind,
+        source_route: location.pathname,
+        source_document_id: id,
+        source_field_key: 'document_content',
+        anchor_id: taskId,
+        content_format: 'tiptap_json',
+        surface_content: JSON.stringify(editor.getJSON()),
+        entity_refs: [{
+          kind: 'document',
+          id,
+          label: title.trim() || 'Document',
+        }],
+        prompt_text: payload.promptText.trim(),
+        requested_apply_mode: 'insert_after_anchor',
+      });
+
+      updateTaskState(taskId, (current) => ({
+        taskId,
+        surfaceKind,
+        draft: current?.draft ?? createAgentTaskComposerDraft({ agentId: payload.agentId, promptText: payload.promptText }),
+        run: createdRun,
+        pendingAction: null,
+        errorMessage: null,
+      }));
+      updateAgentTaskNode(editor, taskId, {
+        agentId: payload.agentId,
+        agentLabel: payload.agentName,
+        promptText: payload.promptText,
+        status: mapRunToTaskStatus(createdRun),
+        summary: createdRun.suggested_edit?.summary ?? createdRun.error_summary ?? null,
+      });
+    } catch (taskError) {
+      const message = taskError instanceof Error ? taskError.message : 'Failed to run agent task.';
+      updateTaskState(taskId, (current) => ({
+        taskId,
+        surfaceKind,
+        draft: current?.draft ?? createAgentTaskComposerDraft({ agentId: payload.agentId, promptText: payload.promptText }),
+        run: current?.run ?? null,
+        pendingAction: null,
+        errorMessage: message,
+      }));
+      updateAgentTaskNode(editor, taskId, {
+        status: 'failed',
+        summary: message,
+      });
+    }
+  }, [id, location.pathname, title, token, updateAgentTaskNode, updateTaskState]);
+
+  const applyDocumentTask = useCallback(async (
+    taskId: string,
+    surfaceKind: AgentTaskEvent['surfaceKind'],
+    editor: Editor,
+  ) => {
+    const taskState = taskStates[taskId];
+    const taskRun = taskState?.run;
+    const suggestion = taskRun?.suggested_edit;
+
+    if (!taskRun || !suggestion?.content || !token || !id) {
+      updateTaskState(taskId, (current) => ({
+        taskId,
+        surfaceKind,
+        draft: current?.draft ?? createAgentTaskComposerDraft(),
+        run: current?.run ?? null,
+        pendingAction: null,
+        errorMessage: 'No suggested edit is available to apply.',
+      }));
+      return;
+    }
+
+    updateTaskState(taskId, (current) => ({
+      taskId,
+      surfaceKind,
+      draft: current?.draft ?? createAgentTaskComposerDraft(),
+      run: current?.run ?? null,
+      pendingAction: 'apply',
+      errorMessage: null,
+    }));
+
+    try {
+      const located = findAgentTaskNode(editor, taskId);
+      if (!located) {
+        throw new Error('Unable to locate this agent task in the editor.');
+      }
+
+      const nextDoc = plainTextToTiptapDocument(suggestion.content);
+      const nextContent = Array.isArray(nextDoc.content) ? nextDoc.content : [];
+      editor.chain().focus().insertContentAt(located.pos + located.nodeSize, nextContent).run();
+
+      const persisted = await persistAppliedSuggestion(editor, taskRun);
+      const appliedRun = await applyAgentSurfaceRun(token, taskRun.id, {
+        session_document_id: persisted.sessionDocumentId ?? undefined,
+        session_version_id: persisted.sessionVersionId ?? undefined,
+      });
+
+      updateTaskState(taskId, (current) => ({
+        taskId,
+        surfaceKind,
+        draft: current?.draft ?? createAgentTaskComposerDraft(),
+        run: appliedRun,
+        pendingAction: null,
+        errorMessage: null,
+      }));
+      updateAgentTaskNode(editor, taskId, {
+        status: 'applied',
+        summary: appliedRun.suggested_edit?.summary ?? suggestion.summary ?? null,
+      });
+    } catch (taskError) {
+      const message = taskError instanceof Error ? taskError.message : 'Failed to apply suggestion.';
+      updateTaskState(taskId, (current) => ({
+        taskId,
+        surfaceKind,
+        draft: current?.draft ?? createAgentTaskComposerDraft(),
+        run: current?.run ?? null,
+        pendingAction: null,
+        errorMessage: message,
+      }));
+    }
+  }, [id, persistAppliedSuggestion, taskStates, token, updateAgentTaskNode, updateTaskState]);
+
+  const dismissDocumentTask = useCallback(async (
+    taskId: string,
+    surfaceKind: AgentTaskEvent['surfaceKind'],
+    editor: Editor,
+  ) => {
+    const taskRun = taskStates[taskId]?.run;
+    if (!taskRun || !token) {
+      return;
+    }
+
+    updateTaskState(taskId, (current) => ({
+      taskId,
+      surfaceKind,
+      draft: current?.draft ?? createAgentTaskComposerDraft(),
+      run: current?.run ?? null,
+      pendingAction: 'dismiss',
+      errorMessage: null,
+    }));
+
+    try {
+      const dismissedRun = await dismissAgentSurfaceRun(token, taskRun.id);
+      updateTaskState(taskId, (current) => ({
+        taskId,
+        surfaceKind,
+        draft: current?.draft ?? createAgentTaskComposerDraft(),
+        run: dismissedRun,
+        pendingAction: null,
+        errorMessage: null,
+      }));
+      updateAgentTaskNode(editor, taskId, {
+        status: 'dismissed',
+        summary: dismissedRun.suggested_edit?.summary ?? taskRun.suggested_edit?.summary ?? null,
+      });
+    } catch (taskError) {
+      const message = taskError instanceof Error ? taskError.message : 'Failed to dismiss suggestion.';
+      updateTaskState(taskId, (current) => ({
+        taskId,
+        surfaceKind,
+        draft: current?.draft ?? createAgentTaskComposerDraft(),
+        run: current?.run ?? null,
+        pendingAction: null,
+        errorMessage: message,
+      }));
+    }
+  }, [taskStates, token, updateAgentTaskNode, updateTaskState]);
+
+  const handleAgentTaskEvent = useCallback((event: AgentTaskEvent) => {
+    setActiveEditor(event.editor);
+    setActiveTaskId(event.taskId);
+    updateTaskState(event.taskId, (current) => ({
+      taskId: event.taskId,
+      surfaceKind: event.surfaceKind,
+      draft: {
+        agentId: event.task.agentId,
+        promptText: event.task.promptText ?? '',
+      },
+      run: current?.run ?? null,
+      pendingAction: current?.pendingAction ?? null,
+      errorMessage: current?.errorMessage ?? null,
+    }));
+
+    if (!taskStates[event.taskId]?.run) {
+      void loadLatestTaskRun(event.editor, event.taskId);
+    }
+
+    if (event.type === 'run_requested' && event.task.agentId && event.task.agentLabel) {
+      void runDocumentTask(event.taskId, event.surfaceKind, event.editor, {
+        agentId: event.task.agentId,
+        agentName: event.task.agentLabel,
+        promptText: event.task.promptText ?? '',
+      });
+    }
+
+    if (event.type === 'apply_requested') {
+      void applyDocumentTask(event.taskId, event.surfaceKind, event.editor);
+    }
+
+    if (event.type === 'dismiss_requested') {
+      void dismissDocumentTask(event.taskId, event.surfaceKind, event.editor);
+    }
+  }, [applyDocumentTask, dismissDocumentTask, loadLatestTaskRun, runDocumentTask, taskStates, updateTaskState]);
+
+  const activeTask = activeTaskId ? taskStates[activeTaskId] ?? null : null;
+  const plainTextSurface = useMemo<RichTextEditorPlainTextSurfaceConfig | null>(() => {
+    if (!id) return null;
+    return {
+      surfaceId: id,
+      fieldKey: 'document_content',
+      entityRefs: [{
+        kind: 'document',
+        id,
+        label: title.trim() || 'Document',
+      }],
+      sourceRoute: location.pathname,
+    };
+  }, [id, location.pathname, title]);
 
   /* handlers ------------------------------------------------------- */
   const handleSave = async () => {
@@ -310,6 +738,7 @@ const DocumentEditorPage: React.FC = () => {
                         const newKind = e.target.value as DocumentKind;
                         setKind(newKind);
                         setContentType(KIND_HINTS[newKind]?.defaultContentType ?? 'custom');
+                        if (newKind === 'cell_doc') setContentFormat('tiptap_json');
                       }}
                       aria-label="Document kind"
                     >
@@ -343,7 +772,7 @@ const DocumentEditorPage: React.FC = () => {
                     ))}
                   </Select>
                 </FormControl>
-              {isCreate && (
+              {isCreate && kind !== 'cell_doc' && (
                   <ToggleButtonGroup
                     size="small" exclusive
                     value={contentFormat}
@@ -366,27 +795,104 @@ const DocumentEditorPage: React.FC = () => {
           </Paper>
 
           {/* Content editor */}
-          <RichTextEditor
-            content={editorContent}
-            contentFormat={contentFormat}
-            externalContentKey={externalContentKey}
-            readOnly={isReadOnly}
-            onChange={(json, text) => {
-              if (contentFormat === 'tiptap_json') {
-                setContent(json);
-                setPlainText(text);
-              } else {
-                setContent(text);
-                setPlainText(text);
-              }
-            }}
-            placeholder={KIND_HINTS[kind]?.placeholder ?? 'Start writing…'}
-            minHeight="400px"
-            collaborative={collaborative}
-            documentId={id}
-            token={token ?? undefined}
-            collaborationUserName={currentUserName}
-          />
+          {kind === 'cell_doc' ? (
+            <Box>
+              {/* Inline title — Notion-like heading-style title input */}
+              <Box
+                component="input"
+                value={title}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
+                placeholder="Untitled"
+                disabled={isReadOnly || isSharedEditor}
+                aria-label="Document title"
+                sx={{
+                  width: '100%',
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  ...theme.typography.h4,
+                  fontWeight: 700,
+                  mb: 1,
+                  p: 0,
+                  pl: '40px',
+                  color: theme.palette.text.primary,
+                  '&::placeholder': { color: theme.palette.text.disabled },
+                  '&:disabled': { color: theme.palette.text.primary },
+                }}
+              />
+              <CellDocEditor
+                content={editorContent}
+                onChange={(json, text) => { setContent(json); setPlainText(text); }}
+                externalContentKey={externalContentKey}
+                readOnly={isReadOnly}
+                placeholder={KIND_HINTS[kind]?.placeholder}
+                minHeight="400px"
+                collaborative={collaborative}
+                documentId={id}
+                token={token ?? undefined}
+                collaborationUserName={currentUserName}
+                viewerRole={viewerRole}
+                onEditorReady={setActiveEditor}
+                onAgentTaskEvent={handleAgentTaskEvent}
+              />
+            </Box>
+          ) : (
+            <RichTextEditor
+              content={editorContent}
+              contentFormat={contentFormat}
+              externalContentKey={externalContentKey}
+              readOnly={isReadOnly}
+              onChange={(json, text) => {
+                if (contentFormat === 'tiptap_json') {
+                  setContent(json);
+                  setPlainText(text);
+                } else {
+                  setContent(text);
+                  setPlainText(text);
+                }
+              }}
+              placeholder={KIND_HINTS[kind]?.placeholder ?? 'Start writing…'}
+              minHeight="400px"
+              collaborative={collaborative}
+              documentId={id}
+              token={token ?? undefined}
+              collaborationUserName={currentUserName}
+              onEditorReady={setActiveEditor}
+              onAgentTaskEvent={handleAgentTaskEvent}
+              plainTextSurface={plainTextSurface}
+            />
+          )}
+          {activeTask && activeTaskId && activeEditor && (
+            <Box sx={{ mt: 2 }}>
+              <AgentTaskComposer
+                draft={activeTask.draft}
+                onDraftChange={(nextDraft) => {
+                  updateTaskState(activeTaskId, (current) => ({
+                    taskId: activeTaskId,
+                    surfaceKind: current?.surfaceKind ?? 'rich_text_editor',
+                    draft: nextDraft,
+                    run: current?.run ?? null,
+                    pendingAction: current?.pendingAction ?? null,
+                    errorMessage: current?.errorMessage ?? null,
+                  }));
+                  updateAgentTaskNode(activeEditor, activeTaskId, {
+                    agentId: nextDraft.agentId,
+                    promptText: nextDraft.promptText,
+                  });
+                }}
+                onRun={({ agent, draft }) => runDocumentTask(activeTaskId, activeTask.surfaceKind, activeEditor, {
+                  agentId: agent.id,
+                  agentName: agent.name,
+                  promptText: draft.promptText,
+                })}
+                onApply={(_run) => applyDocumentTask(activeTaskId, activeTask.surfaceKind, activeEditor)}
+                onDismiss={(_run) => dismissDocumentTask(activeTaskId, activeTask.surfaceKind, activeEditor)}
+                run={activeTask.run}
+                pendingAction={activeTask.pendingAction}
+                errorMessage={activeTask.errorMessage}
+              />
+            </Box>
+          )}
         </Grid>
 
         {/* ── Sidebar: version history (edit mode only) ─────────── */}
@@ -403,7 +909,7 @@ const DocumentEditorPage: React.FC = () => {
                     key={v.id}
                     onClick={() => handleLoadVersion(v)}
                     sx={{
-                      borderRadius: 1, mb: 0.5,
+                      borderRadius: '4px', mb: 0.5,
                       border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
                       '&:hover': { background: alpha(theme.palette.primary.main, 0.04) },
                     }}
@@ -455,6 +961,13 @@ const DocumentEditorPage: React.FC = () => {
         )}
 
         <Box sx={{ flex: 1 }} />
+
+        {!isCreate && kind === 'cell_doc' && id && (
+          <RerunAgentButton
+            documentId={id}
+            onRerunComplete={() => loadDocument()}
+          />
+        )}
 
         <Button
           variant="outlined" onClick={() => navigate(isCreate ? '/workspace' : `/workspace/${id}`)}

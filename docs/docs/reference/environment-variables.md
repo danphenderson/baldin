@@ -5,7 +5,7 @@ title: Look Up Settings
 description: Look up runtime configuration, derived startup behavior, and the settings most likely to matter.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-14 -->
 
 # Look Up Settings
 
@@ -15,7 +15,13 @@ Use this page as the reference source for configuration. If you are setting up t
 
 ## Backend (`backend/.env`)
 
-Copy `backend/.env.example` to `backend/.env` for local development.
+`backend/.env` is checked into the repo as a safe local-default baseline. For Compose-backed backend services, add real secrets and user-specific local settings to the optional ignored `backend/.env.local` file; explicitly exported shell variables still override those values when you intentionally launch Compose with them.
+
+Precedence order:
+
+1. `backend/.env`
+2. `backend/.env.local`
+3. explicitly exported process environment variables
 
 ### Required
 
@@ -36,7 +42,7 @@ Copy `backend/.env.example` to `backend/.env` for local development.
 | `DEFAULT_DATABASE_USER` | `postgres` | Main database user |
 | `DEFAULT_DATABASE_PASSWORD` | `postgres` | Main database password |
 | `TEST_DATABASE_HOSTNAME` | `test_db` | Test database host |
-| `TEST_DATABASE_PORT` | `5431` | Test database port |
+| `TEST_DATABASE_PORT` | `5432` | Test database port inside Compose networking |
 | `TEST_DATABASE_DB` | `test_db` | Test database name |
 | `TEST_DATABASE_USER` | `postgres` | Test database user |
 | `TEST_DATABASE_PASSWORD` | `postgres` | Test database password |
@@ -52,12 +58,13 @@ Copy `backend/.env.example` to `backend/.env` for local development.
 | `MAX_CHUNKS` | `-1` | Maximum extraction chunks (-1 = unlimited) |
 | `LOGGING_LEVEL` | `DEBUG` | Python logging level |
 | `PUBLIC_ASSETS_DIR` | `public` | Root directory for uploads, `var/logs`, seeds, and other local persisted assets |
+| `ALLOW_KMP_DUPLICATE_LIB_OK` | `False` | DEV/PYTEST-only escape hatch that sets `KMP_DUPLICATE_LIB_OK=TRUE` when explicitly enabled |
 
 ### AI / Extraction
 
 | Variable | Purpose |
 |----------|---------|
-| `OPENAI_API_KEY` | Enables AI-assisted extraction and automation features |
+| `OPENAI_API_KEY` | Enables AI-assisted extraction and automation features. Keep real values in process env or `backend/.env.local`. |
 | `OPENAI_COMPLETION_MODEL` | Optional override for the completion model |
 | `OPENAI_DEFAULT_MODEL` | Optional override for the default chat model |
 
@@ -79,7 +86,23 @@ Copy `backend/.env.example` to `backend/.env` for local development.
 | `CRAWLER_EXECUTION_MODE` | `inline` runs jobs in the API process; `worker` enqueues them to Redis |
 | `CRAWLER_SCHEDULER_INTERVAL` | Poll interval, in seconds, for the recurring crawler scheduler |
 
+### ETL Service (Internal)
+
+| Variable | Local example | Purpose |
+|----------|---------------|---------|
+| `ETL_SERVICE_URL` | `http://etl-service:8010` | Base URL for the internal ETL crawler execution service |
+| `ETL_SERVICE_TIMEOUT_SECONDS` | `180` | HTTP timeout for ETL service requests |
+
+### Monitoring (Optional)
+
+| Variable | Purpose |
+|----------|---------|
+| `SENTRY_DSN` | Sentry DSN for backend error monitoring. Leave empty to disable. |
+| `SENTRY_TRACES_SAMPLE_RATE` | Sentry performance tracing sample rate (`0` to `1`). Set to `0` locally. |
+
 ### Startup Behavior
+
+For host-side backend pytest, use `./scripts/run_backend_pytest_host.sh`. That helper overrides the repo-tracked Compose default and targets `127.0.0.1:5431`.
 
 | Setting | Source | Meaning |
 |----------|--------|---------|
@@ -94,11 +117,22 @@ Related runtime toggles exposed through settings:
 | `CRAWLER_SCHEDULER_ENABLED` | `True` | Enables the crawler scheduler outside `PYTEST` |
 | `RUN_REAPER_ENABLED` | `True` | Enables the background reaper outside `PYTEST` |
 
+Related bootstrap escape hatch:
+
+| Variable | Purpose |
+|----------|---------|
+| `LEGACY_BOOTSTRAP` | When set to `1`, re-enables the legacy metadata bootstrap path in `DEV` and `PYTEST` only. Ignored in `STAGE` and `PROD`. |
+
 ## Frontend
 
 | Variable | Purpose |
 |----------|---------|
 | `VITE_API_URL` | Backend API base URL. Required for production builds; must be a non-localhost origin. |
+| `VITE_SENTRY_DSN` | Sentry DSN for frontend error monitoring. Leave empty to disable. |
+| `VITE_SENTRY_ENVIRONMENT` | Environment tag sent to Sentry (`DEV`, `STAGE`, `PROD`). |
+| `VITE_SENTRY_TRACES_SAMPLE_RATE` | Sentry performance tracing sample rate (`0` to `1`). Set to `0` locally. |
+
+`frontend/.env` is also checked into the repo as a safe local-default baseline. Override it with `frontend/.env.local` or process env at startup when you need different local values.
 
 For local development, `VITE_API_URL` is typically set to `http://localhost:8004` in `frontend/.env`.
 

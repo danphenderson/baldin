@@ -1,52 +1,42 @@
 import json
-from contextlib import asynccontextmanager
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from sqlalchemy import select
 
 from app import models, schemas
+from app.conftest import (
+    async_client_ctx,
+    login_and_get_headers,
+)
+from app.conftest import (
+    create_user as _shared_create_user,
+)
+from app.core import conf
 from app.core import orchestration as orchestration_core
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
+from app.core.db import session_context
 from app.core.rag.state import LeadEnrichmentDraft, active_rag_event_id
-from app.main import app
-from app.tests import utils
-
-password_helper = PasswordHelper()
-_db_ready = False
 
 
-@asynccontextmanager
-async def _client() -> AsyncClient:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url="http://testserver",
-    ) as client:
-        yield client
+@pytest.fixture(autouse=True)
+def _configure_openai_for_documents_rag_tests(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(conf.openai, "API_KEY", "test-openai-key")
+
+
+@pytest.fixture(scope="module", autouse=True)
+async def _shared_db_ready(ensure_db: None) -> None:
+    del ensure_db
 
 
 async def _ensure_db_ready() -> None:
-    global _db_ready
-    if _db_ready:
-        return
-
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
+    return None
 
 
 async def _create_user(password: str) -> tuple[str, UUID]:
-    email = utils.random_email()
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            email, password_helper.hash(password), session
-        )
-        await session.commit()
-    return email, user.id
+    return await _shared_create_user(password)
 
 
 async def _auth_headers(
@@ -54,13 +44,10 @@ async def _auth_headers(
     email: str,
     password: str,
 ) -> dict[str, str]:
-    response = await client.post(
-        "/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+    return await login_and_get_headers(client, email, password)
+
+
+_client = async_client_ctx
 
 
 def _route_draft() -> LeadEnrichmentDraft:
@@ -153,7 +140,7 @@ async def test_enrich_lead_route_uses_langgraph_and_persists_compact_payload(
         email, _user_id = await _create_user("rag-route-pass")
         headers = await _auth_headers(client, email, "rag-route-pass")
         response = await client.post(
-            "/documents/rag/enrich-lead",
+            "/api/v1/documents/rag/enrich-lead",
             json={"lead_description": lead_description, "k": 5},
             headers=headers,
         )
@@ -257,7 +244,7 @@ async def test_enrich_lead_route_persists_terminal_failure_after_repair_attempt(
         email, _user_id = await _create_user("rag-route-fail-pass")
         headers = await _auth_headers(client, email, "rag-route-fail-pass")
         response = await client.post(
-            "/documents/rag/enrich-lead",
+            "/api/v1/documents/rag/enrich-lead",
             json={
                 "lead_description": "Backend platform role focused on orchestration and retrieval systems.",
                 "k": 5,
@@ -354,7 +341,7 @@ async def test_enrich_lead_route_marks_running_event_failed_when_graph_crashes(
     async with _client() as client:
         headers = await _auth_headers(client, email, "rag-route-crash-pass")
         response = await client.post(
-            "/documents/rag/enrich-lead",
+            "/api/v1/documents/rag/enrich-lead",
             json={
                 "lead_description": "Backend platform role focused on orchestration reliability.",
                 "k": 5,

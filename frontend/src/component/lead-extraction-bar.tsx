@@ -1,10 +1,20 @@
 import React from 'react';
 import {
-  Card, CardContent, Typography, Button, TextField, Stack,
-  InputAdornment, LinearProgress, useTheme,
-} from '@mui/material';
-import { alpha } from '@mui/material/styles';
-import { Bolt as BoltIcon, OpenInNew as OpenIcon } from '@mui/icons-material';
+  Typography,
+  Button,
+  TextField,
+  Stack,
+  InputAdornment,
+  LinearProgress,
+  useTheme,
+  } from '@mui/material';
+import { Bolt as BoltIcon,
+  OpenInNew as OpenIcon } from '@mui/icons-material';
+import { brandGradient,
+  softBrandGradient,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+} from '../design-system';
 
 export interface LeadExtractionBarProps {
   url: string;
@@ -18,7 +28,7 @@ const LeadExtractionBar: React.FC<LeadExtractionBarProps> = ({
 }) => {
   const theme = useTheme();
 
-  const gradientBg = `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`;
+  const gradientBg = brandGradient(theme);
 
   return (
     <Card
@@ -26,9 +36,7 @@ const LeadExtractionBar: React.FC<LeadExtractionBarProps> = ({
         mb: 3,
         position: 'relative',
         overflow: 'hidden',
-        background: theme.palette.mode === 'dark'
-          ? `linear-gradient(135deg, ${alpha(theme.palette.primary.dark, 0.18)}, ${alpha(theme.palette.secondary.dark, 0.10)})`
-          : `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.08)}, ${alpha(theme.palette.secondary.light, 0.05)})`,
+        background: softBrandGradient(theme),
         borderLeft: `3px solid ${theme.palette.primary.main}`,
       }}
     >

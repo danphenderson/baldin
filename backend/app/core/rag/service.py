@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from fastapi import HTTPException
+from sqlalchemy import desc, select
 
-from app import schemas
+from app import models, schemas
 from app.core import conf
 from app.core import orchestration as orchestration_core
 from app.core.correlation_id import correlation_id
@@ -24,11 +25,33 @@ class RagWorkflowService:
     def __init__(self, db) -> None:
         self.db = db
 
+    async def _load_user_aspirations(
+        self, user_id
+    ) -> list[dict[str, str | int | None]]:
+        result = await self.db.execute(
+            select(models.Aspiration)
+            .where(models.Aspiration.user_id == user_id)
+            .order_by(
+                desc(models.Aspiration.priority), desc(models.Aspiration.updated_at)
+            )
+        )
+        aspirations = result.scalars().all()
+        return [
+            {
+                "kind": aspiration.kind,
+                "label": aspiration.label,
+                "reason": aspiration.reason,
+                "priority": aspiration.priority,
+            }
+            for aspiration in aspirations
+        ]
+
     async def enrich_lead(
         self,
         body: schemas.LeadEnrichRequest,
         user: schemas.UserRead,
     ) -> schemas.LeadEnrichResponse:
+        conf.openai.require_enabled("Lead enrichment")
         thread_id = correlation_id.get("")
         event_token = active_rag_event_id.set("")
         initial_state: LeadEnrichmentState = {
@@ -45,6 +68,8 @@ class RagWorkflowService:
             final_state = await lead_enrichment_graph.ainvoke(
                 initial_state, config=config
             )
+        except HTTPException:
+            raise
         except Exception as exc:
             event_id = active_rag_event_id.get("")
             if event_id:
@@ -84,11 +109,12 @@ class RagWorkflowService:
         body: schemas.LeadRankRequest,
         user: schemas.UserRead,
     ) -> schemas.LeadRankResponse:
+        conf.openai.require_enabled("Lead ranking")
         thread_id = correlation_id.get("")
         event_token = active_rag_event_id.set("")
+        aspirations = await self._load_user_aspirations(user.id)
         combined_query = " ".join(
-            lead.get("title", "") + " " + lead.get("description", "")
-            for lead in body.leads
+            f"{lead.title} {lead.description or ''}".strip() for lead in body.leads
         )
         initial_state: LeadRankingState = {
             "db": self.db,
@@ -96,7 +122,8 @@ class RagWorkflowService:
             "user": user,
             "workflow_name": RANKING_WORKFLOW_NAME,
             "model_name": conf.openai.COMPLETION_MODEL,
-            "leads": body.leads,
+            "leads": [lead.model_dump(mode="python") for lead in body.leads],
+            "aspirations": aspirations,
             "combined_query": combined_query,
             "combined_query_chars": len(combined_query),
             "requested_k": body.k,
@@ -104,6 +131,8 @@ class RagWorkflowService:
         config = {"configurable": {"thread_id": thread_id}} if thread_id else {}
         try:
             final_state = await lead_ranking_graph.ainvoke(initial_state, config=config)
+        except HTTPException:
+            raise
         except Exception as exc:
             event_id = active_rag_event_id.get("")
             if event_id:
@@ -121,7 +150,21 @@ class RagWorkflowService:
             active_rag_event_id.reset(event_token)
 
         if final_state.get("outcome_result") == "success":
-            return schemas.LeadRankResponse(ranking=final_state["rendered_output"])
+            ranked_leads = [
+                schemas.LeadRankedEntryRead(
+                    lead_id=body.leads[entry.lead_index - 1].id,
+                    lead_index=entry.lead_index,
+                    title=entry.title,
+                    relevance_score=entry.relevance_score,
+                    explanation=entry.explanation,
+                    aspiration_alignment=entry.aspiration_alignment,
+                )
+                for entry in final_state["draft"].ranked_leads
+            ]
+            return schemas.LeadRankResponse(
+                ranking=final_state["rendered_output"],
+                ranked_leads=ranked_leads,
+            )
 
         http_status = int(final_state.get("http_status") or 500)
         if http_status == 400:
@@ -141,6 +184,7 @@ class RagWorkflowService:
         body: schemas.CompanySummarizeRequest,
         user: schemas.UserRead,
     ) -> schemas.CompanySummarizeResponse:
+        conf.openai.require_enabled("Company summarization")
         thread_id = correlation_id.get("")
         event_token = active_rag_event_id.set("")
         initial_state: CompanySummaryState = {
@@ -155,6 +199,8 @@ class RagWorkflowService:
             final_state = await company_summarization_graph.ainvoke(
                 initial_state, config=config
             )
+        except HTTPException:
+            raise
         except Exception as exc:
             event_id = active_rag_event_id.get("")
             if event_id:

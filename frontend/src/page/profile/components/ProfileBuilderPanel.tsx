@@ -1,8 +1,13 @@
 import React from 'react';
 import {
-  Box, Card, CardContent, Typography, Stack, Button, LinearProgress,
-  useTheme, alpha,
-} from '@mui/material';
+  Box,
+  Typography,
+  Stack,
+  Button,
+  LinearProgress,
+  useTheme,
+  alpha,
+  } from '@mui/material';
 import {
   CheckCircle as CheckIcon,
   Code as SkillIcon,
@@ -13,10 +18,15 @@ import {
   Edit as EditIcon,
   AutoAwesome as AIIcon,
   ArrowForward as ArrowForwardIcon,
-} from '@mui/icons-material';
+  } from '@mui/icons-material';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import type { SectionKey } from '../types';
+import { brandGradient,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+} from '../../../design-system';
+import { radiusTokens, toRadiusPx } from '../../../design-system/tokens/radius';
 
 const MotionBox = motion.create(Box);
 
@@ -88,13 +98,13 @@ export const ProfileBuilderPanel: React.FC<ProfileBuilderPanelProps> = ({
             value={completionPercent}
             sx={{
               height: 6,
-              borderRadius: 3,
+              borderRadius: toRadiusPx(radiusTokens.lg),
               bgcolor: alpha(theme.palette.primary.main, 0.08),
               '& .MuiLinearProgress-bar': {
-                borderRadius: 3,
+                borderRadius: toRadiusPx(radiusTokens.lg),
                 background: isComplete
                   ? theme.palette.success.main
-                  : `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  : brandGradient(theme, 90),
               },
             }}
           />
@@ -112,7 +122,7 @@ export const ProfileBuilderPanel: React.FC<ProfileBuilderPanelProps> = ({
               gap: 1.5,
               mt: 2,
               p: 2,
-              borderRadius: 2,
+              borderRadius: toRadiusPx(radiusTokens.sm),
               bgcolor: alpha(theme.palette.success.main, 0.06),
             }}
           >
@@ -154,7 +164,7 @@ export const ProfileBuilderPanel: React.FC<ProfileBuilderPanelProps> = ({
                     justifyContent: 'center',
                     width: 32,
                     height: 32,
-                    borderRadius: 1.5,
+                    borderRadius: '6px',
                     bgcolor: alpha(theme.palette.primary.main, 0.08),
                     color: theme.palette.primary.main,
                     flexShrink: 0,

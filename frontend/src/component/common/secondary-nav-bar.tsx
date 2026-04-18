@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Box, Tab, Tabs, useTheme, alpha } from '@mui/material';
 import type { SecondaryNavItem } from '../../route/navigation';
+import { navigateInBrowser } from '../../util/browser-navigation';
 
 export interface SecondaryNavBarProps {
   items: SecondaryNavItem[];
@@ -32,6 +33,14 @@ const SecondaryNavBar: React.FC<SecondaryNavBarProps> = ({ items }) => {
 
   // Fall back to first tab when nothing matches (shouldn't happen in practice).
   const value = activeIndex === -1 ? 0 : activeIndex;
+  const handleNavigate = (item: SecondaryNavItem) => {
+    if (item.navigationMode === 'browser') {
+      navigateInBrowser(item.path);
+      return;
+    }
+
+    navigate(item.path);
+  };
 
   return (
     <Box
@@ -48,7 +57,7 @@ const SecondaryNavBar: React.FC<SecondaryNavBarProps> = ({ items }) => {
     >
       <Tabs
         value={value}
-        onChange={(_e, newValue: number) => navigate(items[newValue].path)}
+        onChange={(_e, newValue: number) => handleNavigate(items[newValue])}
         variant="scrollable"
         scrollButtons="auto"
         textColor="primary"

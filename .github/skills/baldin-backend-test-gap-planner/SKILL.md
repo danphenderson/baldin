@@ -28,6 +28,7 @@ Use this skill to decide what backend tests Baldin actually needs for a change, 
 - The repo already has a substantial backend test suite, so new work should usually extend an existing test area before inventing a parallel pattern.
 - Shared fixtures in `backend/app/conftest.py` are the preferred direction for DB-backed integration tests, even though some older tests still use module-local helpers.
 - Host-run backend tests use a dedicated local `test_db` on `127.0.0.1:5431`.
+- Bare `pytest` on the host shell `PATH` is not assumed. Host-side commands should use `cd backend && pipenv run pytest ...` or `./scripts/run_backend_pytest_host.sh ...`.
 - When the local `test_db` service is unavailable, backend tests in `PYTEST` mode fail fast instead of hanging.
 - Route handlers and integration-heavy flows are still a known weakness area in the current polish plan, so coverage choices should prefer user-visible or regression-prone behavior over incidental helpers.
 
@@ -49,6 +50,8 @@ Use this skill to decide what backend tests Baldin actually needs for a change, 
    - Use shared fixtures from `backend/app/conftest.py` when they fit instead of copying private setup helpers.
 4. Map the plan to validation.
    - Recommend the smallest relevant pytest command.
+   - Prefer `./scripts/run_backend_pytest.sh ...` for DB-backed validation from the repo root.
+   - Use `cd backend && pipenv run pytest ...` or `./scripts/run_backend_pytest_host.sh ...` only when an intentional host-side loop is required.
    - Call out when local `test_db` availability is a prerequisite.
    - Note whether the coverage gate or CI behavior changes confidence requirements.
 5. Report gaps and next steps.

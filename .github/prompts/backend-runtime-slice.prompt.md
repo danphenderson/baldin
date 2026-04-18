@@ -15,6 +15,7 @@ Task:
 - Implement the smallest complete fix or slice that resolves the stated backend problem.
 - Add or update targeted backend tests when behavior changes materially.
 - Prefer the narrowest useful pytest scope and the relevant `ruff` checks first. Treat full backend coverage as a later confidence pass unless the touched surface demands broader coverage immediately.
+- Prefer `./scripts/run_backend_pytest.sh` for backend pytest. If you intentionally validate from the host, use `cd backend && pipenv run pytest ...` or `./scripts/run_backend_pytest_host.sh ...`, not bare `pytest`.
 - Preserve current API behavior unless the request explicitly requires a contract change.
 - Do not hand-edit generated artifacts such as [openapi.json](../../openapi.json) or [frontend/src/schema.d.ts](../../frontend/src/schema.d.ts).
 - If routes or schemas change and contract regeneration is straightforward, run `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` in the same local loop and report whether the generated artifacts changed.

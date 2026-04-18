@@ -1,16 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { timeAgo } from '../util/format';
+import {
+  timeAgo } from '../util/format';
 import {
   Alert,
   Avatar,
   Box,
   Button,
-  Card,
-  CardContent,
   Checkbox,
-  Chip,
-  Dialog,
-  DialogContent,
   Divider,
   FormControl,
   FormControlLabel,
@@ -29,7 +25,7 @@ import {
   Typography,
   useMediaQuery,
   useTheme,
-} from '@mui/material';
+  } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { alpha } from '@mui/material/styles';
 import {
@@ -49,8 +45,15 @@ import {
   PersonAdd as PersonAddIcon,
   WorkspacesOutlined as LeadIcon,
   PlaylistAdd as PlaylistAddIcon,
-} from '@mui/icons-material';
-import ConfirmDialog from './common/confirm-dialog';
+  } from '@mui/icons-material';
+import { ConfirmDialog,
+  softBrandGradient,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogContent as DialogContent,
+} from '../design-system';
 import CreateActionItemDialog from './create-action-item-dialog';
 import type { ActionItemRead, ActionItemCreate } from '../service/action-items';
 import type { CompanyRead } from '../service/companies';
@@ -77,6 +80,7 @@ import {
 import type { ApplicationCreationIntent } from '../service/applications';
 import { createConnection } from '../service/connections';
 import ApplicationIntentButton from './application-intent-button';
+import { AgentEnabledMultilineField } from './agent-surface';
 
 type LeadTab = 'overview' | 'edit' | 'notes' | 'comments' | 'people';
 export type LeadModalTab = LeadTab;
@@ -105,6 +109,8 @@ interface LeadModalProps {
   leadId: string | null;
   companies: CompanyRead[];
   applying: boolean;
+  hasExistingApplication?: boolean;
+  applicationCtaLabel?: string;
   extractContext: LeadExtractResponse | null;
   initialTab?: LeadTab;
   onClose: () => void;
@@ -255,7 +261,7 @@ const MetricPill: React.FC<{
     sx={{
       px: 1.5,
       py: 1,
-      borderRadius: 999,
+      borderRadius: '999px',
       backgroundColor: tone || 'rgba(255,255,255,0.12)',
       minWidth: 0,
     }}
@@ -274,21 +280,26 @@ const MetricPill: React.FC<{
 
 const CommentComposer: React.FC<{
   label: string;
+  surfaceId: string;
+  entityRefs: Array<{ kind: string; id: string; label?: string }>;
   draft: CommentDraft;
   disabled?: boolean;
   submitting?: boolean;
   submitLabel: string;
   onChange: (next: CommentDraft) => void;
   onSubmit: () => void;
-}> = ({ label, draft, disabled, submitting, submitLabel, onChange, onSubmit }) => (
+}> = ({ label, surfaceId, entityRefs, draft, disabled, submitting, submitLabel, onChange, onSubmit }) => (
   <Stack spacing={1.5}>
-    <TextField
+    <AgentEnabledMultilineField
       label={label}
       multiline
       minRows={3}
+      surfaceId={surfaceId}
+      fieldKey="lead_comment_body"
+      entityRefs={entityRefs}
       value={draft.content}
       disabled={disabled}
-      onChange={(event) => onChange({ ...draft, content: event.target.value })}
+      onChange={(nextValue) => onChange({ ...draft, content: nextValue })}
       placeholder="Share context, interview signals, or useful follow-up questions."
     />
     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between" alignItems={{ sm: 'center' }}>
@@ -342,9 +353,8 @@ const CommentThread: React.FC<{
       variant="outlined"
       sx={{
         p: { xs: 1.5, sm: 2 },
-        borderRadius: 3,
         backgroundColor: nested ? 'transparent' : 'background.paper',
-        borderColor: nested ? 'divider' : alpha('#94a3b8', 0.16),
+        borderColor: 'divider',
       }}
     >
       <Stack spacing={1.25}>
@@ -399,6 +409,8 @@ const CommentThread: React.FC<{
         <Box sx={{ pl: { sm: 6 } }}>
           <CommentComposer
             label="Reply"
+            surfaceId={comment.id}
+            entityRefs={[]}
             draft={replyDraft}
             onChange={onReplyChange}
             onSubmit={onReplySubmit}
@@ -423,6 +435,8 @@ const LeadModal: React.FC<LeadModalProps> = ({
   leadId,
   companies,
   applying,
+  hasExistingApplication = false,
+  applicationCtaLabel = 'Create Application',
   extractContext,
   initialTab,
   onClose,
@@ -708,8 +722,14 @@ const LeadModal: React.FC<LeadModalProps> = ({
             variant="outlined"
             sx={{
               p: { xs: 2, sm: 2.5 },
-              borderRadius: 4,
-              background: `linear-gradient(135deg, ${alpha(theme.palette.secondary.main, 0.2)}, ${alpha(theme.palette.primary.main, 0.14)})`,
+              borderRadius: '16px',
+              background: softBrandGradient(theme, {
+                startTone: 'main',
+                endTone: 'main',
+                startOpacity: 0.2,
+                endOpacity: 0.14,
+                reverse: true,
+              }),
               borderColor: alpha(theme.palette.primary.main, 0.28),
             }}
           >
@@ -917,13 +937,16 @@ const LeadModal: React.FC<LeadModalProps> = ({
             </FormControl>
           </Grid>
           <Grid size={12}>
-            <TextField
+            <AgentEnabledMultilineField
               fullWidth
               label="Description"
               multiline
               minRows={7}
+              surfaceId={lead.id}
+              fieldKey="lead_shared_description"
+              entityRefs={[{ kind: 'lead', id: lead.id, label: lead.title ?? 'Lead' }]}
               value={sharedDraft.description}
-              onChange={(event) => setSharedDraft((current) => ({ ...current, description: event.target.value }))}
+              onChange={(nextValue) => setSharedDraft((current) => ({ ...current, description: nextValue }))}
               disabled={!canEditSharedField(lead.description, permissions)}
             />
           </Grid>
@@ -970,7 +993,7 @@ const LeadModal: React.FC<LeadModalProps> = ({
 
     return (
       <Stack spacing={2.5}>
-        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: 4 }}>
+        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 } }}>
           <Stack spacing={1}>
             <Typography variant="subtitle2" color="text.secondary">Registration Status</Typography>
             <Typography variant="body2" color="text.secondary">
@@ -979,12 +1002,15 @@ const LeadModal: React.FC<LeadModalProps> = ({
           </Stack>
         </Paper>
 
-        <TextField
+        <AgentEnabledMultilineField
           label="Internal notes"
           multiline
           minRows={8}
+          surfaceId={lead.id}
+          fieldKey="lead_private_notes"
+          entityRefs={[{ kind: 'lead', id: lead.id, label: lead.title ?? 'Lead' }]}
           value={noteDraft}
-          onChange={(event) => setNoteDraft(event.target.value)}
+          onChange={setNoteDraft}
           disabled={!permissions?.can_update_registration}
           placeholder="Capture interview prep, salary signals, concerns, or outreach notes visible only to you."
         />
@@ -1032,7 +1058,7 @@ const LeadModal: React.FC<LeadModalProps> = ({
 
     return (
       <Stack spacing={2.5}>
-        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: 4 }}>
+        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 } }}>
           <Stack spacing={1}>
             <Typography variant="subtitle2" color="text.secondary">Threaded Collaboration</Typography>
             <Typography variant="body2" color="text.secondary">
@@ -1044,6 +1070,8 @@ const LeadModal: React.FC<LeadModalProps> = ({
         {permissions.can_post_comments ? (
           <CommentComposer
             label="Add a comment"
+            surfaceId={lead.id}
+            entityRefs={[{ kind: 'lead', id: lead.id, label: lead.title ?? 'Lead' }]}
             draft={commentDraft}
             onChange={setCommentDraft}
             onSubmit={handlePostComment}
@@ -1059,11 +1087,11 @@ const LeadModal: React.FC<LeadModalProps> = ({
         {commentsLoading ? (
           <Stack spacing={1.5}>
             {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} variant="rounded" height={110} sx={{ borderRadius: 3 }} />
+              <Skeleton key={index} variant="rounded" height={110} sx={{ borderRadius: '12px' }} />
             ))}
           </Stack>
         ) : comments.length === 0 ? (
-          <Paper variant="outlined" sx={{ p: 3, borderRadius: 4, textAlign: 'center' }}>
+          <Paper variant="outlined" sx={{ p: 3, textAlign: 'center' }}>
             <Typography variant="body1" fontWeight={700}>No comments yet</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               Start the thread with interview context, recruiter signal, or process notes. Anonymous posting is already enabled.
@@ -1097,7 +1125,7 @@ const LeadModal: React.FC<LeadModalProps> = ({
 
     return (
       <Stack spacing={2.5}>
-        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: 4 }}>
+        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 } }}>
           <Stack spacing={1}>
             <Typography variant="subtitle2" color="text.secondary">Participant Context</Typography>
             <Typography variant="body2" color="text.secondary">
@@ -1111,7 +1139,7 @@ const LeadModal: React.FC<LeadModalProps> = ({
         </Paper>
 
         {participants.length === 0 ? (
-          <Paper variant="outlined" sx={{ p: 3, borderRadius: 4 }}>
+          <Paper variant="outlined" sx={{ p: 3 }}>
             <Typography variant="body1" fontWeight={700}>No public participant profiles yet</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               If you are registered on this lead, you can opt into profile visibility from the My Notes tab.
@@ -1205,9 +1233,10 @@ const LeadModal: React.FC<LeadModalProps> = ({
             sx={{
               px: { xs: 2, sm: 3 },
               py: { xs: 2, sm: 2.75 },
-              background: theme.palette.mode === 'dark'
-                ? `linear-gradient(135deg, ${alpha(theme.palette.primary.dark, 0.5)}, ${alpha(theme.palette.secondary.dark, 0.34)})`
-                : `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.18)}, ${alpha(theme.palette.secondary.light, 0.14)})`,
+              background: softBrandGradient(theme, {
+                startOpacity: theme.palette.mode === 'dark' ? 0.5 : 0.18,
+                endOpacity: theme.palette.mode === 'dark' ? 0.34 : 0.14,
+              }),
             }}
           >
             <Stack spacing={2}>
@@ -1258,9 +1287,12 @@ const LeadModal: React.FC<LeadModalProps> = ({
                   <ApplicationIntentButton
                     onSelect={(intent) => onApply(lead, intent)}
                     loading={applying}
-                    label="Create Application"
+                    disabled={hasExistingApplication}
+                    label={applicationCtaLabel}
                     loadingLabel="Creating..."
-                    ariaLabel={`Create application for ${lead.title || 'this lead'}`}
+                    ariaLabel={hasExistingApplication
+                      ? `Existing application for ${lead.title || 'this lead'}`
+                      : `Create application for ${lead.title || 'this lead'}`}
                   />
                   <Button
                     variant="outlined"
@@ -1303,8 +1335,8 @@ const LeadModal: React.FC<LeadModalProps> = ({
           <Box sx={{ p: { xs: 2, sm: 3 } }}>
             {loading && !lead ? (
               <Stack spacing={2}>
-                <Skeleton variant="rounded" height={120} sx={{ borderRadius: 4 }} />
-                <Skeleton variant="rounded" height={320} sx={{ borderRadius: 4 }} />
+                <Skeleton variant="rounded" height={120} sx={{ borderRadius: '16px' }} />
+                <Skeleton variant="rounded" height={320} sx={{ borderRadius: '16px' }} />
               </Stack>
             ) : loadError ? (
               <Stack spacing={2}>

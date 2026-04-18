@@ -1,14 +1,30 @@
 # Path: app/core/db.py
 
 import asyncio
+import os
 import socket
+import subprocess
+import sys
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, AsyncGenerator, Collection, Mapping
 from uuid import UUID
 
+from alembic.config import Config as AlembicConfig
+from alembic.script import ScriptDirectory
 from fastapi import Depends
 from fastapi_users.db import SQLAlchemyUserDatabase
-from sqlalchemy import UniqueConstraint, delete, false, inspect, or_, select, update
+from sqlalchemy import (
+    UniqueConstraint,
+    delete,
+    false,
+    func,
+    inspect,
+    or_,
+    select,
+    update,
+)
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -40,6 +56,10 @@ OBSOLETE_TABLES = (
     "resumes",
     "cover_letters",
 )
+# Baldin's crawler scheduler (`app.crawler_scheduler._SCHEDULER_ADVISORY_LOCK_ID`)
+# already uses advisory lock 64127831, so Alembic startup takes the adjacent
+# 64127832 key to keep those two coordination locks predictable and collision-free.
+ALEMBIC_MIGRATION_ADVISORY_LOCK_ID = 64127832
 
 # Determine the appropriate SQLAlchemy database URI based on the environment
 if conf.settings.ENVIRONMENT == "PYTEST":
@@ -73,7 +93,7 @@ def _pytest_database_runtime_error() -> RuntimeError:
         "Unable to connect to the PYTEST database at "
         f"{conf.settings.TEST_DATABASE_HOSTNAME}:{conf.settings.TEST_DATABASE_PORT}. "
         "Start the local test_db service with `docker compose up -d test_db` "
-        "or update backend/.env TEST_DATABASE_* settings."
+        "or update backend/.env, backend/.env.local, or the process env TEST_DATABASE_* settings."
     )
 
 
@@ -95,12 +115,6 @@ async_session_maker = async_sessionmaker(bind=async_engine, expire_on_commit=Fal
 
 _ENUM_COLUMN_SPECS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     (
-        "applications",
-        "status",
-        "applicationstatus",
-        tuple(status.value for status in models.ApplicationStatus),
-    ),
-    (
         "crawler_runs",
         "status",
         "crawlerrunstatus",
@@ -121,6 +135,54 @@ def _quote_identifier(connection: Connection, identifier: str) -> str:
 
 def _quote_literal(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
+
+
+DELETE_BLOCK_REASON_SELF_DELETE = "self_delete"
+DELETE_BLOCK_REASON_LAST_REMAINING_SUPERUSER = "last_remaining_superuser"
+USER_CLEANUP_DOMAIN_AGENTS = "agents"
+USER_CLEANUP_DOMAIN_LEADS = "leads"
+USER_CLEANUP_DOMAIN_APPLICATIONS = "applications"
+USER_CLEANUP_DOMAIN_DOCUMENTS = "documents"
+USER_CLEANUP_DOMAIN_EXTRACTORS = "extractors"
+USER_CLEANUP_DOMAIN_ORCHESTRATION = "orchestration"
+USER_CLEANUP_DOMAIN_PROFILE = "profile"
+USER_CLEANUP_DOMAINS = (
+    USER_CLEANUP_DOMAIN_PROFILE,
+    USER_CLEANUP_DOMAIN_LEADS,
+    USER_CLEANUP_DOMAIN_APPLICATIONS,
+    USER_CLEANUP_DOMAIN_DOCUMENTS,
+    USER_CLEANUP_DOMAIN_AGENTS,
+    USER_CLEANUP_DOMAIN_EXTRACTORS,
+    USER_CLEANUP_DOMAIN_ORCHESTRATION,
+)
+
+
+@dataclass(frozen=True)
+class UserCleanupScope:
+    application_ids: list[UUID]
+    document_ids: list[UUID]
+    agent_ids: list[UUID]
+    chat_session_ids: list[UUID]
+    document_version_ids: list[UUID]
+    extractor_ids: list[UUID]
+    pipeline_ids: list[UUID]
+
+
+@dataclass(frozen=True)
+class _CleanupSpec:
+    table_name: str
+    model: Any
+    conditions_by_domain: Mapping[str, tuple[Any, ...]]
+    match_any: bool = False
+
+
+@dataclass(frozen=True)
+class UserCleanupPlan:
+    domains: tuple[str, ...]
+    deleted_records: dict[str, int]
+    cleared_profile_fields: int
+    delete_block_reason: str | None
+    purge_block_reason: str | None
 
 
 def _get_enum_labels(connection: Connection, enum_name: str) -> list[str]:
@@ -346,6 +408,12 @@ def _drop_obsolete_tables(connection: Connection) -> None:
 
 
 def _create_and_sync_schema(connection: Connection) -> None:
+    """Legacy bootstrap — retained behind ``LEGACY_BOOTSTRAP=1`` for transition.
+
+    Production and local-development startup now use Alembic migrations via
+    :func:`run_alembic_migrations`.  This function is only reachable when the
+    ``LEGACY_BOOTSTRAP`` environment variable is explicitly set to ``1``.
+    """
     connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
     _drop_obsolete_tables(connection)
     models.Base.metadata.create_all(connection)
@@ -354,8 +422,18 @@ def _create_and_sync_schema(connection: Connection) -> None:
     _sync_named_enum_columns(connection)
 
 
+def _create_test_schema(connection: Connection) -> None:
+    """Fast schema bootstrap used only by the pytest test path.
+
+    Uses ``metadata.create_all`` for speed — not the production migration
+    path.  This is acceptable because test databases are disposable.
+    """
+    connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+    models.Base.metadata.create_all(connection)
+
+
 async def _terminate_other_test_db_sessions(conn: AsyncSession | Any) -> None:
-    await conn.execute(
+    result = await conn.execute(
         text(
             """
             SELECT pg_terminate_backend(pid)
@@ -365,33 +443,179 @@ async def _terminate_other_test_db_sessions(conn: AsyncSession | Any) -> None:
             """
         )
     )
+    # Drain the result rows before reusing the same asyncpg connection.
+    result.all()
+
+
+def _alembic_working_directory() -> str:
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+def _build_alembic_environment() -> dict[str, str]:
+    env = os.environ.copy()
+    env["ALEMBIC_DATABASE_URL"] = sqlalchemy_database_uri
+    return env
+
+
+def _run_alembic_command(*args: str) -> None:
+    command = [sys.executable, "-m", "alembic", *args]
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        cwd=_alembic_working_directory(),
+        env=_build_alembic_environment(),
+    )
+    if result.returncode != 0:
+        output = result.stderr.strip() or result.stdout.strip() or "No output captured."
+        console_log.error(
+            "Alembic command failed (exit %d): %s\n%s",
+            result.returncode,
+            " ".join(command),
+            output,
+        )
+        raise RuntimeError(
+            f"{' '.join(command)} exited with code {result.returncode}: {output}"
+        )
+
+
+async def _public_table_exists(table_name: str) -> bool:
+    async with async_engine.connect() as conn:
+        result = await conn.execute(
+            text(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.tables
+                    WHERE table_schema = 'public' AND table_name = :table_name
+                )
+                """
+            ),
+            {"table_name": table_name},
+        )
+        return bool(result.scalar_one())
+
+
+async def _schema_has_non_alembic_tables() -> bool:
+    async with async_engine.connect() as conn:
+        result = await conn.execute(
+            text(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.tables
+                    WHERE table_schema = 'public'
+                      AND table_name <> 'alembic_version'
+                )
+                """
+            )
+        )
+        return bool(result.scalar_one())
+
+
+async def _stamp_existing_schema_if_needed() -> None:
+    if await _public_table_exists("alembic_version"):
+        return
+    if not await _schema_has_non_alembic_tables():
+        return
+
+    environment = conf.settings.ENVIRONMENT
+    if environment in {"DEV", "PYTEST"}:
+        raise RuntimeError(
+            "Existing schema detected without alembic_version. Automatic baseline "
+            "stamping is disabled because it is unsafe for pre-Alembic databases. "
+            "For local recovery, either reset the disposable database or rerun with "
+            "LEGACY_BOOTSTRAP=1."
+        )
+
+    raise RuntimeError(
+        "Existing schema detected without alembic_version. Automatic baseline "
+        "stamping is disabled because it is unsafe for pre-Alembic databases. "
+        "Manually baseline the database before running Alembic migrations."
+    )
+
+
+def run_alembic_migrations() -> None:
+    """Run ``alembic upgrade head`` as a subprocess.
+
+    This is the production / local-development schema bootstrap path.  It
+    replaces the legacy ``_create_and_sync_schema`` function so that Alembic
+    migrations are the single source of truth for DDL changes.
+
+    Raises ``RuntimeError`` if the subprocess exits non-zero.
+    """
+    _run_alembic_command("upgrade", "head")
+    console_log.info("Alembic migrations applied successfully.")
+
+
+async def _run_alembic_migrations_with_advisory_lock() -> None:
+    async with async_engine.connect() as conn:
+        await conn.execute(
+            text("SELECT pg_advisory_lock(:lock_id)"),
+            {"lock_id": ALEMBIC_MIGRATION_ADVISORY_LOCK_ID},
+        )
+        try:
+            await asyncio.to_thread(run_alembic_migrations)
+        finally:
+            await conn.execute(
+                text("SELECT pg_advisory_unlock(:lock_id)"),
+                {"lock_id": ALEMBIC_MIGRATION_ADVISORY_LOCK_ID},
+            )
+
+
+def _legacy_bootstrap_requested() -> bool:
+    requested = os.environ.get("LEGACY_BOOTSTRAP", "") == "1"
+    if not requested:
+        return False
+    if conf.settings.ENVIRONMENT in {"DEV", "PYTEST"}:
+        return True
+    console_log.warning(
+        "Ignoring LEGACY_BOOTSTRAP=1 outside DEV/PYTEST; Alembic remains the only bootstrap path in %s.",
+        conf.settings.ENVIRONMENT,
+    )
+    return False
 
 
 async def create_db_and_tables() -> None:
+    """Bootstrap the database schema at application startup.
+
+    * **Default path** — runs ``alembic upgrade head`` so Alembic migrations
+      are the single source of truth for schema changes.
+    * **Legacy path** — set ``LEGACY_BOOTSTRAP=1`` in the environment to fall
+      back to the old ``metadata.create_all`` + sync behaviour while
+      transitioning to Alembic.  This flag is temporary.
+        * **Test path** — direct callers in ``ENVIRONMENT=PYTEST`` still target the
+            dedicated test database and keep the same timeout semantics.
     """
-    Asynchronously create the database tables and repair additive local schema drift.
+    use_legacy = _legacy_bootstrap_requested()
 
-    This function is typically used during the application startup to ensure
-    that the database schema is set up correctly.
+    if use_legacy:
+        console_log.warning(
+            "LEGACY_BOOTSTRAP=1 detected — using metadata.create_all bootstrap. "
+            "Remove this flag once Alembic migrations are the only schema path."
+        )
 
-    `metadata.create_all()` only creates missing tables; it does not alter
-    existing ones. In local developer-preview environments we keep a persisted
-    Postgres volume, so additive model changes would otherwise break startup
-    until the user manually reset the database. This sync step only adds missing
-    columns and does not attempt destructive migrations.
-    """
+        async def _create_schema() -> None:
+            async with async_engine.begin() as conn:
+                await conn.run_sync(_create_and_sync_schema)
 
-    async def _create_schema() -> None:
-        async with async_engine.begin() as conn:
-            await conn.run_sync(_create_and_sync_schema)
+        try:
+            await _create_schema()
+        except (ConnectionError, OSError, socket.gaierror):
+            raise
+        return
+
+    async def _migrate_schema() -> None:
+        await _stamp_existing_schema_if_needed()
+        await _run_alembic_migrations_with_advisory_lock()
 
     try:
         if conf.settings.ENVIRONMENT == "PYTEST":
             await asyncio.wait_for(
-                _create_schema(), timeout=PYTEST_DB_OPERATION_TIMEOUT_SECONDS
+                _migrate_schema(), timeout=PYTEST_DB_OPERATION_TIMEOUT_SECONDS
             )
         else:
-            await _create_schema()
+            await _migrate_schema()
     except (asyncio.TimeoutError, asyncio.CancelledError) as exc:
         if conf.settings.ENVIRONMENT == "PYTEST":
             await _dispose_engine_and_raise_pytest_database_runtime_error(exc)
@@ -403,16 +627,20 @@ async def create_db_and_tables() -> None:
 
 
 async def drop_and_create_db_and_tables() -> None:
-    """
-    Asynchronously drop the database and all defined tables, then recreate them.
+    """Drop and recreate the public schema — **test-only**.
 
-    This function is typically used during testing to ensure that the database
-    schema is set up correctly.
+    Uses ``metadata.create_all`` for speed since test databases are disposable
+    and do not need the full Alembic migration history.
 
-    # TODO: This function should be removed once we have alembic migrations in place.
+    In ``ENVIRONMENT=PYTEST`` we also dispose the engine before and after the
+    reset. The reset path terminates other backend sessions in the test
+    database; without a post-reset dispose, SQLAlchemy can keep dead pooled
+    connections around and hand them to the next test module.
     """
 
     async def _reset_schema() -> None:
+        if conf.settings.ENVIRONMENT == "PYTEST":
+            await async_engine.dispose()
         async with async_engine.begin() as conn:
             if conf.settings.ENVIRONMENT == "PYTEST":
                 await _terminate_other_test_db_sessions(conn)
@@ -420,13 +648,14 @@ async def drop_and_create_db_and_tables() -> None:
             await conn.execute(text("CREATE SCHEMA public"))
             await conn.execute(text("GRANT ALL ON SCHEMA public TO postgres"))
             await conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
-            await conn.run_sync(_create_and_sync_schema)
+            await conn.run_sync(_create_test_schema)
 
     try:
         if conf.settings.ENVIRONMENT == "PYTEST":
             await asyncio.wait_for(
                 _reset_schema(), timeout=PYTEST_DB_OPERATION_TIMEOUT_SECONDS
             )
+            await async_engine.dispose()
         else:
             await _reset_schema()
     except (asyncio.TimeoutError, asyncio.CancelledError) as exc:
@@ -489,43 +718,216 @@ class DataBaseManager:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def list_tables(self):
+    async def list_tables(self) -> list[str]:
         """Asynchronously list all tables in the database."""
-        query = text(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
+        result = await self.session.execute(
+            text(
+                """
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                ORDER BY table_name
+                """
+            )
         )
-        result = await self.session.execute(query)
-        # Update to handle result set correctly
         return [row.table_name for row in result.mappings().all()]
 
-    async def get_table_details(self, table_name: str):
+    async def get_table_details(self, table_name: str) -> dict[str, str]:
         """Asynchronously get details of a specific table such as columns and types."""
-        query = text(
-            "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = :table_name"
+        result = await self.session.execute(
+            text(
+                """
+                SELECT column_name, data_type
+                FROM information_schema.columns
+                WHERE table_schema = 'public' AND table_name = :table_name
+                ORDER BY ordinal_position
+                """
+            ),
+            {"table_name": table_name},
         )
-        result = await self.session.execute(query, {"table_name": table_name})
-        # Same here, ensure to access results correctly
         return {row.column_name: row.data_type for row in result.mappings().all()}
 
     async def _list_ids(self, statement: Any) -> list[UUID]:
         result = await self.session.execute(statement)
         return list(result.scalars().all())
 
+    async def _count_rows(self, model: Any, *conditions: Any) -> int:
+        result = await self.session.execute(
+            select(func.count()).select_from(model).where(*conditions)
+        )
+        return int(result.scalar() or 0)
+
     async def _delete_rows(self, model: Any, *conditions: Any) -> int:
         result = await self.session.execute(delete(model).where(*conditions))
         return int(result.rowcount or 0)
+
+    async def _count_rows_matching_any(self, model: Any, conditions: list[Any]) -> int:
+        if not conditions:
+            return 0
+        return await self._count_rows(model, or_(*conditions))
 
     async def _delete_rows_matching_any(self, model: Any, conditions: list[Any]) -> int:
         if not conditions:
             return 0
         return await self._delete_rows(model, or_(*conditions))
 
-    async def _delete_user_related_rows(self, user_id: UUID) -> dict[str, int]:
+    async def _list_public_base_table_names(self) -> list[str]:
+        result = await self.session.execute(
+            text(
+                """
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+                ORDER BY table_name
+                """
+            )
+        )
+        return [row.table_name for row in result.mappings().all()]
+
+    async def _public_base_table_exists(self, table_name: str) -> bool:
+        result = await self.session.execute(
+            text(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.tables
+                    WHERE table_schema = 'public'
+                      AND table_type = 'BASE TABLE'
+                      AND table_name = :table_name
+                )
+                """
+            ),
+            {"table_name": table_name},
+        )
+        return bool(result.scalar())
+
+    def _quote_identifier_for_session(self, identifier: str) -> str:
+        bind = self.session.get_bind()
+        return bind.dialect.identifier_preparer.quote(identifier)
+
+    async def _count_public_table_rows(self, table_name: str) -> int:
+        quoted_table_name = self._quote_identifier_for_session(table_name)
+        result = await self.session.execute(
+            text(f"SELECT COUNT(*) FROM public.{quoted_table_name}")
+        )
+        return int(result.scalar() or 0)
+
+    async def _count_public_table_rows_bulk(
+        self, table_names: list[str]
+    ) -> dict[str, int]:
+        if not table_names:
+            return {}
+
+        counts_query = " UNION ALL ".join(
+            (
+                "SELECT "
+                f"{_quote_literal(table_name)} AS table_name, "
+                f"COUNT(*)::int AS row_count FROM public.{self._quote_identifier_for_session(table_name)}"
+            )
+            for table_name in table_names
+        )
+        result = await self.session.execute(text(counts_query))
+        return {row.table_name: int(row.row_count) for row in result.mappings().all()}
+
+    def _get_alembic_head_revision(self) -> str | None:
+        backend_root = Path(__file__).resolve().parents[2]
+        alembic_config = AlembicConfig(str(backend_root / "alembic.ini"))
+        alembic_config.set_main_option("script_location", str(backend_root / "alembic"))
+        try:
+            return ScriptDirectory.from_config(alembic_config).get_current_head()
+        except Exception:
+            return None
+
+    async def get_database_status(self) -> dict[str, Any]:
+        head_revision = self._get_alembic_head_revision()
+        public_table_names = await self._list_public_base_table_names()
+        current_revision: str | None = None
+        if await self._public_base_table_exists("alembic_version"):
+            result = await self.session.execute(
+                text("SELECT version_num FROM alembic_version")
+            )
+            current_revision = result.scalar_one_or_none()
+        return {
+            "current_revision": current_revision,
+            "head_revision": head_revision,
+            "is_at_head": bool(head_revision and current_revision == head_revision),
+            "public_table_count": len(public_table_names),
+        }
+
+    async def list_table_summaries(self) -> list[dict[str, Any]]:
+        public_table_names = await self._list_public_base_table_names()
+        result = await self.session.execute(
+            text(
+                """
+                SELECT table_name, COUNT(*)::int AS column_count
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                GROUP BY table_name
+                ORDER BY table_name
+                """
+            )
+        )
+        column_counts = {
+            row.table_name: int(row.column_count) for row in result.mappings().all()
+        }
+        row_counts = await self._count_public_table_rows_bulk(public_table_names)
+        summaries: list[dict[str, Any]] = []
+        for table_name in public_table_names:
+            summaries.append(
+                {
+                    "table_name": table_name,
+                    "column_count": column_counts.get(table_name, 0),
+                    "row_count": row_counts.get(table_name, 0),
+                }
+            )
+        return summaries
+
+    async def get_table_summary_details(self, table_name: str) -> dict[str, Any] | None:
+        if not await self._public_base_table_exists(table_name):
+            return None
+        result = await self.session.execute(
+            text(
+                """
+                SELECT
+                    column_name,
+                    data_type,
+                    is_nullable,
+                    column_default
+                FROM information_schema.columns
+                WHERE table_schema = 'public' AND table_name = :table_name
+                ORDER BY ordinal_position
+                """
+            ),
+            {"table_name": table_name},
+        )
+        return {
+            "table_name": table_name,
+            "row_count": await self._count_public_table_rows(table_name),
+            "columns": [
+                {
+                    "name": row.column_name,
+                    "data_type": row.data_type,
+                    "is_nullable": row.is_nullable == "YES",
+                    "default": row.column_default,
+                }
+                for row in result.mappings().all()
+            ],
+        }
+
+    async def _build_user_cleanup_scope(self, user_id: UUID) -> UserCleanupScope:
         application_ids = await self._list_ids(
             select(models.Application.id).where(models.Application.user_id == user_id)
         )
         document_ids = await self._list_ids(
             select(models.Document.id).where(models.Document.user_id == user_id)
+        )
+        agent_ids = await self._list_ids(
+            select(models.Agent.id).where(models.Agent.user_id == user_id)
+        )
+        chat_session_ids = await self._list_ids(
+            select(models.AgentChatSession.id).where(
+                models.AgentChatSession.user_id == user_id
+            )
         )
         document_version_ids = (
             await self._list_ids(
@@ -544,161 +946,531 @@ class DataBaseManager:
                 models.OrchestrationPipeline.user_id == user_id
             )
         )
-
-        deleted_records = {
-            models.OrchestrationEvent.__tablename__: 0,
-            models.ExtractorExample.__tablename__: 0,
-            models.LeadRegistration.__tablename__: 0,
-            models.LeadComment.__tablename__: 0,
-            models.DocumentXApplication.__tablename__: 0,
-            models.DocumentEmbedding.__tablename__: 0,
-            models.DocumentShare.__tablename__: 0,
-            models.DocumentActivity.__tablename__: 0,
-            models.DocumentVersion.__tablename__: 0,
-            models.Application.__tablename__: 0,
-            models.Skill.__tablename__: 0,
-            models.Experience.__tablename__: 0,
-            models.Education.__tablename__: 0,
-            models.Certificate.__tablename__: 0,
-            models.Contact.__tablename__: 0,
-            models.Document.__tablename__: 0,
-            models.Extractor.__tablename__: 0,
-            models.OrchestrationPipeline.__tablename__: 0,
-        }
-
-        if pipeline_ids:
-            deleted_records[
-                models.OrchestrationEvent.__tablename__
-            ] = await self._delete_rows(
-                models.OrchestrationEvent,
-                models.OrchestrationEvent.pipeline_id.in_(pipeline_ids),
-            )
-
-        if extractor_ids:
-            deleted_records[
-                models.ExtractorExample.__tablename__
-            ] = await self._delete_rows(
-                models.ExtractorExample,
-                models.ExtractorExample.extractor_id.in_(extractor_ids),
-            )
-
-        document_link_conditions: list[Any] = []
-        if application_ids:
-            document_link_conditions.append(
-                models.DocumentXApplication.application_id.in_(application_ids)
-            )
-        if document_ids:
-            document_link_conditions.append(
-                models.DocumentXApplication.document_id.in_(document_ids)
-            )
-        deleted_records[
-            models.DocumentXApplication.__tablename__
-        ] = await self._delete_rows_matching_any(
-            models.DocumentXApplication, document_link_conditions
+        return UserCleanupScope(
+            application_ids=application_ids,
+            document_ids=document_ids,
+            agent_ids=agent_ids,
+            chat_session_ids=chat_session_ids,
+            document_version_ids=document_version_ids,
+            extractor_ids=extractor_ids,
+            pipeline_ids=pipeline_ids,
         )
 
-        document_activity_conditions: list[Any] = []
-        if document_ids:
-            document_activity_conditions.append(
-                models.DocumentActivity.document_id.in_(document_ids)
-            )
-        document_activity_conditions.append(
-            models.DocumentActivity.actor_user_id == user_id
-        )
-        deleted_records[
-            models.DocumentActivity.__tablename__
-        ] = await self._delete_rows_matching_any(
-            models.DocumentActivity, document_activity_conditions
-        )
+    def _normalize_cleanup_domains(
+        self, domains: Collection[str] | None
+    ) -> tuple[str, ...]:
+        if not domains:
+            return USER_CLEANUP_DOMAINS
 
-        deleted_records[models.DocumentShare.__tablename__] = await self._delete_rows(
-            models.DocumentShare,
-            or_(
-                models.DocumentShare.document_id.in_(document_ids)
-                if document_ids
-                else false(),
-                models.DocumentShare.shared_with_user_id == user_id,
-                models.DocumentShare.shared_by_user_id == user_id,
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for domain in domains:
+            if domain not in USER_CLEANUP_DOMAINS:
+                raise ValueError(f"Unknown cleanup domain: {domain}")
+            if domain in seen:
+                continue
+            seen.add(domain)
+            normalized.append(domain)
+        return tuple(normalized)
+
+    def _build_user_cleanup_specs(
+        self, user_id: UUID, scope: UserCleanupScope
+    ) -> tuple[_CleanupSpec, ...]:
+        return (
+            _CleanupSpec(
+                table_name=models.AgentRun.__tablename__,
+                model=models.AgentRun,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_AGENTS: (models.AgentRun.user_id == user_id,)
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.AgentChatMessage.__tablename__,
+                model=models.AgentChatMessage,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_AGENTS: (
+                        models.AgentChatMessage.session_id.in_(scope.chat_session_ids)
+                        if scope.chat_session_ids
+                        else false(),
+                    )
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.AgentChatSession.__tablename__,
+                model=models.AgentChatSession,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_AGENTS: (
+                        models.AgentChatSession.id.in_(scope.chat_session_ids)
+                        if scope.chat_session_ids
+                        else false(),
+                    )
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.Agent.__tablename__,
+                model=models.Agent,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_AGENTS: (
+                        models.Agent.id.in_(scope.agent_ids)
+                        if scope.agent_ids
+                        else false(),
+                    )
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.OrchestrationEvent.__tablename__,
+                model=models.OrchestrationEvent,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_ORCHESTRATION: (
+                        models.OrchestrationEvent.pipeline_id.in_(scope.pipeline_ids)
+                        if scope.pipeline_ids
+                        else false(),
+                    )
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.ExtractorExample.__tablename__,
+                model=models.ExtractorExample,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_EXTRACTORS: (
+                        models.ExtractorExample.extractor_id.in_(scope.extractor_ids)
+                        if scope.extractor_ids
+                        else false(),
+                    )
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.DocumentXApplication.__tablename__,
+                model=models.DocumentXApplication,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_APPLICATIONS: (
+                        models.DocumentXApplication.application_id.in_(
+                            scope.application_ids
+                        )
+                        if scope.application_ids
+                        else false(),
+                    ),
+                    USER_CLEANUP_DOMAIN_DOCUMENTS: (
+                        models.DocumentXApplication.document_id.in_(scope.document_ids)
+                        if scope.document_ids
+                        else false(),
+                    ),
+                },
+                match_any=True,
+            ),
+            _CleanupSpec(
+                table_name=models.DocumentActivity.__tablename__,
+                model=models.DocumentActivity,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_DOCUMENTS: (
+                        models.DocumentActivity.document_id.in_(scope.document_ids)
+                        if scope.document_ids
+                        else false(),
+                        models.DocumentActivity.actor_user_id == user_id,
+                    )
+                },
+                match_any=True,
+            ),
+            _CleanupSpec(
+                table_name=models.DocumentShare.__tablename__,
+                model=models.DocumentShare,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_DOCUMENTS: (
+                        or_(
+                            models.DocumentShare.document_id.in_(scope.document_ids)
+                            if scope.document_ids
+                            else false(),
+                            models.DocumentShare.shared_with_user_id == user_id,
+                            models.DocumentShare.shared_by_user_id == user_id,
+                        ),
+                    )
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.DocumentEmbedding.__tablename__,
+                model=models.DocumentEmbedding,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_DOCUMENTS: (
+                        models.DocumentEmbedding.document_version_id.in_(
+                            scope.document_version_ids
+                        )
+                        if scope.document_version_ids
+                        else false(),
+                    )
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.DocumentVersion.__tablename__,
+                model=models.DocumentVersion,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_DOCUMENTS: (
+                        models.DocumentVersion.document_id.in_(scope.document_ids)
+                        if scope.document_ids
+                        else false(),
+                    )
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.LeadRegistration.__tablename__,
+                model=models.LeadRegistration,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_LEADS: (
+                        models.LeadRegistration.user_id == user_id,
+                    )
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.LeadComment.__tablename__,
+                model=models.LeadComment,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_LEADS: (
+                        models.LeadComment.author_user_id == user_id,
+                    )
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.Application.__tablename__,
+                model=models.Application,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_APPLICATIONS: (
+                        models.Application.user_id == user_id,
+                    )
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.Skill.__tablename__,
+                model=models.Skill,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_PROFILE: (models.Skill.user_id == user_id,)
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.Experience.__tablename__,
+                model=models.Experience,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_PROFILE: (models.Experience.user_id == user_id,)
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.Education.__tablename__,
+                model=models.Education,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_PROFILE: (models.Education.user_id == user_id,)
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.Certificate.__tablename__,
+                model=models.Certificate,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_PROFILE: (
+                        models.Certificate.user_id == user_id,
+                    )
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.Aspiration.__tablename__,
+                model=models.Aspiration,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_PROFILE: (models.Aspiration.user_id == user_id,)
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.Contact.__tablename__,
+                model=models.Contact,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_PROFILE: (models.Contact.user_id == user_id,)
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.Document.__tablename__,
+                model=models.Document,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_DOCUMENTS: (models.Document.user_id == user_id,)
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.Extractor.__tablename__,
+                model=models.Extractor,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_EXTRACTORS: (
+                        models.Extractor.user_id == user_id,
+                    )
+                },
+            ),
+            _CleanupSpec(
+                table_name=models.OrchestrationPipeline.__tablename__,
+                model=models.OrchestrationPipeline,
+                conditions_by_domain={
+                    USER_CLEANUP_DOMAIN_ORCHESTRATION: (
+                        models.OrchestrationPipeline.user_id == user_id,
+                    )
+                },
             ),
         )
-        if document_version_ids:
-            deleted_records[
-                models.DocumentEmbedding.__tablename__
-            ] = await self._delete_rows(
-                models.DocumentEmbedding,
-                models.DocumentEmbedding.document_version_id.in_(document_version_ids),
-            )
-        if document_ids:
-            await self.session.execute(
-                update(models.Document)
-                .where(models.Document.id.in_(document_ids))
-                .values(head_version_id=None)
-            )
-        deleted_records[models.DocumentVersion.__tablename__] = await self._delete_rows(
-            models.DocumentVersion,
-            models.DocumentVersion.document_id.in_(document_ids)
-            if document_ids
-            else false(),
-        )
 
-        deleted_records[
-            models.LeadRegistration.__tablename__
-        ] = await self._delete_rows(
-            models.LeadRegistration, models.LeadRegistration.user_id == user_id
-        )
-        deleted_records[models.LeadComment.__tablename__] = await self._delete_rows(
-            models.LeadComment, models.LeadComment.author_user_id == user_id
-        )
-
-        deleted_records[models.Application.__tablename__] = await self._delete_rows(
-            models.Application, models.Application.user_id == user_id
-        )
-        deleted_records[models.Skill.__tablename__] = await self._delete_rows(
-            models.Skill, models.Skill.user_id == user_id
-        )
-        deleted_records[models.Experience.__tablename__] = await self._delete_rows(
-            models.Experience, models.Experience.user_id == user_id
-        )
-        deleted_records[models.Education.__tablename__] = await self._delete_rows(
-            models.Education, models.Education.user_id == user_id
-        )
-        deleted_records[models.Certificate.__tablename__] = await self._delete_rows(
-            models.Certificate, models.Certificate.user_id == user_id
-        )
-        deleted_records[models.Contact.__tablename__] = await self._delete_rows(
-            models.Contact, models.Contact.user_id == user_id
-        )
-        deleted_records[models.Document.__tablename__] = await self._delete_rows(
-            models.Document, models.Document.user_id == user_id
-        )
-        deleted_records[models.Extractor.__tablename__] = await self._delete_rows(
-            models.Extractor, models.Extractor.user_id == user_id
-        )
-        deleted_records[
-            models.OrchestrationPipeline.__tablename__
-        ] = await self._delete_rows(
-            models.OrchestrationPipeline,
-            models.OrchestrationPipeline.user_id == user_id,
-        )
-
+    def _build_empty_deleted_records(
+        self,
+        specs: tuple[_CleanupSpec, ...],
+        selected_domains: tuple[str, ...],
+    ) -> dict[str, int]:
+        deleted_records: dict[str, int] = {}
+        for spec in specs:
+            if any(domain in spec.conditions_by_domain for domain in selected_domains):
+                deleted_records[spec.table_name] = 0
         return deleted_records
 
+    def _select_cleanup_conditions(
+        self,
+        spec: _CleanupSpec,
+        selected_domains: tuple[str, ...],
+    ) -> tuple[Any, ...]:
+        conditions: list[Any] = []
+        for domain in selected_domains:
+            conditions.extend(spec.conditions_by_domain.get(domain, ()))
+        return tuple(conditions)
+
+    async def _collect_user_related_counts_for_domains(
+        self,
+        specs: tuple[_CleanupSpec, ...],
+        selected_domains: tuple[str, ...],
+    ) -> dict[str, int]:
+        deleted_records = self._build_empty_deleted_records(specs, selected_domains)
+        for spec in specs:
+            conditions = self._select_cleanup_conditions(spec, selected_domains)
+            if not conditions:
+                continue
+            if spec.match_any:
+                deleted_records[spec.table_name] = await self._count_rows_matching_any(
+                    spec.model,
+                    list(conditions),
+                )
+            else:
+                deleted_records[spec.table_name] = await self._count_rows(
+                    spec.model,
+                    *conditions,
+                )
+        return deleted_records
+
+    async def _delete_user_related_rows_for_domains(
+        self,
+        scope: UserCleanupScope,
+        specs: tuple[_CleanupSpec, ...],
+        selected_domains: tuple[str, ...],
+    ) -> dict[str, int]:
+        deleted_records = self._build_empty_deleted_records(specs, selected_domains)
+        for spec in specs:
+            conditions = self._select_cleanup_conditions(spec, selected_domains)
+            if not conditions:
+                continue
+            if (
+                spec.table_name == models.DocumentVersion.__tablename__
+                and scope.document_ids
+            ):
+                await self.session.execute(
+                    update(models.Document)
+                    .where(models.Document.id.in_(scope.document_ids))
+                    .values(head_version_id=None)
+                )
+            if spec.match_any:
+                deleted_records[spec.table_name] = await self._delete_rows_matching_any(
+                    spec.model,
+                    list(conditions),
+                )
+            else:
+                deleted_records[spec.table_name] = await self._delete_rows(
+                    spec.model,
+                    *conditions,
+                )
+        return deleted_records
+
+    def _count_user_profile_fields_to_clear(self, user: models.User) -> int:
+        return sum(
+            1
+            for field_name in USER_PROFILE_FIELDS
+            if getattr(user, field_name) is not None
+        )
+
+    def _count_user_profile_fields_for_domains(
+        self,
+        user: models.User,
+        selected_domains: tuple[str, ...],
+    ) -> int:
+        if USER_CLEANUP_DOMAIN_PROFILE not in selected_domains:
+            return 0
+        return self._count_user_profile_fields_to_clear(user)
+
     def _clear_user_profile_fields(self, user: models.User) -> int:
-        cleared_profile_fields = 0
+        cleared_profile_fields = self._count_user_profile_fields_to_clear(user)
         for field_name in USER_PROFILE_FIELDS:
             if getattr(user, field_name) is not None:
                 setattr(user, field_name, None)
-                cleared_profile_fields += 1
         return cleared_profile_fields
 
-    async def purge_user_data(self, user_id: UUID) -> dict[str, Any] | None:
+    def _clear_user_profile_fields_for_domains(
+        self,
+        user: models.User,
+        selected_domains: tuple[str, ...],
+    ) -> int:
+        if USER_CLEANUP_DOMAIN_PROFILE not in selected_domains:
+            return 0
+        return self._clear_user_profile_fields(user)
+
+    async def get_delete_block_reason(
+        self,
+        target_user: models.User,
+        current_superuser_id: UUID,
+    ) -> str | None:
+        if target_user.is_superuser:
+            remaining_superusers = await self.session.scalar(
+                select(func.count())
+                .select_from(models.User)
+                .where(models.User.is_superuser.is_(True))
+            )
+            if int(remaining_superusers or 0) <= 1:
+                return DELETE_BLOCK_REASON_LAST_REMAINING_SUPERUSER
+        if target_user.id == current_superuser_id:
+            return DELETE_BLOCK_REASON_SELF_DELETE
+        return None
+
+    def _is_full_user_purge(self, selected_domains: tuple[str, ...]) -> bool:
+        return set(selected_domains) == set(USER_CLEANUP_DOMAINS)
+
+    async def get_user_cleanup_plan(
+        self,
+        user_id: UUID,
+        *,
+        current_superuser_id: UUID | None = None,
+        domains: Collection[str] | None = None,
+    ) -> UserCleanupPlan | None:
         user = await self.session.get(models.User, user_id)
         if user is None:
             return None
 
+        selected_domains = self._normalize_cleanup_domains(domains)
+        scope = await self._build_user_cleanup_scope(user_id)
+        specs = self._build_user_cleanup_specs(user_id, scope)
+        delete_block_reason: str | None = None
+        purge_block_reason: str | None = None
+
+        if current_superuser_id is not None:
+            delete_block_reason = await self.get_delete_block_reason(
+                user,
+                current_superuser_id,
+            )
+            if self._is_full_user_purge(selected_domains):
+                purge_block_reason = delete_block_reason
+
+        return UserCleanupPlan(
+            domains=selected_domains,
+            deleted_records=await self._collect_user_related_counts_for_domains(
+                specs,
+                selected_domains,
+            ),
+            cleared_profile_fields=self._count_user_profile_fields_for_domains(
+                user,
+                selected_domains,
+            ),
+            delete_block_reason=delete_block_reason,
+            purge_block_reason=purge_block_reason,
+        )
+
+    async def preview_user_data_operation(
+        self,
+        user_id: UUID,
+        current_superuser_id: UUID,
+        domains: Collection[str] | None = None,
+    ) -> dict[str, Any] | None:
+        cleanup_plan = await self.get_user_cleanup_plan(
+            user_id,
+            current_superuser_id=current_superuser_id,
+            domains=domains,
+        )
+        if cleanup_plan is None:
+            return None
+        return {
+            "user_id": user_id,
+            "domains": list(cleanup_plan.domains),
+            "cleared_profile_fields": cleanup_plan.cleared_profile_fields,
+            "deleted_records": cleanup_plan.deleted_records,
+            "delete_allowed": cleanup_plan.delete_block_reason is None,
+            "delete_block_reason": cleanup_plan.delete_block_reason,
+            "purge_allowed": cleanup_plan.purge_block_reason is None,
+            "purge_block_reason": cleanup_plan.purge_block_reason,
+        }
+
+    async def list_users_for_db_management(
+        self,
+        *,
+        q: str | None = None,
+        is_superuser: bool | None = None,
+        is_active: bool | None = None,
+        page: int = 1,
+        page_size: int = 10,
+        request_count: bool = False,
+    ) -> dict[str, Any]:
+        base = select(models.User)
+        if q:
+            pattern = f"%{q}%"
+            base = base.where(
+                models.User.email.ilike(pattern)
+                | models.User.first_name.ilike(pattern)
+                | models.User.last_name.ilike(pattern)
+            )
+        if is_superuser is not None:
+            base = base.where(models.User.is_superuser.is_(is_superuser))
+        if is_active is not None:
+            base = base.where(models.User.is_active.is_(is_active))
+
+        total = 0
+        if request_count:
+            count_result = await self.session.execute(
+                select(func.count()).select_from(base.subquery())
+            )
+            total = int(count_result.scalar_one())
+
+        offset = (page - 1) * page_size
+        result = await self.session.execute(
+            base.order_by(models.User.created_at.desc()).offset(offset).limit(page_size)
+        )
+        return {
+            "items": result.scalars().all(),
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+        }
+
+    async def purge_user_data(
+        self,
+        user_id: UUID,
+        current_superuser_id: UUID,
+        domains: Collection[str] | None = None,
+    ) -> dict[str, Any] | None:
+        cleanup_plan = await self.get_user_cleanup_plan(
+            user_id,
+            current_superuser_id=current_superuser_id,
+            domains=domains,
+        )
+        if cleanup_plan is None:
+            return None
+        if cleanup_plan.purge_block_reason is not None:
+            raise ValueError(cleanup_plan.purge_block_reason)
+
+        user = await self.session.get(models.User, user_id)
+        assert user is not None
+        selected_domains = cleanup_plan.domains
+        scope = await self._build_user_cleanup_scope(user_id)
+        specs = self._build_user_cleanup_specs(user_id, scope)
+
         try:
-            deleted_records = await self._delete_user_related_rows(user_id)
-            cleared_profile_fields = self._clear_user_profile_fields(user)
+            deleted_records = await self._delete_user_related_rows_for_domains(
+                scope,
+                specs,
+                selected_domains,
+            )
+            cleared_profile_fields = self._clear_user_profile_fields_for_domains(
+                user,
+                selected_domains,
+            )
             await self.session.commit()
         except Exception:
             await self.session.rollback()
@@ -707,17 +1479,29 @@ class DataBaseManager:
         return {
             "user_id": user_id,
             "user_deleted": False,
+            "domains": list(selected_domains),
             "cleared_profile_fields": cleared_profile_fields,
             "deleted_records": deleted_records,
         }
 
-    async def delete_user(self, user_id: UUID) -> dict[str, Any] | None:
+    async def delete_user(
+        self,
+        user_id: UUID,
+    ) -> dict[str, Any] | None:
         user = await self.session.get(models.User, user_id)
         if user is None:
             return None
 
+        selected_domains = self._normalize_cleanup_domains(None)
+        scope = await self._build_user_cleanup_scope(user_id)
+        specs = self._build_user_cleanup_specs(user_id, scope)
+
         try:
-            deleted_records = await self._delete_user_related_rows(user_id)
+            deleted_records = await self._delete_user_related_rows_for_domains(
+                scope,
+                specs,
+                selected_domains,
+            )
             await self.session.delete(user)
             await self.session.commit()
         except Exception:
@@ -727,6 +1511,7 @@ class DataBaseManager:
         return {
             "user_id": user_id,
             "user_deleted": True,
+            "domains": list(selected_domains),
             "cleared_profile_fields": 0,
             "deleted_records": deleted_records,
         }

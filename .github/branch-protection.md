@@ -20,6 +20,7 @@ Apply these rules to the `main` branch in the GitHub repository settings. They a
   - `Run pre-commit hooks`
   - `Backend tests and coverage`
   - `Frontend tests`
+  - `Frontend theme drift guard`
   - `Frontend typecheck`
   - `Frontend build`
   - `API contract freshness`
@@ -33,4 +34,5 @@ Apply these rules to the `main` branch in the GitHub repository settings. They a
 ## Notes
 
 - These protections must be configured in GitHub. They are documented here because the repository code cannot enforce branch protection rules by itself.
+- Treat applying these settings in GitHub as a manual beta-release checklist item for `main`.
 - Keep the status check names in sync with `.github/workflows/ci.yml` when jobs are renamed.

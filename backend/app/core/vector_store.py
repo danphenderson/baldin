@@ -12,22 +12,14 @@ from abc import ABC, abstractmethod
 from typing import Any
 from uuid import UUID
 
-from langchain_openai import OpenAIEmbeddings
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import conf
 from app.logging import get_logger
-from app.models import DocumentEmbedding
+from app.models import Document, DocumentEmbedding
 
 logger = get_logger(__name__)
-
-
-def _get_embeddings_client() -> OpenAIEmbeddings:
-    return OpenAIEmbeddings(
-        model=conf.openai.EMBEDDING_MODEL,
-        dimensions=conf.openai.EMBEDDING_DIMENSIONS,
-    )
 
 
 class BaseVectorStore(ABC):
@@ -51,11 +43,17 @@ class BaseVectorStore(ABC):
         *,
         user_id: UUID,
         k: int = 5,
+        document_ids: list[UUID] | None = None,
     ) -> list[dict[str, Any]]:
         """Return the *k* most similar chunks for a query, scoped to a user."""
 
     @abstractmethod
-    async def delete_by_document(self, document_id: UUID) -> int:
+    async def delete_by_document(
+        self,
+        document_id: UUID,
+        *,
+        user_id: UUID | None = None,
+    ) -> int:
         """Remove all embeddings for a document.  Returns the number deleted."""
 
 
@@ -64,7 +62,7 @@ class PGVectorStore(BaseVectorStore):
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
-        self._embeddings = _get_embeddings_client()
+        self._embeddings = conf.openai.get_embeddings()
 
     async def add_texts(
         self,
@@ -96,7 +94,11 @@ class PGVectorStore(BaseVectorStore):
         *,
         user_id: UUID,
         k: int = 5,
+        document_ids: list[UUID] | None = None,
     ) -> list[dict[str, Any]]:
+        if document_ids is not None and not document_ids:
+            return []
+
         query_vector = await self._embeddings.aembed_query(query)
         distance_expr = DocumentEmbedding.embedding.cosine_distance(query_vector)
         stmt = (
@@ -106,12 +108,17 @@ class PGVectorStore(BaseVectorStore):
                 DocumentEmbedding.document_version_id,
                 DocumentEmbedding.chunk_index,
                 DocumentEmbedding.chunk_text,
+                Document.title.label("document_title"),
+                Document.kind.label("document_kind"),
                 distance_expr.label("distance"),
             )
+            .join(Document, Document.id == DocumentEmbedding.document_id)
             .where(DocumentEmbedding.user_id == user_id)
             .order_by(distance_expr)
             .limit(k)
         )
+        if document_ids is not None:
+            stmt = stmt.where(DocumentEmbedding.document_id.in_(document_ids))
         result = await self.session.execute(stmt)
         return [
             {
@@ -120,15 +127,23 @@ class PGVectorStore(BaseVectorStore):
                 "document_version_id": row.document_version_id,
                 "chunk_index": row.chunk_index,
                 "chunk_text": row.chunk_text,
+                "document_title": row.document_title,
+                "document_kind": row.document_kind,
                 "score": 1.0 - float(row.distance),
             }
             for row in result
         ]
 
-    async def delete_by_document(self, document_id: UUID) -> int:
-        result = await self.session.execute(
-            delete(DocumentEmbedding).where(
-                DocumentEmbedding.document_id == document_id
-            )
+    async def delete_by_document(
+        self,
+        document_id: UUID,
+        *,
+        user_id: UUID | None = None,
+    ) -> int:
+        stmt = delete(DocumentEmbedding).where(
+            DocumentEmbedding.document_id == document_id
         )
+        if user_id is not None:
+            stmt = stmt.where(DocumentEmbedding.user_id == user_id)
+        result = await self.session.execute(stmt)
         return int(result.rowcount or 0)

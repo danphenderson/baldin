@@ -20,9 +20,14 @@
 # env-files
 .DS_Store
 **.env
+**.env.local
 **.env.test
 **.env.development
 **.env.prod
+!backend/.env
+!frontend/.env
+backend/.env.local
+frontend/.env.local
 
 # misc
 **/npm-debug.log*
@@ -46,4 +51,5 @@ backend/public/datalake/
 
 public/*
 **.coverage
-.vscode/*
+/.vscode/*
+!/.vscode/mcp.json

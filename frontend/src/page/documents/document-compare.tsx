@@ -1,7 +1,16 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Box, Typography, Chip, Stack, Button, useTheme, alpha, Alert, Paper, Skeleton,
+  Box,
+  Typography,
+  Stack,
+  Button,
+  useTheme,
+  alpha,
+  Alert,
+  Paper,
+  Skeleton,
 } from '@mui/material';
+import { StatusChip as Chip } from '../../design-system';
 import Grid from '@mui/material/Grid';
 import {
   ArrowBack as BackIcon, Restore as RestoreIcon,
@@ -10,15 +19,33 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import {
+  extractPlainTextFromBlockSnapshot,
+  extractPlainTextFromDocumentContent,
+  flattenDocumentBlockSnapshot,
+  type FlattenedDocumentBlockSnapshot,
+} from '../../component/document-content';
+import { monoFontFamily } from '../../design-system/tokens/typography';
+import {
   getVersion, getDocument, createVersion,
   type DocumentVersionRead, type DocumentDetailRead, type DocumentVersionCreate,
 } from '../../service/documents';
+import { radiusTokens, toRadiusPx } from '../../design-system/tokens/radius';
 
 /* ------------------------------------------------------------------ */
 /*  Diff algorithm — simple LCS-based line diff                        */
 /* ------------------------------------------------------------------ */
 
 type DiffLine = { type: 'added' | 'removed' | 'unchanged'; text: string };
+type BlockDiffStatus = 'added' | 'removed' | 'changed' | 'moved';
+type BlockDiffRow = {
+  blockId: string;
+  blockType: string;
+  status: BlockDiffStatus;
+  title: string;
+  leftText: string;
+  rightText: string;
+  diffLines: DiffLine[];
+};
 
 function computeDiff(leftText: string, rightText: string): DiffLine[] {
   const leftLines = leftText.split('\n');
@@ -74,29 +101,82 @@ function formatDate(dateStr: string): string {
   });
 }
 
-/** Recursively extract plain text from a Tiptap JSON node tree. */
-function extractPlainTextFromTiptapJson(content: string): string {
-  try {
-    const doc = JSON.parse(content);
-    if (!doc || typeof doc !== 'object') return content;
-    const walk = (node: Record<string, unknown>): string => {
-      if (node.type === 'text' && typeof node.text === 'string') return node.text;
-      if (!Array.isArray(node.content)) return '';
-      return (node.content as Record<string, unknown>[])
-        .map(child => walk(child))
-        .join(node.type === 'doc' || node.type === 'bulletList' || node.type === 'orderedList' ? '\n' : '');
-    };
-    const lines = ((doc.content ?? []) as Record<string, unknown>[])
-      .map((block: Record<string, unknown>) => walk(block));
-    return lines.join('\n');
-  } catch {
-    return content;
+function getVersionText(v: DocumentVersionRead): string {
+  if (Array.isArray(v.block_snapshot)) {
+    return extractPlainTextFromBlockSnapshot(v.block_snapshot);
   }
+
+  return extractPlainTextFromDocumentContent(
+    v.content ?? '',
+    v.content_format === 'tiptap_json' ? 'tiptap_json' : 'plain_text',
+  );
 }
 
-function getVersionText(v: DocumentVersionRead): string {
-  if (v.content_format === 'tiptap_json' && v.content) return extractPlainTextFromTiptapJson(v.content);
-  return v.content ?? '';
+function blockTitle(block: FlattenedDocumentBlockSnapshot): string {
+  const readableType = block.blockType.replace(/_/g, ' ');
+  if (block.text.trim()) {
+    const firstLine = block.text.split('\n').find((line) => line.trim());
+    if (firstLine) return firstLine.slice(0, 80);
+  }
+  return readableType;
+}
+
+function computeCellDocBlockDiff(
+  leftVersion: DocumentVersionRead,
+  rightVersion: DocumentVersionRead,
+): BlockDiffRow[] {
+  const leftBlocks = flattenDocumentBlockSnapshot(leftVersion.block_snapshot);
+  const rightBlocks = flattenDocumentBlockSnapshot(rightVersion.block_snapshot);
+  const leftById = new Map(leftBlocks.map((block) => [block.blockId, block]));
+  const rightById = new Map(rightBlocks.map((block) => [block.blockId, block]));
+  const rows: BlockDiffRow[] = [];
+
+  rightBlocks.forEach((rightBlock) => {
+    const leftBlock = leftById.get(rightBlock.blockId);
+    if (!leftBlock) {
+      rows.push({
+        blockId: rightBlock.blockId,
+        blockType: rightBlock.blockType,
+        status: 'added',
+        title: blockTitle(rightBlock),
+        leftText: '',
+        rightText: rightBlock.text,
+        diffLines: [{ type: 'added', text: rightBlock.text }],
+      });
+      return;
+    }
+
+    const moved = leftBlock.path !== rightBlock.path;
+    const changed = leftBlock.text !== rightBlock.text;
+    if (!moved && !changed) return;
+
+    rows.push({
+      blockId: rightBlock.blockId,
+      blockType: rightBlock.blockType,
+      status: changed ? 'changed' : 'moved',
+      title: blockTitle(rightBlock),
+      leftText: leftBlock.text,
+      rightText: rightBlock.text,
+      diffLines: changed
+        ? computeDiff(leftBlock.text, rightBlock.text)
+        : [{ type: 'unchanged', text: rightBlock.text }],
+    });
+  });
+
+  leftBlocks.forEach((leftBlock) => {
+    if (rightById.has(leftBlock.blockId)) return;
+    rows.push({
+      blockId: leftBlock.blockId,
+      blockType: leftBlock.blockType,
+      status: 'removed',
+      title: blockTitle(leftBlock),
+      leftText: leftBlock.text,
+      rightText: '',
+      diffLines: [{ type: 'removed', text: leftBlock.text }],
+    });
+  });
+
+  return rows;
 }
 
 /* ------------------------------------------------------------------ */
@@ -161,16 +241,33 @@ const DocumentComparePage: React.FC = () => {
     if (!leftVersion || !rightVersion) return [];
     return computeDiff(getVersionText(leftVersion), getVersionText(rightVersion));
   }, [leftVersion, rightVersion]);
+  const cellDocDiffRows = useMemo(() => {
+    if (!leftVersion || !rightVersion) return [];
+    return computeCellDocBlockDiff(leftVersion, rightVersion);
+  }, [leftVersion, rightVersion]);
 
   const stats = useMemo(() => {
     let added = 0;
     let removed = 0;
+    let changed = 0;
+    let moved = 0;
+
+    if (doc?.kind === 'cell_doc' && Array.isArray(leftVersion?.block_snapshot) && Array.isArray(rightVersion?.block_snapshot)) {
+      cellDocDiffRows.forEach((row) => {
+        if (row.status === 'added') added++;
+        if (row.status === 'removed') removed++;
+        if (row.status === 'changed') changed++;
+        if (row.status === 'moved') moved++;
+      });
+      return { added, removed, changed, moved };
+    }
+
     for (const line of diffLines) {
       if (line.type === 'added') added++;
       if (line.type === 'removed') removed++;
     }
-    return { added, removed };
-  }, [diffLines]);
+    return { added, removed, changed, moved };
+  }, [cellDocDiffRows, diffLines, doc?.kind, leftVersion?.block_snapshot, rightVersion?.block_snapshot]);
 
   /* restore handler ------------------------------------------------ */
   const handleRestore = async (version: DocumentVersionRead) => {
@@ -196,7 +293,7 @@ const DocumentComparePage: React.FC = () => {
     return (
       <Box>
         <Skeleton variant="text" width={300} height={40} />
-        <Skeleton variant="rounded" height={400} sx={{ mt: 2, borderRadius: 3 }} />
+        <Skeleton variant="rounded" height={400} sx={{ mt: 2, borderRadius: '12px' }} />
       </Box>
     );
   }
@@ -213,6 +310,10 @@ const DocumentComparePage: React.FC = () => {
   }
 
   const isReadOnly = doc?.viewer_role === 'viewer';
+  const isCellDocComparison = doc?.kind === 'cell_doc';
+  const usesBlockSnapshotDiff = isCellDocComparison
+    && Array.isArray(leftVersion.block_snapshot)
+    && Array.isArray(rightVersion.block_snapshot);
 
   const bgColor = (type: DiffLine['type']) => {
     switch (type) {
@@ -327,9 +428,11 @@ const DocumentComparePage: React.FC = () => {
       </Grid>
 
       {/* ── Rich-text note ─────────────────────────────────────── */}
-      {hasRichContent && (
+      {(isCellDocComparison || hasRichContent) && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          Rich-text formatting is not shown in diff view. Comparing plain-text content only.
+          {isCellDocComparison
+            ? 'Cell-doc versions are compared block-by-block from saved block snapshots.'
+            : 'Rich-text formatting is not shown in diff view. Comparing plain-text content only.'}
         </Alert>
       )}
 
@@ -345,8 +448,24 @@ const DocumentComparePage: React.FC = () => {
           size="small" variant="outlined"
           sx={{ color: theme.palette.error.main, borderColor: alpha(theme.palette.error.main, 0.4), fontWeight: 600 }}
         />
+        {usesBlockSnapshotDiff && (
+          <>
+            <Chip
+              label={`${stats.changed} changed`}
+              size="small"
+              variant="outlined"
+              sx={{ color: theme.palette.warning.main, borderColor: alpha(theme.palette.warning.main, 0.4), fontWeight: 600 }}
+            />
+            <Chip
+              label={`${stats.moved} moved`}
+              size="small"
+              variant="outlined"
+              sx={{ color: theme.palette.info.main, borderColor: alpha(theme.palette.info.main, 0.4), fontWeight: 600 }}
+            />
+          </>
+        )}
         <Chip
-          label={`${diffLines.length} total lines`}
+          label={usesBlockSnapshotDiff ? `${cellDocDiffRows.length} changed blocks` : `${diffLines.length} total lines`}
           size="small" variant="outlined" sx={{ fontWeight: 500 }}
         />
       </Stack>
@@ -356,17 +475,105 @@ const DocumentComparePage: React.FC = () => {
         sx={{
           overflow: 'auto', maxHeight: 'calc(100vh - 400px)',
           border: `1px solid ${theme.palette.divider}`,
-          borderRadius: 2,
+          borderRadius: toRadiusPx(radiusTokens.sm),
         }}
       >
-        {diffLines.length === 0 ? (
+        {usesBlockSnapshotDiff ? (
+          cellDocDiffRows.length === 0 ? (
+            <Box sx={{ p: 4, textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                Both versions are identical — no block-level differences found.
+              </Typography>
+            </Box>
+          ) : (
+            <Stack spacing={0}>
+              {cellDocDiffRows.map((row) => (
+                <Box
+                  key={`${row.status}:${row.blockId}`}
+                  sx={{
+                    borderBottom: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
+                    px: 2,
+                    py: 1.5,
+                    backgroundColor: row.status === 'added'
+                      ? alpha(theme.palette.success.main, 0.08)
+                      : row.status === 'removed'
+                        ? alpha(theme.palette.error.main, 0.08)
+                        : row.status === 'changed'
+                          ? alpha(theme.palette.warning.main, 0.06)
+                          : alpha(theme.palette.info.main, 0.06),
+                  }}
+                >
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
+                    <Chip
+                      size="small"
+                      color={
+                        row.status === 'added'
+                          ? 'success'
+                          : row.status === 'removed'
+                            ? 'error'
+                            : row.status === 'changed'
+                              ? 'warning'
+                              : 'info'
+                      }
+                      label={row.status}
+                    />
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {row.title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {row.blockType.replace(/_/g, ' ')}
+                    </Typography>
+                  </Stack>
+                  <Box component="pre" sx={{ m: 0, fontFamily: monoFontFamily, fontSize: '0.8rem', whiteSpace: 'pre-wrap' }}>
+                    {row.diffLines.map((line, index) => (
+                      <Box
+                        key={`${row.blockId}:${index}`}
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: '16px 1fr',
+                          gap: 1,
+                          alignItems: 'start',
+                          py: 0.125,
+                        }}
+                      >
+                        <Typography
+                          component="span"
+                          sx={{
+                            color: prefixColor(line.type),
+                            fontWeight: 700,
+                            fontSize: '0.8rem',
+                            lineHeight: '22px',
+                          }}
+                        >
+                          {prefix(line.type)}
+                        </Typography>
+                        <Typography
+                          component="span"
+                          sx={{
+                            color: line.type === 'unchanged' ? 'text.primary' : 'text.secondary',
+                            fontSize: '0.8rem',
+                            lineHeight: '22px',
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word',
+                          }}
+                        >
+                          {line.text || '\u00A0'}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              ))}
+            </Stack>
+          )
+        ) : diffLines.length === 0 ? (
           <Box sx={{ p: 4, textAlign: 'center' }}>
             <Typography variant="body2" color="text.secondary">
               Both versions are identical — no differences found.
             </Typography>
           </Box>
         ) : (
-          <Box component="pre" sx={{ m: 0, p: 0, fontFamily: 'monospace', fontSize: '0.8rem' }}>
+          <Box component="pre" sx={{ m: 0, p: 0, fontFamily: monoFontFamily, fontSize: '0.8rem' }}>
             {diffLines.map((line, idx) => (
               <Box
                 key={idx}

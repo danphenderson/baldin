@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { Extensions } from '@tiptap/core';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { API_URL } from '../config/env';
@@ -20,6 +21,8 @@ interface UseCollaborativeEditorOptions {
   token: string;
   enabled: boolean;
   userName?: string;
+  /** Extensions to pass to seedCollaborationDocument for schema-aware seeding. */
+  seedExtensions?: Extensions;
 }
 
 export interface ConnectedUser {
@@ -86,7 +89,7 @@ export function buildCollaborationSocketConfig(apiUrl: string, documentId: strin
 export function useCollaborativeEditor(
   options: UseCollaborativeEditorOptions,
 ): CollaborativeEditorState {
-  const { documentId, token, enabled, userName } = options;
+  const { documentId, token, enabled, userName, seedExtensions } = options;
 
   const [ydoc, setYdoc] = useState<Y.Doc | null>(null);
   const [provider, setProvider] = useState<WebsocketProvider | null>(null);
@@ -121,7 +124,12 @@ export function useCollaborativeEditor(
     let ydocInstance: Y.Doc | null = null;
     let providerInstance: WebsocketProvider | null = null;
     let updateAwareness: (() => void) | null = null;
+    let statusHandler: ((event: { status: string }) => void) | null = null;
     let retryTimeoutId: number | null = null;
+
+    setConnected(false);
+    setConnectionStatus('connecting');
+    setConnectedUsers([]);
 
     const waitForRetry = async (delayMs: number) => new Promise<void>(resolve => {
       retryTimeoutId = window.setTimeout(() => {
@@ -149,6 +157,8 @@ export function useCollaborativeEditor(
             return null;
           }
 
+          setConnected(false);
+          setConnectionStatus('disconnected');
           return null;
         }
       }
@@ -169,7 +179,12 @@ export function useCollaborativeEditor(
         && bootstrap.content
         && bootstrap.content_format === 'tiptap_json'
       ) {
-        seedCollaborationDocument(ydocInstance, bootstrap.content);
+        const seeded = seedCollaborationDocument(ydocInstance, bootstrap.content, seedExtensions);
+        if (!seeded) {
+          console.warn(
+            'Failed to seed collaboration state from saved TipTap JSON; continuing with live connection.',
+          );
+        }
       }
 
       if (isCancelled || ydocInstance === null) {
@@ -180,6 +195,8 @@ export function useCollaborativeEditor(
         console.warn(
           'Collaboration bootstrap did not return a session token; skipping realtime connection.',
         );
+        setConnected(false);
+        setConnectionStatus('disconnected');
         return;
       }
 
@@ -199,8 +216,13 @@ export function useCollaborativeEditor(
       );
       setYdoc(ydocInstance);
       setProvider(providerInstance);
+      setConnectionStatus('connecting');
 
-      providerInstance.on('status', (event: { status: string }) => {
+      statusHandler = (event: { status: string }) => {
+        if (isCancelled) {
+          return;
+        }
+
         setConnected(event.status === 'connected');
         if (event.status === 'connected') {
           setConnectionStatus('connected');
@@ -209,11 +231,17 @@ export function useCollaborativeEditor(
         } else {
           setConnectionStatus('disconnected');
         }
-      });
+      };
+
+      providerInstance.on('status', statusHandler);
 
       providerInstance.awareness.setLocalStateField('user', localUser);
 
       updateAwareness = () => {
+        if (isCancelled) {
+          return;
+        }
+
         const states = providerInstance?.awareness.getStates() ?? new Map();
         const users: ConnectedUser[] = [];
 
@@ -246,6 +274,9 @@ export function useCollaborativeEditor(
       if (providerInstance && updateAwareness) {
         providerInstance.awareness.off('change', updateAwareness);
       }
+      if (providerInstance && statusHandler) {
+        providerInstance.off('status', statusHandler);
+      }
       providerInstance?.disconnect();
       providerInstance?.destroy();
       ydocInstance?.destroy();
@@ -255,7 +286,7 @@ export function useCollaborativeEditor(
       setConnectionStatus('disconnected');
       setConnectedUsers([]);
     };
-  }, [documentId, token, enabled, localUser]);
+  }, [documentId, token, enabled, localUser, seedExtensions]);
 
   return {
     ydoc,

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTheme } from '@mui/material/styles';
 import {
   getApplications, updateApplication, deleteApplication,
   type ApplicationRead, type ApplicationUpdate,
 } from '../../service/applications';
+import { getStatusColors } from '../../design-system';
 
 /* ------------------------------------------------------------------ */
 /*  Pipeline stage columns (progression only — no terminal outcomes)   */
@@ -14,21 +16,34 @@ export interface Column {
   color: string;
 }
 
-/** Active board columns — stage progression from applied → offer. */
-export const COLUMNS: Column[] = [
-  { key: 'applied', label: 'Applied', color: '#06b6d4' },
-  { key: 'screening', label: 'Screening', color: '#8b5cf6' },
-  { key: 'interview', label: 'Interview', color: '#f59e0b' },
-  { key: 'offer', label: 'Offer', color: '#10b981' },
-];
+/** Hook that returns stage columns with theme-aware colors. */
+export function useStageColumns() {
+  const theme = useTheme();
+  const sc = getStatusColors(theme);
 
-/** All stage+outcome column metadata (for queue page stage chips, etc.). */
-export const ALL_STATUS_COLUMNS: Column[] = [
-  { key: 'registered', label: 'Registered', color: '#94a3b8' },
-  ...COLUMNS,
-  { key: 'rejected', label: 'Rejected', color: '#f43f5e' },
-  { key: 'withdrawn', label: 'Withdrawn', color: '#a1a1aa' },
-];
+  return useMemo(() => {
+    /** Active board columns — stage progression from applied → offer. */
+    const columns: Column[] = [
+      { key: 'applied', label: 'Applied', color: sc.applied },
+      { key: 'screening', label: 'Screening', color: sc.screening },
+      { key: 'interview', label: 'Interview', color: sc.interview },
+      { key: 'offer', label: 'Offer', color: sc.offer },
+    ];
+
+    /** All stage+outcome column metadata (for queue page stage chips, etc.). */
+    const allStatusColumns: Column[] = [
+      { key: 'registered', label: 'Registered', color: sc.registered },
+      ...columns,
+      { key: 'rejected', label: 'Rejected', color: sc.rejected },
+      { key: 'withdrawn', label: 'Withdrawn', color: sc.withdrawn },
+    ];
+
+    return { columns, allStatusColumns };
+  }, [sc]);
+}
+
+/** Static stage progression keys for pure logic (no color needed). */
+const STAGE_KEYS = ['applied', 'screening', 'interview', 'offer'];
 
 /** Terminal closure outcomes — not board lanes. */
 export const OUTCOMES = ['rejected', 'withdrawn'] as const;
@@ -56,21 +71,15 @@ export function relativeDate(iso: string): string {
 
 /** Resolve the effective stage string for bucketing / display. */
 export function effectiveStage(app: ApplicationRead): string {
-  return (app.stage ?? app.status ?? 'applied').toLowerCase();
+  return (app.stage ?? 'applied').toLowerCase();
 }
 
 /** Return the next stage in the pipeline, or null at the end. */
 export function nextStage(current: string): string | null {
   if (current === 'registered') return 'applied';
-  const idx = COLUMNS.findIndex((c) => c.key === current);
-  if (idx < 0 || idx >= COLUMNS.length - 1) return null;
-  return COLUMNS[idx + 1].key;
-}
-
-/** @deprecated Use nextStage instead. Kept for backward compat with queue page. */
-export function nextStatus(current: string): ApplicationRead['status'] | null {
-  const result = nextStage(current);
-  return result as ApplicationRead['status'] | null;
+  const idx = STAGE_KEYS.indexOf(current);
+  if (idx < 0 || idx >= STAGE_KEYS.length - 1) return null;
+  return STAGE_KEYS[idx + 1];
 }
 
 /** Is this application terminally closed? */
@@ -111,7 +120,7 @@ export interface UseApplicationsReturn {
   setError: (msg: string) => void;
   setSuccess: (msg: string) => void;
   refresh: () => Promise<void>;
-  handleStatusChange: (appId: string, newStatus: ApplicationRead['status']) => Promise<void>;
+  handleStatusChange: (appId: string, newStatus: string) => Promise<void>;
   handleReminderUpdate: (
     appId: string,
     reminder: Pick<ApplicationUpdate, 'next_step' | 'next_step_due'>,
@@ -162,7 +171,7 @@ export function useApplications(token: string | null): UseApplicationsReturn {
   /* ---- Bucket apps into registered, board columns, and closed ---- */
   const { buckets, registeredApps, closedApps } = useMemo(() => {
     const map = new Map<string, ApplicationRead[]>();
-    for (const col of COLUMNS) map.set(col.key, []);
+    for (const key of STAGE_KEYS) map.set(key, []);
     const registered: ApplicationRead[] = [];
     const closed: ApplicationRead[] = [];
 
@@ -190,17 +199,16 @@ export function useApplications(token: string | null): UseApplicationsReturn {
     ).length;
   }, [applications]);
 
-  const handleStatusChange = async (appId: string, newStatus: ApplicationRead['status']) => {
+  const handleStatusChange = async (appId: string, newStatus: string) => {
     if (!token) return;
 
     const previousApplication = applications.find((app) => app.id === appId);
     if (!previousApplication) return;
 
-    const previousStatus = previousApplication.status ?? null;
     const previousStage = previousApplication.stage ?? null;
     const previousOutcome = previousApplication.outcome ?? null;
     const shouldReopen = (
-      (previousOutcome === 'rejected' || previousOutcome === 'withdrawn' || previousStatus === 'rejected' || previousStatus === 'withdrawn')
+      (previousOutcome === 'rejected' || previousOutcome === 'withdrawn')
       && newStatus !== 'rejected'
       && newStatus !== 'withdrawn'
     );
@@ -212,14 +220,15 @@ export function useApplications(token: string | null): UseApplicationsReturn {
 
     setApplications((prev) =>
       prev.map((a) => (a.id === appId
-        ? { ...a, status: newStatus, stage: optimisticStage, outcome: optimisticOutcome }
+        ? { ...a, stage: optimisticStage, outcome: optimisticOutcome }
         : a)),
     );
     try {
-      const updatedApp = await updateApplication(token, appId, {
-        status: newStatus,
-        ...(shouldReopen ? { reopen: true } : {}),
-      } as ApplicationUpdate);
+      const payload: ApplicationUpdate = isOutcome
+        ? { outcome: newStatus as ApplicationRead['outcome'] }
+        : { stage: newStatus as ApplicationRead['stage'], outcome: null };
+      if (shouldReopen) (payload as any).reopen = true;
+      const updatedApp = await updateApplication(token, appId, payload);
       setApplications((prev) =>
         prev.map((a) => (a.id === appId ? updatedApp : a)),
       );
@@ -227,7 +236,7 @@ export function useApplications(token: string | null): UseApplicationsReturn {
       setError(e instanceof Error ? e.message : 'Failed to update status');
       setApplications((prev) =>
         prev.map((a) => (a.id === appId
-          ? { ...a, status: previousStatus, stage: previousStage, outcome: previousOutcome }
+          ? { ...a, stage: previousStage, outcome: previousOutcome }
           : a)),
       );
       refresh();
@@ -237,11 +246,11 @@ export function useApplications(token: string | null): UseApplicationsReturn {
   const handleAdvance = (app: ApplicationRead) => {
     const stage = effectiveStage(app);
     const next = nextStage(stage);
-    if (next) handleStatusChange(app.id, next as ApplicationRead['status']);
+    if (next) handleStatusChange(app.id, next);
   };
 
   const handleClose = (app: ApplicationRead, outcome: Outcome) => {
-    handleStatusChange(app.id, outcome as ApplicationRead['status']);
+    handleStatusChange(app.id, outcome);
   };
 
   const handleReminderUpdate = async (

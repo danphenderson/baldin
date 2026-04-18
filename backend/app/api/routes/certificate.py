@@ -1,6 +1,6 @@
 # app/api/routes/certificate.py
-from fastapi import APIRouter, BackgroundTasks, Depends
-from sqlalchemy import select
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from sqlalchemy import func, select
 
 from app.api.deps import (
     AsyncSession,
@@ -29,19 +29,27 @@ CERTIFICATE_SEED_OPERATION = SeedOperation(
 )
 
 
-@router.get("/", response_model=list[schemas.CertificateRead])
+@router.get("/", response_model=schemas.PaginatedResponse[schemas.CertificateRead])
 async def read_current_user_certificates(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
 ):
-    result = await db.execute(
-        select(models.Certificate).where(models.Certificate.user_id == user.id)
+    base = select(models.Certificate).where(models.Certificate.user_id == user.id)
+    count_result = await db.execute(select(func.count()).select_from(base.subquery()))
+    total = count_result.scalar_one()
+    offset = (page - 1) * page_size
+    result = await db.execute(base.offset(offset).limit(page_size))
+    return schemas.PaginatedResponse[schemas.CertificateRead](
+        items=result.scalars().all(),
+        total=total,
+        page=page,
+        page_size=page_size,
     )
-    certificates = result.scalars().all()
-    return certificates
 
 
-@router.get("/{certificate_id}", response_model=schemas.CertificateRead)
+@router.get("/{id}", response_model=schemas.CertificateRead)
 async def read_user_certificate(
     certificate: schemas.CertificateRead = Depends(get_certificate),
 ):
@@ -54,14 +62,14 @@ async def create_user_certificate(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    certificate = models.Certificate(**payload.dict(), user_id=user.id)
+    certificate = models.Certificate(**payload.model_dump(), user_id=user.id)
     db.add(certificate)
     await db.commit()
     await db.refresh(certificate)
     return certificate
 
 
-@router.put("/{certificate_id}", response_model=schemas.CertificateRead)
+@router.patch("/{id}", response_model=schemas.CertificateRead)
 async def update_user_certificate(
     payload: schemas.CertificateUpdate,
     certificate: schemas.CertificateRead = Depends(get_certificate),
@@ -74,7 +82,7 @@ async def update_user_certificate(
     return certificate
 
 
-@router.delete("/{certificate_id}", response_model=schemas.CertificateRead)
+@router.delete("/{id}", response_model=schemas.CertificateRead)
 async def delete_user_certificate(
     certificate: schemas.CertificateRead = Depends(get_certificate),
     db: AsyncSession = Depends(get_async_session),

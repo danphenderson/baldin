@@ -1,7 +1,14 @@
 # Baldin CODEOWNERS
 # Changes to these paths require review from the listed owner(s).
 
-# Copilot customization surface
+# Shared agentic instruction tree
+AGENTS.md                           @danphenderson
+**/AGENTS.md                        @danphenderson
+
+# Copilot and Codex customization surface
+.codex/**                          @danphenderson
+.vscode/mcp.json                   @danphenderson
+.github/AGENTIC_SURFACE.md         @danphenderson
 .github/copilot-instructions.md    @danphenderson
 .github/instructions/**            @danphenderson
 .github/agents/**                  @danphenderson

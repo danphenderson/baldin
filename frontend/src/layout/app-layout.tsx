@@ -1,10 +1,30 @@
-import React, { useContext, useEffect, useState, useCallback, useRef } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import React, { useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
-  Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
-  AppBar, Toolbar, Typography, IconButton, Chip, Divider, Collapse,
-  useTheme, alpha, Tooltip, Badge, ClickAwayListener, useMediaQuery,
-} from '@mui/material';
+  Outlet,
+  useNavigate,
+  useLocation } from 'react-router-dom';
+import {
+  Box,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  AppBar,
+  Toolbar,
+  Typography,
+  IconButton,
+  Divider,
+  Collapse,
+  ButtonBase,
+  useTheme,
+  alpha,
+  Tooltip,
+  Badge,
+  ClickAwayListener,
+  useMediaQuery,
+  } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
   WorkOutline as LeadsIcon,
@@ -29,28 +49,55 @@ import {
   BusinessOutlined as CompaniesIcon,
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
-} from '@mui/icons-material';
+  Search as SearchIcon,
+  } from '@mui/icons-material';
+import Fuse from 'fuse.js';
 import { UserContext } from '../context/user-context';
 import { logout as logoutApi } from '../service/auth';
 import { getUnreadCount } from '../service/messages';
 import { useThemeMode } from '../theme/theme-provider';
 import { avatarUrl } from '../service/users';
-import { ToolbarHeaderContext, type ToolbarHeaderContent } from './toolbar-header-context';
+import { ToolbarHeaderContext,
+  type ToolbarHeaderContent } from './toolbar-header-context';
+import { useNotification } from '../context/notification-context';
 import SecondaryNavBar from '../component/common/secondary-nav-bar';
 import ErrorBoundary from '../component/common/error-boundary';
 import UserAvatar from '../component/common/user-avatar';
+import NewConversationDialog from '../component/new-conversation-dialog';
+import AgentFormDialog from '../component/agent-form-dialog';
+import LeadFormDialog from '../component/lead-form-dialog';
+import WorkflowFormDialog from '../component/workflow-form-dialog';
+import { ExtractorCreateModal } from '../component/extractor-modal';
+import { brandGradient,
+  motionTokens,
+  sidebarGradient,
+  StatusChip as Chip,
+} from '../design-system';
+import { radiusTokens, toRadiusPx } from '../design-system/tokens/radius';
+import { createAgent, type AgentCreate, type AgentUpdate } from '../service/agents';
+import { getCompanies, type CompanyRead } from '../service/companies';
+import { createLead, type LeadCreate, type LeadUpdate } from '../service/leads';
+import {
+  createOrchestrationPipeline,
+  type OrchestrationPipelineCreate,
+} from '../service/data-orchestration';
+import CommandPaletteDialog, { type CommandPaletteDisplayItem } from './command-palette-dialog';
+import {
+  buildCommandPaletteItems,
+  type CommandPaletteItem,
+} from './command-palette-items';
 import {
   getSecondaryNavItems,
   drawerSections,
   userRailItems,
   type NavigationItem,
-  type NavigationLinkItem,
-  type NavigationGroupItem,
   type NavIconKey,
 } from '../route/navigation';
 
 const DRAWER_WIDTH = 260;
 const DRAWER_COLLAPSED = 72;
+const COMMAND_PALETTE_STORAGE_KEY = 'baldin_command_palette_recent';
+const COMMAND_PALETTE_MAX_RECENT = 8;
 
 const navIcons: Record<NavIconKey, React.ReactNode> = {
   dashboard: <DashboardIcon />,
@@ -89,7 +136,53 @@ function collectDefaultExpanded(items: NavigationItem[], state: Record<string, b
 }
 
 const HEADER_ACTION_DIAL_ID = 'header-account-actions';
-const HEADER_ACTION_STAGGER_MS = 70;
+const HEADER_ACTION_STAGGER_MS = motionTokens.stagger.headerAction;
+
+function readRecentCommandIds(): string[] {
+  try {
+    const raw = localStorage.getItem(COMMAND_PALETTE_STORAGE_KEY);
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter((value): value is string => typeof value === 'string');
+  } catch {
+    return [];
+  }
+}
+
+function writeRecentCommandIds(commandIds: string[]): void {
+  localStorage.setItem(COMMAND_PALETTE_STORAGE_KEY, JSON.stringify(commandIds.slice(0, COMMAND_PALETTE_MAX_RECENT)));
+}
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  const tagName = target.tagName.toLowerCase();
+  if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') {
+    return true;
+  }
+
+  if (target.isContentEditable || target.closest('.ProseMirror')) {
+    return true;
+  }
+
+  return Boolean(target.closest('[contenteditable=""], [contenteditable="true"], [contenteditable="plaintext-only"]'));
+}
+
+function isApplePlatform(): boolean {
+  const platform = (
+    navigator as Navigator & { userAgentData?: { platform?: string } }
+  ).userAgentData?.platform ?? navigator.platform ?? navigator.userAgent;
+  return /mac|iphone|ipad|ipod/i.test(platform);
+}
 
 const AppLayout: React.FC = () => {
   const theme = useTheme();
@@ -98,6 +191,7 @@ const AppLayout: React.FC = () => {
   const location = useLocation();
   const { user, token, setToken, setUser } = useContext(UserContext);
   const { mode, toggleMode } = useThemeMode();
+  const { notify } = useNotification();
   const [collapsed, setCollapsed] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
     const initialState = drawerSections.reduce<Record<string, boolean>>((state, section) => {
@@ -111,7 +205,19 @@ const AppLayout: React.FC = () => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [toolbarHeader, setToolbarHeader] = useState<ToolbarHeaderContent | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [commandPaletteQuery, setCommandPaletteQuery] = useState('');
+  const [commandPaletteActiveIndex, setCommandPaletteActiveIndex] = useState(-1);
+  const [recentCommandIds, setRecentCommandIds] = useState<string[]>(() => readRecentCommandIds());
+  const [isNewConversationDialogOpen, setIsNewConversationDialogOpen] = useState(false);
+  const [isNewAgentDialogOpen, setIsNewAgentDialogOpen] = useState(false);
+  const [isNewLeadDialogOpen, setIsNewLeadDialogOpen] = useState(false);
+  const [leadCompanies, setLeadCompanies] = useState<CompanyRead[]>([]);
+  const [isWorkflowDialogOpen, setIsWorkflowDialogOpen] = useState(false);
+  const [isExtractorDialogOpen, setIsExtractorDialogOpen] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const commandPaletteInputRef = useRef<HTMLInputElement | null>(null);
+  const leadCompaniesRequestIdRef = useRef(0);
 
   const fetchUnread = useCallback(async () => {
     if (!token) return;
@@ -136,7 +242,7 @@ const AppLayout: React.FC = () => {
   }, [token, fetchUnread]);
 
   const drawerWidth = collapsed ? DRAWER_COLLAPSED : DRAWER_WIDTH;
-  const textTransition = 'opacity 0.2s ease, max-width 0.2s ease';
+  const textTransition = `opacity ${motionTokens.duration.standard}ms ${motionTokens.easing.standard}, max-width ${motionTokens.duration.standard}ms ${motionTokens.easing.standard}`;
   const accountRailWidth = isCompactToolbar ? 184 : 270;
   const secondaryNavItems = getSecondaryNavItems(location.pathname)
     ?.filter((item) => !item.superuserOnly || user?.is_superuser) ?? null;
@@ -217,6 +323,299 @@ const AppLayout: React.FC = () => {
     closeAccountDial();
   };
 
+  const shortcutLabel = useMemo(() => (isApplePlatform() ? '⌘K' : 'Ctrl+K'), []);
+
+  const focusCommandPaletteInput = useCallback(() => {
+    commandPaletteInputRef.current?.focus();
+    commandPaletteInputRef.current?.select();
+  }, []);
+
+  const closeCommandPalette = useCallback(() => {
+    setIsCommandPaletteOpen(false);
+    setCommandPaletteQuery('');
+    setCommandPaletteActiveIndex(-1);
+  }, []);
+
+  const hasNonPaletteDialogOpen = useCallback(() => (
+    Array.from(document.querySelectorAll('[role="dialog"]'))
+      .some((element) => (element as HTMLElement).dataset.commandPaletteDialog !== 'true')
+  ), []);
+
+  const openCommandPalette = useCallback(() => {
+    if (!isCommandPaletteOpen && hasNonPaletteDialogOpen()) {
+      return;
+    }
+
+    closeAccountDial();
+    setIsCommandPaletteOpen(true);
+  }, [closeAccountDial, hasNonPaletteDialogOpen, isCommandPaletteOpen]);
+
+  const pushRecentCommand = useCallback((commandId: string) => {
+    setRecentCommandIds((current) => {
+      const next = [commandId, ...current.filter((id) => id !== commandId)].slice(0, COMMAND_PALETTE_MAX_RECENT);
+      writeRecentCommandIds(next);
+      return next;
+    });
+  }, []);
+
+  const openNewConversationCommand = useCallback(() => {
+    setIsNewConversationDialogOpen(true);
+  }, []);
+
+  const openNewAgentCommand = useCallback(() => {
+    setIsNewAgentDialogOpen(true);
+  }, []);
+
+  const openNewLeadCommand = useCallback(async () => {
+    setLeadCompanies([]);
+    setIsNewLeadDialogOpen(true);
+
+    if (!token) {
+      return;
+    }
+
+    const requestId = leadCompaniesRequestIdRef.current + 1;
+    leadCompaniesRequestIdRef.current = requestId;
+
+    try {
+      const companies = await getCompanies(token);
+      if (leadCompaniesRequestIdRef.current !== requestId) {
+        return;
+      }
+      setLeadCompanies(companies);
+    } catch (error) {
+      if (leadCompaniesRequestIdRef.current !== requestId) {
+        return;
+      }
+      setLeadCompanies([]);
+      notify(error instanceof Error ? error.message : 'Failed to load companies', 'error');
+    }
+  }, [notify, token]);
+
+  const openNewDocumentCommand = useCallback(() => {
+    navigate('/workspace/new');
+  }, [navigate]);
+
+  const openNewWorkflowCommand = useCallback(() => {
+    setIsWorkflowDialogOpen(true);
+  }, []);
+
+  const openCreateExtractorCommand = useCallback(() => {
+    setIsExtractorDialogOpen(true);
+  }, []);
+
+  const handleCommandPaletteCreateAgent = useCallback(async (data: AgentCreate | AgentUpdate) => {
+    if (!token) {
+      return;
+    }
+
+    try {
+      const created = await createAgent(token, data as AgentCreate);
+      setIsNewAgentDialogOpen(false);
+      navigate(`/automation/agents/${created.id}`);
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Failed to create agent', 'error');
+      throw error;
+    }
+  }, [navigate, notify, token]);
+
+  const handleCommandPaletteCreateLead = useCallback(async (data: LeadCreate | LeadUpdate) => {
+    if (!token) {
+      return;
+    }
+
+    try {
+      await createLead(token, data as LeadCreate);
+      setIsNewLeadDialogOpen(false);
+      setLeadCompanies([]);
+      navigate('/leads');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Failed to create lead', 'error');
+      throw error;
+    }
+  }, [navigate, notify, token]);
+
+  const handleCommandPaletteCreateWorkflow = useCallback(async (data: OrchestrationPipelineCreate) => {
+    if (!token) {
+      return;
+    }
+
+    try {
+      await createOrchestrationPipeline(token, data);
+      navigate('/workflows');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Failed to create workflow', 'error');
+      throw error;
+    }
+  }, [navigate, notify, token]);
+
+  const commandPaletteItems = useMemo(() => buildCommandPaletteItems({
+    navigate,
+    actions: {
+      openNewMessage: openNewConversationCommand,
+      openNewAgent: openNewAgentCommand,
+      openNewLead: openNewLeadCommand,
+      openNewDocument: openNewDocumentCommand,
+      openNewWorkflow: openNewWorkflowCommand,
+      openCreateExtractor: openCreateExtractorCommand,
+      toggleTheme: handleThemeToggle,
+      signOut: handleLogout,
+    },
+  }), [
+    handleLogout,
+    handleThemeToggle,
+    navigate,
+    openCreateExtractorCommand,
+    openNewAgentCommand,
+    openNewConversationCommand,
+    openNewDocumentCommand,
+    openNewLeadCommand,
+    openNewWorkflowCommand,
+  ]);
+
+  const visibleCommandItems = useMemo(() => (
+    commandPaletteItems.filter((item) => item.visible?.({ isSuperuser }) ?? true)
+  ), [commandPaletteItems, isSuperuser]);
+
+  const commandItemsById = useMemo(() => (
+    new Map(visibleCommandItems.map((item) => [item.id, item]))
+  ), [visibleCommandItems]);
+
+  const searchedCommandItems = useMemo(() => {
+    const trimmedQuery = commandPaletteQuery.trim();
+    if (!trimmedQuery) {
+      return visibleCommandItems;
+    }
+
+    const fuse = new Fuse(visibleCommandItems, {
+      threshold: 0.32,
+      ignoreLocation: true,
+      keys: [
+        { name: 'title', weight: 0.6 },
+        { name: 'subtitle', weight: 0.2 },
+        { name: 'keywords', weight: 0.2 },
+      ],
+    });
+
+    return fuse.search(trimmedQuery).map((result) => result.item);
+  }, [commandPaletteQuery, visibleCommandItems]);
+
+  const commandPaletteDisplayItems = useMemo<CommandPaletteDisplayItem[]>(() => {
+    const trimmedQuery = commandPaletteQuery.trim();
+    const toDisplayItem = (
+      item: CommandPaletteItem,
+      renderSection: CommandPaletteDisplayItem['renderSection'],
+    ): CommandPaletteDisplayItem => ({
+      id: item.id,
+      title: item.title,
+      subtitle: item.subtitle,
+      icon: item.icon,
+      renderSection,
+    });
+
+    if (trimmedQuery) {
+      return searchedCommandItems.map((item) => toDisplayItem(item, item.section));
+    }
+
+    const visibleById = new Map(visibleCommandItems.map((item) => [item.id, item]));
+    const recentItems = recentCommandIds
+      .map((id) => visibleById.get(id))
+      .filter((item): item is CommandPaletteItem => Boolean(item));
+    const recentIds = new Set(recentItems.map((item) => item.id));
+    const remainingItems = visibleCommandItems.filter((item) => !recentIds.has(item.id));
+
+    return [
+      ...recentItems.map((item) => toDisplayItem(item, 'recent')),
+      ...remainingItems.filter((item) => item.section === 'actions').map((item) => toDisplayItem(item, 'actions')),
+      ...remainingItems.filter((item) => item.section === 'navigation').map((item) => toDisplayItem(item, 'navigation')),
+    ];
+  }, [commandPaletteQuery, recentCommandIds, searchedCommandItems, visibleCommandItems]);
+
+  const handleCommandPaletteSelect = useCallback(async (displayItem: CommandPaletteDisplayItem) => {
+    const command = commandItemsById.get(displayItem.id);
+    if (!command) {
+      return;
+    }
+
+    pushRecentCommand(command.id);
+    closeCommandPalette();
+    await command.run();
+  }, [closeCommandPalette, commandItemsById, pushRecentCommand]);
+
+  useEffect(() => {
+    if (!isCommandPaletteOpen) {
+      return;
+    }
+
+    if (commandPaletteDisplayItems.length === 0) {
+      if (commandPaletteActiveIndex !== -1) {
+        setCommandPaletteActiveIndex(-1);
+      }
+      return;
+    }
+
+    if (commandPaletteActiveIndex < 0 || commandPaletteActiveIndex >= commandPaletteDisplayItems.length) {
+      setCommandPaletteActiveIndex(0);
+    }
+  }, [commandPaletteActiveIndex, commandPaletteDisplayItems.length, isCommandPaletteOpen]);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+
+      if ((event.metaKey || event.ctrlKey) && key === 'k') {
+        event.preventDefault();
+
+        if (!isCommandPaletteOpen && hasNonPaletteDialogOpen()) {
+          return;
+        }
+
+        if (isCommandPaletteOpen) {
+          focusCommandPaletteInput();
+          return;
+        }
+
+        openCommandPalette();
+        return;
+      }
+
+      if (event.key === 'Escape' && isCommandPaletteOpen) {
+        event.preventDefault();
+        closeCommandPalette();
+        return;
+      }
+
+      if (
+        event.key === '/'
+        && !event.metaKey
+        && !event.ctrlKey
+        && !event.altKey
+        && !event.shiftKey
+      ) {
+        if (
+          isCommandPaletteOpen
+          || event.isComposing
+          || hasNonPaletteDialogOpen()
+          || isEditableTarget(event.target)
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+        openCommandPalette();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [
+    closeCommandPalette,
+    focusCommandPaletteInput,
+    hasNonPaletteDialogOpen,
+    isCommandPaletteOpen,
+    openCommandPalette,
+  ]);
+
   const userAvatarSrc = user
     ? avatarUrl(user.id, (user as any).avatar_uri)
     : undefined;
@@ -273,7 +672,7 @@ const AppLayout: React.FC = () => {
               <ListItemButton
                 onClick={() => toggleGroup(item.id)}
                 sx={{
-                  borderRadius: 2,
+                  borderRadius: toRadiusPx(radiusTokens.sm),
                   minHeight: isNested ? 40 : 44,
                   px: collapsed ? 1.75 : 2,
                   pl: collapsed ? 1.75 : 2 + (depth * 1.5),
@@ -348,7 +747,7 @@ const AppLayout: React.FC = () => {
           <ListItemButton
             onClick={() => navigate(item.path)}
             sx={{
-              borderRadius: 2,
+              borderRadius: toRadiusPx(radiusTokens.sm),
               minHeight: isNested ? 40 : 44,
               px: collapsed ? 1.75 : 2,
               pl: collapsed ? 1.75 : 2 + (depth * 1.5),
@@ -430,7 +829,7 @@ const AppLayout: React.FC = () => {
             color: 'primary.main',
             px: 2,
             py: 1,
-            borderRadius: 1,
+            borderRadius: toRadiusPx(radiusTokens.xs),
             boxShadow: 4,
             fontWeight: 600,
             fontSize: '0.875rem',
@@ -454,9 +853,7 @@ const AppLayout: React.FC = () => {
             boxSizing: 'border-box',
             display: 'flex',
             flexDirection: 'column',
-            background: theme.palette.mode === 'dark'
-              ? 'linear-gradient(180deg, #0f1629 0%, #0a0e1a 100%)'
-              : theme.palette.background.paper,
+            background: sidebarGradient(theme),
             borderRight: `1px solid ${theme.palette.divider}`,
             overflowX: 'hidden',
           },
@@ -482,7 +879,7 @@ const AppLayout: React.FC = () => {
                 sx={{
                   width: 40,
                   height: 40,
-                  borderRadius: '12px',
+                  borderRadius: toRadiusPx(radiusTokens.lg),
                   color: theme.palette.text.secondary,
                   border: `1px solid ${alpha(theme.palette.text.primary, 0.08)}`,
                   backgroundColor: alpha(theme.palette.common.white, theme.palette.mode === 'dark' ? 0.04 : 0.5),
@@ -501,20 +898,20 @@ const AppLayout: React.FC = () => {
                 sx={{
                   width: 36,
                   height: 36,
-                  borderRadius: '10px',
+                  borderRadius: toRadiusPx(radiusTokens.md),
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  background: brandGradient(theme),
                 }}
               >
-                <AutoAwesomeIcon sx={{ color: '#fff', fontSize: 20 }} />
+                <AutoAwesomeIcon sx={{ color: theme.palette.common.white, fontSize: 20 }} />
               </Box>
               <Typography
                 variant="h6"
                 sx={{
                   fontWeight: 800,
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  background: brandGradient(theme),
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   opacity: 1,
@@ -588,7 +985,7 @@ const AppLayout: React.FC = () => {
                 px: collapsed ? 0 : 1.5,
                 py: collapsed ? 0.75 : 1.25,
                 mb: 0.75,
-                borderRadius: 3,
+                borderRadius: toRadiusPx(radiusTokens.lg),
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: collapsed ? 'center' : 'flex-start',
@@ -686,10 +1083,60 @@ const AppLayout: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'flex-end',
+                  gap: 1.25,
                   minWidth: 0,
                   maxWidth: '100%',
                 }}
               >
+                <ButtonBase
+                  onClick={openCommandPalette}
+                  aria-label={`Open command palette (${shortcutLabel})`}
+                  sx={{
+                    minWidth: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    px: 1.25,
+                    py: 0.9,
+                    borderRadius: '999px',
+                    backgroundColor: alpha(theme.palette.background.paper, theme.palette.mode === 'dark' ? 0.62 : 0.82),
+                    border: `1px solid ${alpha(theme.palette.text.primary, 0.08)}`,
+                    boxShadow: `0 10px 24px ${alpha(theme.palette.common.black, theme.palette.mode === 'dark' ? 0.2 : 0.08)}`,
+                    transition: 'background-color 0.2s ease, transform 0.2s ease',
+                    '&:hover': {
+                      backgroundColor: alpha(theme.palette.background.paper, theme.palette.mode === 'dark' ? 0.74 : 0.94),
+                      transform: 'translateY(-1px)',
+                    },
+                  }}
+                >
+                  <SearchIcon sx={{ fontSize: 18, color: 'text.secondary', flexShrink: 0 }} />
+                  {!isCompactToolbar && (
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: 'text.secondary',
+                        fontWeight: 500,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Search or run…
+                    </Typography>
+                  )}
+                  <Box
+                    component="span"
+                    sx={{
+                      px: 0.75,
+                      py: 0.2,
+                      borderRadius: '999px',
+                      backgroundColor: alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.12 : 0.06),
+                    }}
+                  >
+                    <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                      {shortcutLabel}
+                    </Typography>
+                  </Box>
+                </ButtonBase>
+
                 <Box
                   id={HEADER_ACTION_DIAL_ID}
                   role="group"
@@ -730,10 +1177,10 @@ const AppLayout: React.FC = () => {
                         }}
                       >
                         <Chip
-                          clickable
+                          clickable={isAccountDialOpen && !action.disabled}
                           icon={action.icon}
                           label={action.label}
-                          onClick={action.disabled ? undefined : action.onClick}
+                          onClick={isAccountDialOpen && !action.disabled ? action.onClick : undefined}
                           sx={{
                             height: 38,
                             borderRadius: '999px',
@@ -821,7 +1268,7 @@ const AppLayout: React.FC = () => {
                           fontWeight: 700,
                           background: userAvatarSrc
                             ? undefined
-                            : `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                            : brandGradient(theme),
                         }}
                       />
                     </Badge>
@@ -852,6 +1299,66 @@ const AppLayout: React.FC = () => {
           </ToolbarHeaderContext.Provider>
         </Box>
       </Box>
+
+      <CommandPaletteDialog
+        open={isCommandPaletteOpen}
+        query={commandPaletteQuery}
+        items={commandPaletteDisplayItems}
+        activeIndex={commandPaletteActiveIndex}
+        shortcutLabel={shortcutLabel}
+        inputRef={commandPaletteInputRef}
+        onClose={closeCommandPalette}
+        onQueryChange={(value) => {
+          setCommandPaletteQuery(value);
+          setCommandPaletteActiveIndex(0);
+        }}
+        onActiveIndexChange={setCommandPaletteActiveIndex}
+        onSelect={handleCommandPaletteSelect}
+      />
+
+      <NewConversationDialog
+        open={isNewConversationDialogOpen}
+        onClose={() => setIsNewConversationDialogOpen(false)}
+        onCreated={(conversationId) => {
+          setIsNewConversationDialogOpen(false);
+          navigate(`/network/messages/${conversationId}`);
+        }}
+      />
+
+      <AgentFormDialog
+        open={isNewAgentDialogOpen}
+        onClose={() => setIsNewAgentDialogOpen(false)}
+        onSave={handleCommandPaletteCreateAgent}
+        agent={null}
+      />
+
+      <LeadFormDialog
+        open={isNewLeadDialogOpen}
+        onClose={() => {
+          leadCompaniesRequestIdRef.current += 1;
+          setIsNewLeadDialogOpen(false);
+          setLeadCompanies([]);
+        }}
+        onSave={handleCommandPaletteCreateLead}
+        lead={null}
+        companies={leadCompanies}
+      />
+
+      <WorkflowFormDialog
+        open={isWorkflowDialogOpen}
+        onClose={() => setIsWorkflowDialogOpen(false)}
+        onSave={handleCommandPaletteCreateWorkflow}
+      />
+
+      <ExtractorCreateModal
+        open={isExtractorDialogOpen}
+        onClose={() => setIsExtractorDialogOpen(false)}
+        onSave={() => {
+          setIsExtractorDialogOpen(false);
+          navigate('/workflows/extractors');
+        }}
+        onError={(message) => notify(message, 'error')}
+      />
     </Box>
   );
 };

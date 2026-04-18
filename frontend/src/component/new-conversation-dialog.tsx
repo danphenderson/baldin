@@ -5,10 +5,6 @@ import {
   Button,
   Checkbox,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   FormControlLabel,
   List,
   ListItem,
@@ -20,8 +16,14 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import {
+  SurfaceDialog as Dialog,
+  SurfaceDialogActions as DialogActions,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogTitle as DialogTitle,
+} from '../design-system';
 import { UserContext } from '../context/user-context';
-import { getConnections, type ConnectionRead } from '../service/connections';
+import { getAllConnections, type ConnectionRead } from '../service/connections';
 import { createConversation } from '../service/messages';
 import { avatarUrl } from '../service/users';
 
@@ -56,8 +58,8 @@ const NewConversationDialog: React.FC<NewConversationDialogProps> = ({
     if (!token) return;
     setLoadingConnections(true);
     try {
-      const res = await getConnections(token, { status: 'accepted', page: 1, page_size: 500 });
-      setConnections(res.items ?? []);
+      const res = await getAllConnections(token, { status: 'accepted' });
+      setConnections(res ?? []);
     } catch {
       setConnections([]);
     }
@@ -80,12 +82,15 @@ const NewConversationDialog: React.FC<NewConversationDialogProps> = ({
   }, [open, loadConnections, initialRecipientId]);
 
   const connectedUsers = connections.map((c) => {
-    const other = c.requester.user_id === currentUserId ? c.addressee : c.requester;
+    const other =
+      c.requester.user_id === currentUserId ? c.addressee : c.requester;
     return other;
   });
 
   const filteredUsers = search.trim()
-    ? connectedUsers.filter((u) => u.display_name.toLowerCase().includes(search.toLowerCase().trim()))
+    ? connectedUsers.filter((u) =>
+        u.display_name.toLowerCase().includes(search.toLowerCase().trim()),
+      )
     : connectedUsers;
 
   const toggleUser = (userId: string) => {
@@ -118,11 +123,13 @@ const NewConversationDialog: React.FC<NewConversationDialogProps> = ({
       const conv = await createConversation(token, {
         participant_user_ids: Array.from(selected),
         type: isGroup ? 'group' : 'direct',
-        title: isGroup ? (groupTitle.trim() || null) : null,
+        title: isGroup ? groupTitle.trim() || null : null,
       });
       onCreated(conv.id);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to create conversation');
+      setError(
+        e instanceof Error ? e.message : 'Failed to create conversation',
+      );
     }
     setCreating(false);
   };
@@ -135,7 +142,9 @@ const NewConversationDialog: React.FC<NewConversationDialogProps> = ({
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <FormControlLabel
-            control={<Switch checked={isGroup} onChange={(_, v) => setIsGroup(v)} />}
+            control={
+              <Switch checked={isGroup} onChange={(_, v) => setIsGroup(v)} />
+            }
             label="Group conversation"
           />
 
@@ -166,7 +175,11 @@ const NewConversationDialog: React.FC<NewConversationDialogProps> = ({
               <CircularProgress size={28} />
             </Box>
           ) : filteredUsers.length === 0 ? (
-            <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ py: 2, textAlign: 'center' }}
+            >
               {connectedUsers.length === 0
                 ? 'No accepted connections. Connect with someone first.'
                 : 'No matching connections.'}
@@ -186,7 +199,10 @@ const NewConversationDialog: React.FC<NewConversationDialogProps> = ({
                       />
                     ) : null}
                     <ListItemAvatar>
-                      <Avatar src={avatarUrl(u.user_id, u.avatar_uri)} sx={{ width: 36, height: 36 }}>
+                      <Avatar
+                        src={avatarUrl(u.user_id, u.avatar_uri)}
+                        sx={{ width: 36, height: 36 }}
+                      >
                         {u.display_name.charAt(0)}
                       </Avatar>
                     </ListItemAvatar>
@@ -211,12 +227,18 @@ const NewConversationDialog: React.FC<NewConversationDialogProps> = ({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={creating}>Cancel</Button>
+        <Button onClick={onClose} disabled={creating}>
+          Cancel
+        </Button>
         <Button
           variant="contained"
           onClick={handleCreate}
           disabled={creating || !canCreate}
-          startIcon={creating ? <CircularProgress size={16} color="inherit" /> : undefined}
+          startIcon={
+            creating ? (
+              <CircularProgress size={16} color="inherit" />
+            ) : undefined
+          }
         >
           Start Conversation
         </Button>

@@ -1,6 +1,47 @@
 import react from '@vitejs/plugin-react';
+import { resolve } from 'node:path';
+import { fileURLToPath, URL } from 'node:url';
 import { loadEnv } from 'vite';
-import { defineConfig } from 'vitest/config';
+import { defineConfig, type Plugin } from 'vitest/config';
+
+const isAdminAppPath = (pathname: string): boolean => (
+  pathname === '/admin' || pathname.startsWith('/admin/')
+);
+
+function adminSpaFallbackPlugin(): Plugin {
+  const rewriteRequest = (url: string | undefined): string | undefined => {
+    if (!url) {
+      return url;
+    }
+
+    const pathname = url.split('?')[0] ?? '';
+    if (!isAdminAppPath(pathname)) {
+      return url;
+    }
+
+    if (pathname.endsWith('.html') || pathname.includes('/@') || /\.[a-z0-9]+$/i.test(pathname)) {
+      return url;
+    }
+
+    return '/admin/index.html';
+  };
+
+  return {
+    name: 'baldin-admin-spa-fallback',
+    configurePreviewServer(server) {
+      server.middlewares.use((req, _res, next) => {
+        req.url = rewriteRequest(req.url);
+        next();
+      });
+    },
+    configureServer(server) {
+      server.middlewares.use((req, _res, next) => {
+        req.url = rewriteRequest(req.url);
+        next();
+      });
+    },
+  };
+}
 
 export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -16,9 +57,18 @@ export default defineConfig(({ mode, command }) => {
   }
 
   return {
-    plugins: [react()],
+    plugins: [react(), adminSpaFallbackPlugin()],
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+      },
+    },
     build: {
       rollupOptions: {
+        input: [
+          resolve(process.cwd(), 'index.html'),
+          resolve(process.cwd(), 'admin/index.html'),
+        ],
         output: {
           manualChunks: {
             vendor: ['react', 'react-dom', 'react-router-dom'],
@@ -41,7 +91,8 @@ export default defineConfig(({ mode, command }) => {
     test: {
       environment: 'jsdom',
       globals: true,
-      setupFiles: './src/setupTests.ts',
+      include: ['./test/**/*.{test,spec}.{ts,tsx}'],
+      setupFiles: './test/setupTests.ts',
     },
   };
 });

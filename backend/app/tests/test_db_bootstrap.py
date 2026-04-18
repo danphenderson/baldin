@@ -1,9 +1,11 @@
-"""Regression tests for local-first bootstrap schema repair."""
+"""Regression tests for migration bootstrap and the transitional legacy path."""
 
 import asyncio
 from collections.abc import Awaitable, Callable
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from typing import Any
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from fastapi_users.password import PasswordHelper
@@ -76,162 +78,401 @@ async def _table_exists(table_name: str) -> bool:
         return bool(result.scalar_one())
 
 
-async def test_create_db_and_tables_repairs_existing_local_schema() -> None:
+async def _check_constraint_names(table_name: str) -> set[str]:
+    async with session_context() as session:
+        result = await session.execute(
+            text(
+                """
+                SELECT con.conname
+                FROM pg_constraint AS con
+                JOIN pg_class AS rel ON rel.oid = con.conrelid
+                JOIN pg_namespace AS ns ON ns.oid = rel.relnamespace
+                WHERE ns.nspname = 'public'
+                  AND rel.relname = :table_name
+                  AND con.contype = 'c'
+                """
+            ),
+            {"table_name": table_name},
+        )
+        return {row[0] for row in result.all()}
+
+
+async def _foreign_key_constraint_names(table_name: str) -> set[str]:
+    async with session_context() as session:
+        result = await session.execute(
+            text(
+                """
+                SELECT con.conname
+                FROM pg_constraint AS con
+                JOIN pg_class AS rel ON rel.oid = con.conrelid
+                JOIN pg_namespace AS ns ON ns.oid = rel.relnamespace
+                WHERE ns.nspname = 'public'
+                  AND rel.relname = :table_name
+                  AND con.contype = 'f'
+                """
+            ),
+            {"table_name": table_name},
+        )
+        return {row[0] for row in result.all()}
+
+
+async def _index_names(table_name: str) -> set[str]:
+    async with session_context() as session:
+        result = await session.execute(
+            text(
+                """
+                SELECT indexname
+                FROM pg_indexes
+                WHERE schemaname = 'public' AND tablename = :table_name
+                """
+            ),
+            {"table_name": table_name},
+        )
+        return {row[0] for row in result.all()}
+
+
+class _LockRecordingConnection:
+    def __init__(self, executed: list[tuple[str, dict[str, Any] | None]]) -> None:
+        self._executed = executed
+
+    async def execute(self, statement, params: dict[str, Any] | None = None) -> None:
+        """Record the advisory-lock SQL text and params instead of hitting a DB."""
+        self._executed.append((getattr(statement, "text", str(statement)), params))
+
+
+def _fake_connect_factory(
+    executed: list[tuple[str, dict[str, Any] | None]],
+) -> Callable[[], Any]:
+    """Build an async connect() stand-in that yields a recording connection."""
+
+    @asynccontextmanager
+    async def fake_connect():
+        yield _LockRecordingConnection(executed)
+
+    return fake_connect
+
+
+async def _run_sync_in_fake_to_thread(fn, *args: object, **kwargs: object) -> Any:
+    """Test helper that runs a to_thread target inline and returns its result."""
+    return fn(*args, **kwargs)
+
+
+async def test_create_db_and_tables_rejects_existing_schema_without_alembic_version(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     await async_engine.dispose()
     await drop_and_create_db_and_tables()
 
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            utils.random_email(),
-            password_helper.hash("geralt"),
-            session,
-        )
-        document = models.Document(
-            user_id=user.id, kind="freeform", title="Local draft"
-        )
-        session.add(document)
-        await session.flush()
+    commands: list[tuple[list[str], str | None]] = []
 
-        version = models.DocumentVersion(
-            document_id=document.id,
-            version_number=1,
-            name="v1",
-            content="hello world",
-        )
-        session.add(version)
-        await session.flush()
+    def fake_subprocess_run(command, *, capture_output, text, cwd, env):
+        commands.append((list(command), env.get("ALEMBIC_DATABASE_URL")))
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
 
-        extractor = models.Extractor(
-            name="Bootstrap extractor",
-            instruction="Extract contact data.",
-            json_schema={"type": "object"},
-            user_id=user.id,
-        )
-        session.add(extractor)
-        await session.flush()
+    monkeypatch.delenv("LEGACY_BOOTSTRAP", raising=False)
+    monkeypatch.setattr(db_module.subprocess, "run", fake_subprocess_run)
 
-        crawler_pipeline = models.CrawlerPipeline(
-            name="Bootstrap crawler",
-            source="linkedin",
-            query_definition={"keywords": ["python"]},
-            created_by_user_id=user.id,
-        )
-        session.add(crawler_pipeline)
-        await session.flush()
+    with pytest.raises(
+        RuntimeError, match="Existing schema detected without alembic_version"
+    ):
+        await create_db_and_tables()
 
-        document.head_version_id = version.id
-        await session.commit()
+    assert commands == []
 
-        user_id = user.id
-        document_id = document.id
-        version_id = version.id
-        extractor_id = extractor.id
-        crawler_pipeline_id = crawler_pipeline.id
 
-    async with session_context() as session:
-        await session.execute(text("DROP TABLE IF EXISTS document_shares CASCADE"))
-        await session.execute(text("DROP TABLE IF EXISTS document_activities CASCADE"))
-        await session.execute(
-            text("ALTER TABLE users DROP COLUMN IF EXISTS headline CASCADE")
-        )
-        await session.execute(
-            text("ALTER TABLE users DROP COLUMN IF EXISTS bio CASCADE")
-        )
-        await session.execute(
-            text("ALTER TABLE users DROP COLUMN IF EXISTS is_discoverable CASCADE")
-        )
-        await session.execute(
-            text("ALTER TABLE users DROP COLUMN IF EXISTS subscription_tier CASCADE")
-        )
-        await session.execute(
-            text(
-                "ALTER TABLE users DROP COLUMN IF EXISTS subscription_expires_at CASCADE"
-            )
-        )
-        await session.execute(
-            text("ALTER TABLE users DROP COLUMN IF EXISTS placement_status CASCADE")
-        )
-        await session.execute(
-            text("ALTER TABLE users DROP COLUMN IF EXISTS placement_date CASCADE")
-        )
-        await session.execute(
-            text("ALTER TABLE documents DROP COLUMN IF EXISTS yjs_state CASCADE")
-        )
-        await session.execute(
-            text(
-                "ALTER TABLE document_versions DROP COLUMN IF EXISTS content_format CASCADE"
-            )
-        )
-        await session.execute(
-            text(
-                "ALTER TABLE document_versions DROP COLUMN IF EXISTS source_file CASCADE"
-            )
-        )
-        await session.execute(
-            text(
-                "ALTER TABLE extractors DROP COLUMN IF EXISTS requires_approval CASCADE"
-            )
-        )
-        await session.execute(
-            text(
-                "ALTER TABLE crawler_pipelines DROP COLUMN IF EXISTS requires_approval CASCADE"
-            )
-        )
-        await session.commit()
+async def test_drop_and_create_db_and_tables_bootstraps_cell_doc_schema() -> None:
+    await async_engine.dispose()
+    await drop_and_create_db_and_tables()
+
+    assert await _table_exists("agents")
+    assert await _table_exists("agent_runs")
+    assert await _table_exists("agent_chat_sessions")
+    assert await _table_exists("agent_chat_messages")
+    assert await _table_exists("document_blocks")
+    assert "configuration" in await _column_names("agents")
+    assert "input_context" in await _column_names("agent_runs")
+    assert "application_id" in await _column_names("agent_chat_sessions")
+    assert "message_count" in await _column_names("agent_chat_sessions")
+    assert "status" in await _column_names("agent_chat_sessions")
+    assert "session_id" in await _column_names("agent_chat_messages")
+    assert "role" in await _column_names("agent_chat_messages")
+    assert "metadata" in await _column_names("agent_chat_messages")
+    assert "block_snapshot" in await _column_names("document_versions")
+    assert "block_id" in await _column_names("document_activities")
+    assert await _column_type("agents", "configuration") == ("jsonb", "jsonb")
+    assert await _column_type("agent_runs", "input_context") == ("jsonb", "jsonb")
+    assert await _column_type("agent_chat_sessions", "message_count") == (
+        "integer",
+        "int4",
+    )
+    assert await _column_type("agent_chat_sessions", "last_message_at") == (
+        "timestamp with time zone",
+        "timestamptz",
+    )
+    assert await _column_type("agent_chat_messages", "metadata") == ("jsonb", "jsonb")
+    assert (
+        "document_activities_block_id_fkey"
+        not in await _foreign_key_constraint_names("document_activities")
+    )
+
+    assert {"ck_agents_kind"}.issubset(await _check_constraint_names("agents"))
+    assert {
+        "ck_agent_runs_trigger_kind",
+        "ck_agent_runs_status",
+        "ck_agent_runs_source_surface_kind",
+        "ck_agent_runs_apply_status",
+    }.issubset(await _check_constraint_names("agent_runs"))
+    assert {"ck_agent_chat_sessions_status"}.issubset(
+        await _check_constraint_names("agent_chat_sessions")
+    )
+    assert {"ck_agent_chat_messages_role"}.issubset(
+        await _check_constraint_names("agent_chat_messages")
+    )
+    assert {
+        "agent_chat_sessions_agent_id_fkey",
+        "agent_chat_sessions_application_id_fkey",
+        "agent_chat_sessions_user_id_fkey",
+    }.issubset(await _foreign_key_constraint_names("agent_chat_sessions"))
+    assert {"agent_chat_messages_session_id_fkey"}.issubset(
+        await _foreign_key_constraint_names("agent_chat_messages")
+    )
+    assert {
+        "ck_documents_kind",
+        "ck_documents_status",
+    }.issubset(await _check_constraint_names("documents"))
+    assert {"ck_document_versions_content_format"}.issubset(
+        await _check_constraint_names("document_versions")
+    )
+    assert {"ck_document_blocks_block_type"}.issubset(
+        await _check_constraint_names("document_blocks")
+    )
+    assert {"ck_document_activities_activity_type"}.issubset(
+        await _check_constraint_names("document_activities")
+    )
+    assert {"ck_document_shares_role"}.issubset(
+        await _check_constraint_names("document_shares")
+    )
+    assert {"ck_orchestration_events_status"}.issubset(
+        await _check_constraint_names("orchestration_events")
+    )
+    assert {"ck_connections_status"}.issubset(
+        await _check_constraint_names("connections")
+    )
+    assert {"ck_conversations_type"}.issubset(
+        await _check_constraint_names("conversations")
+    )
+    assert {"ck_conversation_participants_role"}.issubset(
+        await _check_constraint_names("conversation_participants")
+    )
+    assert {
+        "ix_agent_chat_sessions_agent",
+        "ix_agent_chat_sessions_application_id",
+        "ix_agent_chat_sessions_user_updated",
+    }.issubset(await _index_names("agent_chat_sessions"))
+    assert {
+        "ix_agent_chat_messages_session_created",
+    }.issubset(await _index_names("agent_chat_messages"))
+    assert {
+        "ix_agent_runs_source_surface_kind",
+        "ix_agent_runs_source_document_id",
+        "ix_agent_runs_source_field_key",
+        "ix_agent_runs_source_route",
+        "ix_agent_runs_source_anchor_id",
+        "ix_agent_runs_apply_status",
+    }.issubset(await _index_names("agent_runs"))
+    assert {
+        "ck_action_items_status",
+        "ck_action_items_kind",
+        "ck_action_items_priority",
+    }.issubset(await _check_constraint_names("action_items"))
+
+
+async def test_create_db_and_tables_applies_head_without_document_activity_block_fk(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await async_engine.dispose()
+
+    async with async_engine.begin() as conn:
+        await db_module._terminate_other_test_db_sessions(conn)
+        await conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+        await conn.execute(text("CREATE SCHEMA public"))
+        await conn.execute(text("GRANT ALL ON SCHEMA public TO postgres"))
+        await conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
+
+    monkeypatch.delenv("LEGACY_BOOTSTRAP", raising=False)
+    await create_db_and_tables()
+
+    assert await _table_exists("agents")
+    assert await _table_exists("agent_runs")
+    assert await _table_exists("agent_chat_sessions")
+    assert await _table_exists("agent_chat_messages")
+    assert await _table_exists("document_activities")
+    assert (
+        "document_activities_block_id_fkey"
+        not in await _foreign_key_constraint_names("document_activities")
+    )
+    assert {"ck_agents_kind"}.issubset(await _check_constraint_names("agents"))
+    assert {
+        "ck_agent_runs_trigger_kind",
+        "ck_agent_runs_status",
+        "ck_agent_runs_source_surface_kind",
+        "ck_agent_runs_apply_status",
+    }.issubset(await _check_constraint_names("agent_runs"))
+    assert {"ck_agent_chat_sessions_status"}.issubset(
+        await _check_constraint_names("agent_chat_sessions")
+    )
+    assert {"ck_agent_chat_messages_role"}.issubset(
+        await _check_constraint_names("agent_chat_messages")
+    )
+    assert {
+        "agent_chat_sessions_agent_id_fkey",
+        "agent_chat_sessions_application_id_fkey",
+        "agent_chat_sessions_user_id_fkey",
+    }.issubset(await _foreign_key_constraint_names("agent_chat_sessions"))
+    assert {"agent_chat_messages_session_id_fkey"}.issubset(
+        await _foreign_key_constraint_names("agent_chat_messages")
+    )
+
+
+async def test_create_db_and_tables_uses_legacy_bootstrap_when_flag_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    run_sync_calls: list[Callable[[object], None]] = []
+
+    class FakeConnection:
+        async def run_sync(self, fn: Callable[[object], None]) -> None:
+            run_sync_calls.append(fn)
+
+    @asynccontextmanager
+    async def fake_begin():
+        yield FakeConnection()
+
+    monkeypatch.setenv("LEGACY_BOOTSTRAP", "1")
+    monkeypatch.setattr(
+        db_module,
+        "async_engine",
+        SimpleNamespace(begin=fake_begin),
+    )
+    monkeypatch.setattr(
+        db_module,
+        "run_alembic_migrations",
+        lambda: pytest.fail("Alembic path should not run when LEGACY_BOOTSTRAP=1"),
+    )
 
     await create_db_and_tables()
 
-    assert await _table_exists("document_shares")
-    assert await _table_exists("document_activities")
-    assert {
-        "headline",
-        "bio",
-        "is_discoverable",
-        "subscription_tier",
-        "subscription_expires_at",
-        "placement_status",
-        "placement_date",
-    }.issubset(await _column_names("users"))
-    assert {"yjs_state"}.issubset(await _column_names("documents"))
-    assert {"content_format", "source_file"}.issubset(
-        await _column_names("document_versions")
+    assert run_sync_calls == [db_module._create_and_sync_schema]
+
+
+async def test_create_db_and_tables_ignores_legacy_bootstrap_outside_local_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stamp_mock = AsyncMock(return_value=None)
+    migrate_mock = AsyncMock(return_value=None)
+
+    @asynccontextmanager
+    async def fail_begin():
+        pytest.fail("Legacy bootstrap path should not run outside DEV/PYTEST")
+        yield
+
+    async def fake_to_thread(fn, *args, **kwargs):
+        del args, kwargs
+        await migrate_mock()
+        return fn()
+
+    def run_alembic_mock() -> None:
+        pass
+
+    monkeypatch.setenv("LEGACY_BOOTSTRAP", "1")
+    monkeypatch.setattr(db_module.conf.settings, "ENVIRONMENT", "PROD")
+    monkeypatch.setattr(db_module, "_stamp_existing_schema_if_needed", stamp_mock)
+    monkeypatch.setattr(db_module.asyncio, "to_thread", fake_to_thread)
+    monkeypatch.setattr(db_module, "run_alembic_migrations", run_alembic_mock)
+    monkeypatch.setattr(db_module, "async_engine", SimpleNamespace(begin=fail_begin))
+
+    await create_db_and_tables()
+
+    stamp_mock.assert_awaited_once()
+    migrate_mock.assert_awaited_once()
+
+
+async def test_create_db_and_tables_serializes_alembic_migrations_with_advisory_lock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stamp_mock = AsyncMock(return_value=None)
+    executed: list[tuple[str, dict[str, Any] | None]] = []
+
+    run_alembic_mock = Mock()
+
+    def run_alembic() -> None:
+        run_alembic_mock()
+
+    monkeypatch.delenv("LEGACY_BOOTSTRAP", raising=False)
+    monkeypatch.setattr(db_module.conf.settings, "ENVIRONMENT", "PROD")
+    monkeypatch.setattr(db_module, "_stamp_existing_schema_if_needed", stamp_mock)
+    monkeypatch.setattr(db_module.asyncio, "to_thread", _run_sync_in_fake_to_thread)
+    monkeypatch.setattr(db_module, "run_alembic_migrations", run_alembic)
+    monkeypatch.setattr(
+        db_module,
+        "async_engine",
+        SimpleNamespace(connect=_fake_connect_factory(executed)),
     )
-    assert {"requires_approval"}.issubset(await _column_names("extractors"))
-    assert {"requires_approval"}.issubset(await _column_names("crawler_pipelines"))
 
-    async with session_context() as session:
-        repaired_user = await session.get(models.User, user_id)
-        repaired_document = await session.get(models.Document, document_id)
-        repaired_version = await session.get(models.DocumentVersion, version_id)
-        repaired_extractor = await session.get(models.Extractor, extractor_id)
-        repaired_crawler_pipeline = await session.get(
-            models.CrawlerPipeline, crawler_pipeline_id
-        )
+    await create_db_and_tables()
 
-        assert repaired_user is not None
-        assert repaired_user.headline is None
-        assert repaired_user.bio is None
-        assert repaired_user.is_discoverable is False
-        assert repaired_user.subscription_tier == "free"
-        assert repaired_user.subscription_expires_at is None
-        assert repaired_user.placement_status == "active"
-        assert repaired_user.placement_date is None
-
-        assert repaired_document is not None
-        assert repaired_document.yjs_state is None
-
-        assert repaired_version is not None
-        assert repaired_version.content_format == "plain_text"
-        assert repaired_version.source_file is None
-
-        assert repaired_extractor is not None
-        assert repaired_extractor.requires_approval is False
-
-        assert repaired_crawler_pipeline is not None
-        assert repaired_crawler_pipeline.requires_approval is False
+    stamp_mock.assert_awaited_once()
+    run_alembic_mock.assert_called_once_with()
+    assert executed == [
+        (
+            "SELECT pg_advisory_lock(:lock_id)",
+            {"lock_id": db_module.ALEMBIC_MIGRATION_ADVISORY_LOCK_ID},
+        ),
+        (
+            "SELECT pg_advisory_unlock(:lock_id)",
+            {"lock_id": db_module.ALEMBIC_MIGRATION_ADVISORY_LOCK_ID},
+        ),
+    ]
 
 
-async def test_create_db_and_tables_repairs_string_backed_enum_columns() -> None:
+async def test_create_db_and_tables_releases_advisory_lock_on_migration_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stamp_mock = AsyncMock(return_value=None)
+    executed: list[tuple[str, dict[str, Any] | None]] = []
+
+    def run_alembic() -> None:
+        raise RuntimeError("boom")
+
+    monkeypatch.delenv("LEGACY_BOOTSTRAP", raising=False)
+    monkeypatch.setattr(db_module.conf.settings, "ENVIRONMENT", "PROD")
+    monkeypatch.setattr(db_module, "_stamp_existing_schema_if_needed", stamp_mock)
+    monkeypatch.setattr(db_module.asyncio, "to_thread", _run_sync_in_fake_to_thread)
+    monkeypatch.setattr(db_module, "run_alembic_migrations", run_alembic)
+    monkeypatch.setattr(
+        db_module,
+        "async_engine",
+        SimpleNamespace(connect=_fake_connect_factory(executed)),
+    )
+
+    with pytest.raises(RuntimeError, match="boom"):
+        await create_db_and_tables()
+
+    stamp_mock.assert_awaited_once()
+    assert executed == [
+        (
+            "SELECT pg_advisory_lock(:lock_id)",
+            {"lock_id": db_module.ALEMBIC_MIGRATION_ADVISORY_LOCK_ID},
+        ),
+        (
+            "SELECT pg_advisory_unlock(:lock_id)",
+            {"lock_id": db_module.ALEMBIC_MIGRATION_ADVISORY_LOCK_ID},
+        ),
+    ]
+
+
+async def test_create_db_and_tables_repairs_string_backed_enum_columns_with_legacy_bootstrap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     await async_engine.dispose()
     await drop_and_create_db_and_tables()
 
@@ -261,7 +502,7 @@ async def test_create_db_and_tables_repairs_string_backed_enum_columns() -> None
         application = models.Application(
             lead_id=lead.id,
             user_id=user.id,
-            status=models.ApplicationStatus.APPLIED,
+            stage=models.ApplicationStage.APPLIED,
         )
         session.add_all([crawler_run, application])
         await session.commit()
@@ -273,11 +514,6 @@ async def test_create_db_and_tables_repairs_string_backed_enum_columns() -> None
     async with session_context() as session:
         await session.execute(
             text(
-                "ALTER TABLE applications ALTER COLUMN status TYPE varchar USING status::text"
-            )
-        )
-        await session.execute(
-            text(
                 "ALTER TABLE crawler_runs ALTER COLUMN status TYPE varchar USING status::text"
             )
         )
@@ -287,12 +523,6 @@ async def test_create_db_and_tables_repairs_string_backed_enum_columns() -> None
             )
         )
 
-        await session.execute(
-            text(
-                "UPDATE applications SET status = 'applied' WHERE id = :application_id"
-            ),
-            {"application_id": application_id},
-        )
         await session.execute(
             text(
                 "UPDATE crawler_runs SET status = 'RUNNING' WHERE id = :crawler_run_id"
@@ -307,9 +537,6 @@ async def test_create_db_and_tables_repairs_string_backed_enum_columns() -> None
         )
 
         await session.execute(
-            text("ALTER TYPE applicationstatus RENAME VALUE 'applied' TO 'APPLIED'")
-        )
-        await session.execute(
             text("ALTER TYPE crawlerrunstatus RENAME VALUE 'running' TO 'RUNNING'")
         )
         await session.execute(
@@ -319,10 +546,6 @@ async def test_create_db_and_tables_repairs_string_backed_enum_columns() -> None
         )
         await session.commit()
 
-    assert await _column_type("applications", "status") == (
-        "character varying",
-        "varchar",
-    )
     assert await _column_type("crawler_runs", "status") == (
         "character varying",
         "varchar",
@@ -332,12 +555,9 @@ async def test_create_db_and_tables_repairs_string_backed_enum_columns() -> None
         "varchar",
     )
 
+    monkeypatch.setenv("LEGACY_BOOTSTRAP", "1")
     await create_db_and_tables()
 
-    assert await _column_type("applications", "status") == (
-        "USER-DEFINED",
-        "applicationstatus",
-    )
     assert await _column_type("crawler_runs", "status") == (
         "USER-DEFINED",
         "crawlerrunstatus",
@@ -353,7 +573,7 @@ async def test_create_db_and_tables_repairs_string_backed_enum_columns() -> None
         repaired_lead = await session.get(models.Lead, lead_id)
 
         assert repaired_application is not None
-        assert repaired_application.status == models.ApplicationStatus.APPLIED
+        assert repaired_application.stage == models.ApplicationStage.APPLIED
 
         assert repaired_crawler_run is not None
         assert repaired_crawler_run.status == models.CrawlerRunStatus.RUNNING

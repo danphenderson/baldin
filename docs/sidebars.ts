@@ -35,6 +35,15 @@ const sidebars: SidebarsConfig = {
         'architecture/extraction-pipeline',
         'architecture/document-collaboration',
         'architecture/networking-and-messaging',
+        'architecture/aspirations-to-apply',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Frontend UI System',
+      items: [
+        'architecture/frontend-design-system',
+        'reference/operator-design-forward-path',
       ],
     },
     {

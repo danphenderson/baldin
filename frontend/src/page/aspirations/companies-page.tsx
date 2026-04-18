@@ -1,20 +1,27 @@
-import React from 'react';
-import { Box } from '@mui/material';
+import React, { useContext, useMemo } from 'react';
 import { BusinessOutlined as CompaniesIcon } from '@mui/icons-material';
-import EmptyState from '../../component/common/empty-state';
-import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
+import AspirationsCollection from '../../component/aspirations-collection';
+import { UserContext } from '../../context/user-context';
+import { createApiAdapter } from '../../service/aspirations';
 
 const AspirationCompaniesPage: React.FC = () => {
-  usePageToolbarHeader('Aspirations', 'Companies are not available yet');
+  const { token } = useContext(UserContext);
+  const adapter = useMemo(() => (token ? createApiAdapter(token) : null), [token]);
+
+  if (!adapter) {
+    return null;
+  }
 
   return (
-    <Box sx={{ maxWidth: 760, mx: 'auto' }}>
-      <EmptyState
-        icon={<CompaniesIcon />}
-        title="Company aspirations are not available yet"
-        description="Use this space later to track the companies and employers you want Baldin to prioritize in your search."
-      />
-    </Box>
+    <AspirationsCollection
+      kind="company"
+      adapter={adapter}
+      kindLabel="Company"
+      kindIcon={<CompaniesIcon />}
+      emptyTitle="No company aspirations yet"
+      emptyDescription="Track the companies and employers you want Baldin to prioritize in your search."
+      showSuggestions
+    />
   );
 };
 

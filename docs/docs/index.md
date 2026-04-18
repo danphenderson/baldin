@@ -3,12 +3,18 @@ slug: /
 title: Choose Your Next Step
 sidebar_label: Choose Your Next Step
 sidebar_position: 0
-description: Start with the right next doc for setup, architecture, implementation, or reference work.
+description: Start with Baldin's current posture, then jump to the right next doc for setup, architecture, implementation, or reference work.
 ---
 
 # Choose Your Next Step
 
-Use this page to choose the right next document for the work you are doing. Baldin is a private, local-first engineering monorepo for a developer-preview job-search automation workspace.
+Use this page to choose the right next document for the work you are doing. Baldin is a local-first job-search OS today: a private workspace for tracking applications, extracting leads, collaborating on documents, and working through agent-assisted job-search workflows.
+
+The target direction is an applicant-side labor market observability platform. These docs stay grounded in the currently shipped workspace, repo-local Docker Compose workflow, and contributor surfaces rather than presenting future observability ideas as live product features.
+
+:::note Trust Model And Repo Posture
+Baldin keeps user-owned data local and sharing minimal by default. Discoverability is opt-in, and any future shared-signal layer is intended to rely on coarse bands, time decay, and confidence tiers rather than public identity or exact counts. This repository supports local development, contributor workflows, architecture review, and release-path planning; it is not a production deployment blueprint.
+:::
 
 Use these docs for architecture, engineering workflow, and reference detail that sits below the top-level repository overview.
 
@@ -26,7 +32,7 @@ Pick the path that matches what you need right now:
 
 - **First local boot:** [Boot The Stack](getting-started/quickstart) → [Work Locally](engineering/local-development) → [Look Up Settings](reference/environment-variables)
 - **New contributor:** [Orient Yourself](getting-started/overview) → [Contribute Safely](getting-started/contributing) → [Run The Right Checks](engineering/testing)
-- **Explore what Baldin does:** [Dashboard](features/dashboard) → [Job Search Pipeline](features/job-search-pipeline) → [Document Workspace](features/document-workspace)
+- **Explore current workspace surfaces:** [Dashboard](features/dashboard) → [Job Search Pipeline](features/job-search-pipeline) → [Document Workspace](features/document-workspace)
 - **Backend or API work:** [See System Boundaries](architecture/system-overview) → [Map The Data Model](architecture/data-model) → [Browse API Routes](architecture/api-surface) → [Regenerate API Contracts](engineering/contract-management)
 - **Document editor work:** [Document Workspace](features/document-workspace) → [Understand Document Collaboration](architecture/document-collaboration) → [See Frontend Boundaries](architecture/frontend-architecture)
 - **Networking and messaging work:** [Networking & Messaging](features/networking) → [Follow Network Flows](architecture/networking-and-messaging) → [Browse API Routes](architecture/api-surface)
@@ -40,32 +46,34 @@ Once you are oriented, the next layer usually is:
 - **After setup:** [Work Locally](engineering/local-development) → [Run The Right Checks](engineering/testing)
 - **After backend schema or route changes:** [Regenerate API Contracts](engineering/contract-management) → [Run The Right Checks](engineering/testing) → [See Merge Gates](engineering/ci-pipeline)
 - **After frontend changes:** [See Frontend Boundaries](architecture/frontend-architecture) → [Run The Right Checks](engineering/testing)
+- **Operator-design or shared UI work:** [Frontend Design System](architecture/frontend-design-system) → [Operator Design Forward Path](reference/operator-design-forward-path) → [Work Locally](engineering/local-development)
 - **After docs changes:** [Contribute Safely](getting-started/contributing) → [Run The Right Checks](engineering/testing)
 - **After runtime or deployment questions:** [Planned Deployment](getting-started/deployment-guide) → [Track Release Readiness](engineering/release-roadmap) → [Look Up Settings](reference/environment-variables)
 
 ## Explore Features
 
-- **[Dashboard](features/dashboard)** — Action items, application pipeline, metrics, and activity feed
-- **[Job Search Pipeline](features/job-search-pipeline)** — Companies, leads, and applications
+- **[Dashboard](features/dashboard)** — Personal action items, pipeline metrics, and workspace activity
+- **[Job Search Pipeline](features/job-search-pipeline)** — Companies, leads, applications, and day-to-day search tracking
 - **[Document Workspace](features/document-workspace)** — Versioned documents, collaboration, and sharing
 - **[Extraction & Automation](features/extraction-and-automation)** — Extractors, pipelines, crawlers, and review
-- **[Networking & Messaging](features/networking)** — Directory, connections, conversations, and activity
+- **[Networking & Messaging](features/networking)** — Opt-in discoverability, private conversations, and personal activity
 
 ## Go Straight To
 
-- **[Orient Yourself](getting-started/overview)** — Start with product scope, repo layout, and the first useful next docs
+- **[Orient Yourself](getting-started/overview)** — Start with current posture, repo layout, and the first useful next docs
 - **[Boot The Stack](getting-started/quickstart)** — Get the local stack running in minutes
 - **[Planned Deployment](getting-started/deployment-guide)** — Current deployment posture and production roadmap
-- **[See System Boundaries](architecture/system-overview)** — See services, runtime seams, and major product domains
+- **[See System Boundaries](architecture/system-overview)** — See services, runtime seams, and current workspace domains
 - **[Map The Data Model](architecture/data-model)** — Follow how the main entities and ownership links fit together
 - **[Browse API Routes](architecture/api-surface)** — Navigate FastAPI route groups, access rules, and contract boundaries
 - **[Understand Document Collaboration](architecture/document-collaboration)** — Follow versioned documents, sharing, and the Yjs bootstrap protocol
-- **[Follow Network Flows](architecture/networking-and-messaging)** — Follow connections, conversations, activity, and action items
+- **[Follow Network Flows](architecture/networking-and-messaging)** — Follow opt-in connections, conversations, personal activity, and action items
 - **[See Frontend Boundaries](architecture/frontend-architecture)** — See route groups, page modules, and service boundaries
+- **[Operator Design Forward Path](reference/operator-design-forward-path)** — Active operator-design-first contract for source bundles, planning packets, and archived-reference rules
 - **[Work Locally](engineering/local-development)** — Run the stack locally and move through day-to-day workflow
 - **[See Merge Gates](engineering/ci-pipeline)** — Understand CI jobs, required checks, and candidate artifact builds
 - **[Track Release Readiness](engineering/release-roadmap)** — See current release posture and remaining launch phases
-- **[Prompt The Right Agent](engineering/copilot-prompt-cookbook)** — Choose the right workspace agent and structure prompts cleanly
-- **[Rewrite Weak Prompts](engineering/copilot-prompt-examples)** — Turn vague prompts into scoped implementation requests
+- **[Prompt The Right Agent](engineering/agentic-workflow-cookbook)** — Choose the right agentic entrypoint and structure prompts cleanly
+- **[Rewrite Weak Prompts](engineering/agentic-prompt-examples)** — Turn vague prompts into scoped implementation requests
 - **[Documentation Resources](reference/resources)** — All links to Baldin docs, APIs, admin, and repo files
 - **[Look Up Settings](reference/environment-variables)** — Find backend and frontend configuration details quickly

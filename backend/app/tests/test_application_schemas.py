@@ -1,4 +1,4 @@
-"""Round-trip schema tests for application status reconciliation."""
+"""Round-trip schema tests for application stage / outcome fields."""
 
 from datetime import datetime
 from uuid import uuid4
@@ -7,7 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from app import schemas
-from app.models import ApplicationOutcome, ApplicationStage, ApplicationStatus
+from app.models import ApplicationOutcome, ApplicationStage
 
 NOW = datetime(2026, 1, 2, 3, 4, 5)
 
@@ -44,25 +44,23 @@ def _application_read_payload(**overrides: object) -> dict[str, object]:
         "lead": _lead_payload(lead_id),
         "user": _user_payload(user_id),
         "status_history": [],
+        "stage": ApplicationStage.REGISTERED.value,
     }
     payload.update(overrides)
     return payload
 
 
-def _assert_reconciled_fields(
+def _assert_stage_outcome(
     model: schemas.ApplicationCreate
     | schemas.ApplicationRead
     | schemas.ApplicationUpdate,
     dumped: dict[str, object],
     *,
-    expected_status: ApplicationStatus,
     expected_stage: ApplicationStage | None,
     expected_outcome: ApplicationOutcome | None,
 ) -> None:
-    assert model.status == expected_status
     assert model.stage == expected_stage
     assert model.outcome == expected_outcome
-    assert dumped["status"] == expected_status.value
     assert dumped["stage"] == (
         expected_stage.value if expected_stage is not None else None
     )
@@ -72,43 +70,37 @@ def _assert_reconciled_fields(
 
 
 @pytest.mark.parametrize(
-    ("payload", "expected_status", "expected_stage", "expected_outcome"),
+    ("payload", "expected_stage", "expected_outcome"),
     [
         (
             {},
-            ApplicationStatus.REGISTERED,
             ApplicationStage.REGISTERED,
             None,
         ),
         (
             {"stage": ApplicationStage.SCREENING.value},
-            ApplicationStatus.SCREENING,
             ApplicationStage.SCREENING,
             None,
         ),
         (
-            {"status": ApplicationStatus.INTERVIEW.value},
-            ApplicationStatus.INTERVIEW,
+            {"stage": ApplicationStage.INTERVIEW.value},
             ApplicationStage.INTERVIEW,
             None,
         ),
         (
             {"outcome": ApplicationOutcome.WITHDRAWN.value},
-            ApplicationStatus.WITHDRAWN,
-            None,
+            ApplicationStage.REGISTERED,
             ApplicationOutcome.WITHDRAWN,
         ),
         (
-            {"status": ApplicationStatus.REJECTED.value},
-            ApplicationStatus.REJECTED,
-            None,
+            {"outcome": ApplicationOutcome.REJECTED.value},
+            ApplicationStage.REGISTERED,
             ApplicationOutcome.REJECTED,
         ),
     ],
 )
-def test_application_create_round_trip_reconciles_stage_outcome_and_status(
+def test_application_create_round_trip(
     payload: dict[str, str],
-    expected_status: ApplicationStatus,
     expected_stage: ApplicationStage | None,
     expected_outcome: ApplicationOutcome | None,
 ) -> None:
@@ -119,97 +111,96 @@ def test_application_create_round_trip_reconciles_stage_outcome_and_status(
     dumped = application.model_dump(mode="json")
     round_trip = schemas.ApplicationCreate.model_validate(dumped)
 
-    _assert_reconciled_fields(
+    _assert_stage_outcome(
         application,
         dumped,
-        expected_status=expected_status,
         expected_stage=expected_stage,
         expected_outcome=expected_outcome,
     )
-    _assert_reconciled_fields(
+    _assert_stage_outcome(
         round_trip,
         round_trip.model_dump(mode="json"),
-        expected_status=expected_status,
         expected_stage=expected_stage,
         expected_outcome=expected_outcome,
     )
 
 
 @pytest.mark.parametrize(
-    ("status", "expected_stage", "expected_outcome"),
+    ("overrides", "expected_stage", "expected_outcome"),
     [
         (
-            ApplicationStatus.APPLIED.value,
+            {"stage": ApplicationStage.APPLIED.value},
             ApplicationStage.APPLIED,
             None,
         ),
         (
-            ApplicationStatus.WITHDRAWN.value,
+            {"stage": ApplicationStage.OFFER.value},
+            ApplicationStage.OFFER,
             None,
+        ),
+        (
+            {
+                "outcome": ApplicationOutcome.WITHDRAWN.value,
+                "stage": ApplicationStage.APPLIED.value,
+            },
+            ApplicationStage.APPLIED,
             ApplicationOutcome.WITHDRAWN,
         ),
     ],
 )
-def test_application_read_round_trip_derives_stage_or_outcome_from_legacy_status(
-    status: str,
+def test_application_read_round_trip(
+    overrides: dict[str, str],
     expected_stage: ApplicationStage | None,
     expected_outcome: ApplicationOutcome | None,
 ) -> None:
     application = schemas.ApplicationRead.model_validate(
-        _application_read_payload(status=status)
+        _application_read_payload(**overrides)
     )
 
     dumped = application.model_dump(mode="json")
     round_trip = schemas.ApplicationRead.model_validate(dumped)
 
-    _assert_reconciled_fields(
+    _assert_stage_outcome(
         application,
         dumped,
-        expected_status=ApplicationStatus(status),
         expected_stage=expected_stage,
         expected_outcome=expected_outcome,
     )
-    _assert_reconciled_fields(
+    _assert_stage_outcome(
         round_trip,
         round_trip.model_dump(mode="json"),
-        expected_status=ApplicationStatus(status),
         expected_stage=expected_stage,
         expected_outcome=expected_outcome,
     )
 
 
 @pytest.mark.parametrize(
-    ("payload", "expected_status", "expected_stage", "expected_outcome"),
+    ("payload", "expected_stage", "expected_outcome"),
     [
         (
             {"stage": ApplicationStage.OFFER.value},
-            ApplicationStatus.OFFER,
             ApplicationStage.OFFER,
             None,
         ),
         (
-            {"status": ApplicationStatus.SCREENING.value},
-            ApplicationStatus.SCREENING,
+            {"stage": ApplicationStage.SCREENING.value},
             ApplicationStage.SCREENING,
             None,
         ),
         (
             {"outcome": ApplicationOutcome.REJECTED.value},
-            ApplicationStatus.REJECTED,
             None,
             ApplicationOutcome.REJECTED,
         ),
         (
-            {"status": ApplicationStatus.WITHDRAWN.value},
-            ApplicationStatus.WITHDRAWN,
+            {"outcome": ApplicationOutcome.WITHDRAWN.value},
             None,
             ApplicationOutcome.WITHDRAWN,
         ),
     ],
 )
-def test_application_update_round_trip_reconciles_stage_outcome_and_status(
+def test_application_update_round_trip(
     payload: dict[str, str],
-    expected_status: ApplicationStatus,
     expected_stage: ApplicationStage | None,
     expected_outcome: ApplicationOutcome | None,
 ) -> None:
@@ -218,17 +209,15 @@ def test_application_update_round_trip_reconciles_stage_outcome_and_status(
     dumped = update.model_dump(mode="json")
     round_trip = schemas.ApplicationUpdate.model_validate(dumped)
 
-    _assert_reconciled_fields(
+    _assert_stage_outcome(
         update,
         dumped,
-        expected_status=expected_status,
         expected_stage=expected_stage,
         expected_outcome=expected_outcome,
     )
-    _assert_reconciled_fields(
+    _assert_stage_outcome(
         round_trip,
         round_trip.model_dump(mode="json"),
-        expected_status=expected_status,
         expected_stage=expected_stage,
         expected_outcome=expected_outcome,
     )
@@ -242,10 +231,9 @@ def test_application_update_round_trip_preserves_reopen_flag() -> None:
     dumped = update.model_dump(mode="json")
     round_trip = schemas.ApplicationUpdate.model_validate(dumped)
 
-    _assert_reconciled_fields(
+    _assert_stage_outcome(
         update,
         dumped,
-        expected_status=ApplicationStatus.SCREENING,
         expected_stage=ApplicationStage.SCREENING,
         expected_outcome=None,
     )
@@ -282,22 +270,12 @@ def test_application_create_rejects_outcome_reason_for_active_status() -> None:
         )
 
 
-def test_application_read_clears_outcome_reason_for_active_status() -> None:
+def test_application_read_clears_outcome_reason_when_no_outcome() -> None:
     application = schemas.ApplicationRead.model_validate(
         _application_read_payload(
-            status=ApplicationStatus.APPLIED.value,
+            stage=ApplicationStage.APPLIED.value,
             outcome_reason="Should not leak",
         )
     )
 
     assert application.outcome_reason is None
-
-
-def test_application_update_rejects_outcome_reason_for_active_stage_payload() -> None:
-    with pytest.raises(ValidationError):
-        schemas.ApplicationUpdate.model_validate(
-            {
-                "stage": ApplicationStage.SCREENING.value,
-                "outcome_reason": "Still in play",
-            }
-        )

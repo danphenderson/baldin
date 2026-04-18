@@ -2,14 +2,14 @@
 sidebar_position: 1
 slug: /features/dashboard
 title: Dashboard
-description: Unified dashboard for action items, application pipeline, metrics, and activity.
+description: Authenticated workspace dashboard for action items, application pipeline, metrics, and personal activity.
 ---
 
-<!-- last-verified: 2026-04-10 -->
+<!-- last-verified: 2026-04-17 -->
 
 # Dashboard
 
-The Dashboard is the landing page at `/`. It brings together action items, application status, aggregate metrics, and the activity feed into one surface.
+The Dashboard is the authenticated workspace hub at `/dashboard`. It brings together the operator's next actions, application status, aggregate metrics, and personal activity feed into one current surface. The public marketing home lives separately at `/`.
 
 ## What It Includes
 
@@ -48,7 +48,7 @@ Action items can also be created from the application detail page and lead modal
 
 ### Current UI State
 
-- The authenticated landing page at `/` already shows a welcome quick-start state when both leads and applications are empty.
+- The authenticated dashboard at `/dashboard` already shows a welcome quick-start state when both leads and applications are empty, while the public marketing home remains at `/`.
 - `frontend/src/page/dashboard.tsx` loads summary data, action items, the activity feed, and a small lead sample together, then keeps summary and action items fresh with lightweight polling.
 - The metrics area now includes status breakdown, stage dwell time from `avg_days_per_stage`, and the offer-conversion funnel alongside unread messages, pending connections, overdue action items, and profile completion.
 

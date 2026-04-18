@@ -1,8 +1,14 @@
 // frontend/src/common/component/cover-letters-modal.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
+import { TextField, Button } from '@mui/material';
 import { DocumentRead, DocumentCreate, DocumentUpdate } from '../service/documents';
+import {
+  SurfaceDialog as Dialog,
+  SurfaceDialogActions as DialogActions,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogTitle as DialogTitle,
+} from '../design-system';
 
 interface CoverLetterModalProps {
   open: boolean;

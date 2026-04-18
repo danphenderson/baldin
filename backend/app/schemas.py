@@ -2,7 +2,7 @@
 import json
 from datetime import datetime
 from enum import Enum
-from typing import Any, Literal, Optional, Sequence, TypeVar
+from typing import Any, Generic, Literal, Optional, TypeVar
 
 from fastapi import UploadFile
 from fastapi_users import schemas
@@ -22,7 +22,6 @@ from app.core.url_safety import validate_url_safe_for_fetch
 from app.models import (
     ApplicationOutcome,
     ApplicationStage,
-    ApplicationStatus,
     CrawlerRunStatus,
     LeadReviewStatus,
 )
@@ -110,7 +109,9 @@ class BaseRead(BaseSchema):
     updated_at: datetime = Field(description="The time the item was last updated")
 
 
-PAGINATION_MAX_PAGE_SIZE = 500
+PAGINATION_MAX_PAGE_SIZE = 100
+LEAD_RANK_MAX_LEADS = 20
+MATCH_ASPIRATIONS_MAX_LEADS = 20
 
 
 class Pagination(BaseSchema):
@@ -122,6 +123,16 @@ class Pagination(BaseSchema):
         description="The number of items per page",
     )
     request_count: bool = Field(False, description="Request a query for total count")
+
+
+_T = TypeVar("_T")
+
+
+class PaginatedResponse(BaseSchema, Generic[_T]):
+    items: list[_T] = Field(default_factory=list, description="Paginated items")
+    total: int = Field(0, description="Total number of matching records")
+    page: int = Field(1, ge=1, description="Current page number")
+    page_size: int = Field(20, ge=1, description="Items per page")
 
 
 # Model CRUD Schemas
@@ -245,13 +256,7 @@ class OrchestrationEventUpdate(BaseSchema):
         return v
 
 
-class OrchestrationEventPaginatedRead(BaseSchema):
-    items: list[OrchestrationEventRead] = Field(
-        [], description="Paginated list of orchestration events"
-    )
-    total: int = Field(0, description="Total number of matching events")
-    page: int = Field(1, ge=1, description="Current page number")
-    page_size: int = Field(20, ge=1, description="Items per page")
+OrchestrationEventPaginatedRead = PaginatedResponse[OrchestrationEventRead]
 
 
 class SeedOperationAccepted(BaseSchema):
@@ -289,7 +294,7 @@ class BaseSkill(BaseSchema):
     name: str | None = Field(None, description="Name of the skill")
     category: str | None = Field(None, description="Category of the skill")
     yoe: int | None = Field(None, description="Years of Experience")
-    subskills: str | None = Field(None, description="Sub-Skills")
+    subskills: list[str] | None = Field(None, description="Sub-Skills")
 
     @field_validator("yoe", mode="before")
     @classmethod
@@ -322,15 +327,13 @@ class BaseExperience(BaseSchema):
     end_date: datetime | None = Field(None, description="End date of the experience")
     description: str | None = Field(None, description="Description of the experience")
     location: str | None = Field(None, description="Location of the experience")
-    projects: str | None = Field(None, description="Projects involved")
+    projects: list[str] | None = Field(None, description="Projects involved")
 
     @field_validator("start_date", "end_date", mode="before")
     @classmethod
     def parse_date(cls, value: Any) -> Any:
         if isinstance(value, str):
             value = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        if isinstance(value, datetime):
-            return value.replace(tzinfo=None) if value.tzinfo else value
         return value
 
 
@@ -344,9 +347,9 @@ class ExperienceCreate(BaseExperience):
     def parse_projects(cls, value: Any) -> Any:
         if not value:
             return value
-        elif isinstance(value, list):
-            value = ", ".join(value)
-        return utils.wrap_text(value)
+        if isinstance(value, str):
+            return [v.strip() for v in value.split(",") if v.strip()]
+        return value
 
 
 class ExperienceUpdate(BaseExperience):
@@ -356,9 +359,9 @@ class ExperienceUpdate(BaseExperience):
 class BaseEducation(BaseSchema):
     university: str | None = Field(None, description="University name")
     degree: str | None = Field(None, description="Degree name")
-    gradePoint: str | None = Field(None, description="Grade point")
-    activities: str | None = Field(None, description="Activities involved")
-    achievements: str | None = Field(None, description="Achievements")
+    grade_point: str | None = Field(None, description="Grade point")
+    activities: list[str] | None = Field(None, description="Activities involved")
+    achievements: list[str] | None = Field(None, description="Achievements")
     start_date: datetime | None = Field(None, description="Start date of the education")
     end_date: datetime | None = Field(None, description="End date of the education")
 
@@ -367,8 +370,6 @@ class BaseEducation(BaseSchema):
     def parse_date(cls, value: Any) -> Any:
         if isinstance(value, str):
             value = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        if isinstance(value, datetime):
-            return value.replace(tzinfo=None) if value.tzinfo else value
         return value
 
 
@@ -379,12 +380,12 @@ class EducationRead(BaseEducation, BaseRead):
 class EducationCreate(BaseEducation):
     @field_validator("achievements", "activities", mode="before")
     @classmethod
-    def parse_achievements(cls, value: Any) -> Any:
+    def parse_list_fields(cls, value: Any) -> Any:
         if not value:
             return value
-        elif isinstance(value, list):
-            value = ", ".join(value)
-        return utils.wrap_text(value)
+        if isinstance(value, str):
+            return [v.strip() for v in value.split(",") if v.strip()]
+        return value
 
 
 class EducationUpdate(BaseEducation):
@@ -406,8 +407,6 @@ class BaseCertificate(BaseSchema):
     def parse_date(cls, value: Any) -> Any:
         if isinstance(value, str):
             value = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        if isinstance(value, datetime):
-            return value.replace(tzinfo=None) if value.tzinfo else value
         return value
 
 
@@ -423,6 +422,142 @@ class CertificateUpdate(BaseCertificate):
     pass
 
 
+def _normalize_aspiration_label(value: str) -> str:
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError("Label cannot be blank")
+    return normalized
+
+
+def _normalize_optional_aspiration_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    return normalized or None
+
+
+class AspirationKind(str, Enum):
+    ROLE = "role"
+    COMPANY = "company"
+
+
+class BaseAspiration(BaseSchema):
+    kind: AspirationKind
+    label: str
+    reason: str | None = None
+    notes: str | None = None
+    priority: int = 0
+    extracted_attributes: dict[str, Any] | None = None
+
+    @field_validator("label")
+    @classmethod
+    def normalize_label(cls, value: str) -> str:
+        return _normalize_aspiration_label(value)
+
+    @field_validator("reason", "notes")
+    @classmethod
+    def normalize_optional_text(cls, value: str | None) -> str | None:
+        return _normalize_optional_aspiration_text(value)
+
+
+class AspirationCreate(BaseAspiration):
+    pass
+
+
+class AspirationUpdate(BaseSchema):
+    kind: AspirationKind | None = None
+    label: str | None = None
+    reason: str | None = None
+    notes: str | None = None
+    priority: int | None = None
+    extracted_attributes: dict[str, Any] | None = None
+
+    @field_validator("label")
+    @classmethod
+    def normalize_optional_label(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return _normalize_aspiration_label(value)
+
+    @field_validator("reason", "notes")
+    @classmethod
+    def normalize_update_optional_text(cls, value: str | None) -> str | None:
+        return _normalize_optional_aspiration_text(value)
+
+    @model_validator(mode="after")
+    def validate_non_nullable_updates(self) -> "AspirationUpdate":
+        if "kind" in self.model_fields_set and self.kind is None:
+            raise ValueError("kind cannot be null")
+        if "label" in self.model_fields_set and self.label is None:
+            raise ValueError("label cannot be null")
+        if "priority" in self.model_fields_set and self.priority is None:
+            raise ValueError("priority cannot be null")
+        return self
+
+
+class AspirationSummaryRead(BaseRead):
+    kind: AspirationKind
+    label: str
+    reason: str | None = None
+    notes: str | None = None
+    priority: int = 0
+
+
+class AspirationRead(AspirationSummaryRead):
+    extracted_attributes: dict[str, Any] | None = None
+
+
+class AspirationSuggestionDraft(BaseAspiration):
+    pass
+
+
+class AspirationSuggestResponse(BaseSchema):
+    suggestions: list[AspirationSuggestionDraft] = Field(
+        default_factory=list,
+        description="Non-persisted aspiration drafts suggested from the user's profile",
+    )
+
+
+class AspirationMatchInput(BaseAspiration):
+    client_key: str | None = Field(
+        None,
+        description="Caller-supplied correlation key for unsaved aspirations",
+    )
+
+    @field_validator("client_key")
+    @classmethod
+    def normalize_client_key(cls, value: str | None) -> str | None:
+        return _normalize_optional_aspiration_text(value)
+
+
+class AspirationLeadMatch(BaseSchema):
+    lead_id: UUID4 = Field(description="Lead identifier")
+    match_score: int = Field(..., ge=1, le=10, description="Aspiration match score")
+    explanation: str = Field(
+        ...,
+        min_length=20,
+        max_length=400,
+        description="Why the lead matches this aspiration",
+    )
+
+
+class AspirationMatchResult(AspirationMatchInput):
+    lead_matches: list[AspirationLeadMatch] = Field(
+        default_factory=list,
+        description="Lead matches for this aspiration",
+    )
+    total: int = Field(0, ge=0, description="Total lead matches before pagination")
+    page: int = Field(1, ge=1, description="Current page for this aspiration result")
+    page_size: int = Field(1, ge=1, description="Page size for this aspiration result")
+
+
+class AspirationMatchResponse(BaseSchema):
+    results: list[AspirationMatchResult] = Field(
+        default_factory=list,
+        description="Per-aspiration lead matching results",
+    )
+
+
 class BaseCompany(BaseSchema):
     name: str | None = Field(None, description="Company name")
     industry: str | None = Field(None, description="Industry of the company")
@@ -432,7 +567,14 @@ class BaseCompany(BaseSchema):
 
 
 class CompanyRead(BaseCompany, BaseRead):
-    pass
+    creator_user_id: UUID4 | None = Field(
+        None,
+        description="User who created this company record, if known",
+    )
+    can_manage: bool = Field(
+        False,
+        description="Whether the current user can edit or delete this company",
+    )
 
 
 class CompanyCreate(BaseCompany):
@@ -567,9 +709,8 @@ class LeadRegistrationUpdate(BaseSchema):
         return self
 
 
-class LeadRead(BaseRead, BaseLeadShared):
+class LeadSummaryRead(BaseRead, BaseLeadShared):
     url: str = Field(description="Job posting URL")
-    canonical_url: str = Field(description="Canonical lead URL used for deduplication")
     companies: list[CompanyRead] = Field(
         default_factory=list,
         description="List of companies associated with the lead",
@@ -589,6 +730,10 @@ class LeadRead(BaseRead, BaseLeadShared):
     )
 
 
+class LeadRead(LeadSummaryRead):
+    canonical_url: str = Field(description="Canonical lead URL used for deduplication")
+
+
 class LeadDetailRead(LeadRead):
     viewer_registration: LeadRegistrationRead | None = Field(
         None, description="The current viewer's lead registration, if present"
@@ -599,12 +744,7 @@ class LeadDetailRead(LeadRead):
     )
 
 
-class LeadsPaginatedRead(BaseSchema):
-    leads: Sequence[LeadRead]
-    pagination: Pagination
-    total_count: int | None = Field(
-        ..., description="Total number of leads, if pagination requested"
-    )
+LeadsPaginatedRead = PaginatedResponse[LeadSummaryRead]
 
 
 class LeadCreate(BaseLeadShared):
@@ -729,6 +869,7 @@ class DocumentKind(str, Enum):
     FOLLOW_UP = "follow_up"
     REFERENCE_SHEET = "reference_sheet"
     FREEFORM = "freeform"
+    CELL_DOC = "cell_doc"
 
 
 class DocumentStatus(str, Enum):
@@ -741,6 +882,10 @@ class DocumentActivityType(str, Enum):
     DOCUMENT_CREATED = "document_created"
     DOCUMENT_UPLOADED = "document_uploaded"
     VERSION_SAVED = "version_saved"
+    AGENT_TASK_REQUESTED = "agent_task_requested"
+    AGENT_TASK_APPLIED = "agent_task_applied"
+    AGENT_TASK_FAILED = "agent_task_failed"
+    AGENT_TASK_DISMISSED = "agent_task_dismissed"
     SHARE_CREATED = "share_created"
     SHARE_UPDATED = "share_updated"
     SHARE_REVOKED = "share_revoked"
@@ -748,6 +893,68 @@ class DocumentActivityType(str, Enum):
     DOCUMENT_UNARCHIVED = "document_unarchived"
     DOCUMENT_PINNED = "document_pinned"
     DOCUMENT_UNPINNED = "document_unpinned"
+    BLOCK_CREATED = "block_created"
+    BLOCK_UPDATED = "block_updated"
+    BLOCK_DELETED = "block_deleted"
+    BLOCK_REORDERED = "block_reordered"
+    BLOCK_TYPE_CHANGED = "block_type_changed"
+
+
+class DocumentBlockType(str, Enum):
+    PARAGRAPH = "paragraph"
+    HEADING = "heading"
+    BULLET_LIST = "bullet_list"
+    ORDERED_LIST = "ordered_list"
+    LIST_ITEM = "list_item"
+    TASK_LIST = "task_list"
+    TASK_ITEM = "task_item"
+    BLOCKQUOTE = "blockquote"
+    CODE_BLOCK = "code_block"
+    CALLOUT = "callout"
+    TOGGLE = "toggle"
+    TABLE = "table"
+    TABLE_ROW = "table_row"
+    TABLE_CELL = "table_cell"
+    DIVIDER = "divider"
+    MENTION = "mention"
+    EMBED = "embed"
+
+
+class DocumentReferenceKind(str, Enum):
+    MENTION = "mention"
+    EMBED = "embed"
+
+
+class DocumentReferenceTargetKind(str, Enum):
+    USER = "user"
+    DOCUMENT = "document"
+    AGENT = "agent"
+
+
+class DocumentEmbedCandidateKind(str, Enum):
+    DOCUMENT = "document"
+    BLOCK = "block"
+
+
+class DocumentReferenceResolveStatus(str, Enum):
+    RESOLVED = "resolved"
+    UNAVAILABLE = "unavailable"
+    INVALID = "invalid"
+
+
+class DocumentBlockSnapshotRead(BaseSchema):
+    id: UUID4 = Field(description="Stable block identifier captured in the version")
+    block_type: DocumentBlockType = Field(description="Stable block kind")
+    content: Any | None = Field(None, description="Block content payload")
+    properties: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Extensible block properties payload",
+    )
+    position: int = Field(description="Zero-based sibling position")
+    children: list["DocumentBlockSnapshotRead"] = Field(
+        default_factory=list,
+        description="Nested child blocks ordered by position",
+    )
 
 
 class DocumentVersionRead(BaseRead):
@@ -767,6 +974,25 @@ class DocumentVersionRead(BaseRead):
     )
 
 
+class DocumentVersionDetailRead(DocumentVersionRead):
+    block_snapshot: list[DocumentBlockSnapshotRead] | None = Field(
+        None,
+        description="Recursive block snapshot for cell-doc versions",
+    )
+
+
+class DocumentVersionSummaryRead(BaseSchema):
+    id: UUID4 = Field(description="Current head version identifier")
+    content: str | None = Field(None, description="Current version content")
+    content_type: ContentType | None = Field(None, description="Content origin type")
+    content_format: str | None = Field(
+        None, description="Content format: plain_text or tiptap_json"
+    )
+    source_file: str | None = Field(
+        None, description="Relative path to uploaded source file"
+    )
+
+
 class DocumentVersionCreate(BaseSchema):
     name: str | None = Field(None, description="Snapshot title")
     content: str | None = Field(None, description="Version content")
@@ -778,16 +1004,20 @@ class DocumentVersionCreate(BaseSchema):
     change_summary: str | None = Field(
         None, description="User or system note for this version"
     )
+    restore_version_id: UUID4 | None = Field(
+        None,
+        description="Optional source version to restore block state from for cell-doc saves",
+    )
 
 
-class DocumentRead(BaseRead):
+class DocumentSummaryRead(BaseRead):
     kind: DocumentKind = Field(description="Document kind discriminator")
     title: str = Field(description="Document title")
     status: DocumentStatus = Field(description="Document lifecycle status")
     is_pinned: bool = Field(
         False, description="Whether this is the active document for its kind"
     )
-    head_version: DocumentVersionRead | None = Field(
+    head_version: DocumentVersionSummaryRead | None = Field(
         None, description="Current head version inline"
     )
     version_count: int = Field(0, description="Total number of versions")
@@ -829,8 +1059,14 @@ class DocumentRead(BaseRead):
     )
 
 
+class DocumentRead(DocumentSummaryRead):
+    head_version: DocumentVersionRead | None = Field(
+        None, description="Current head version inline"
+    )
+
+
 class DocumentDetailRead(DocumentRead):
-    versions: list[DocumentVersionRead] = Field(
+    versions: list[DocumentVersionDetailRead] = Field(
         default_factory=list, description="Full version history, oldest first"
     )
 
@@ -881,6 +1117,203 @@ class DocumentUpdate(BaseSchema):
 
 class DocumentPinRequest(BaseSchema):
     pinned: bool = Field(True, description="Whether to pin or unpin the document")
+
+
+class DocumentBlockRead(BaseRead):
+    document_id: UUID4 = Field(description="Parent document identifier")
+    parent_block_id: UUID4 | None = Field(
+        None, description="Parent block identifier for nested blocks"
+    )
+    block_type: DocumentBlockType = Field(description="Stable block kind")
+    content: Any | None = Field(None, description="Block content payload")
+    properties: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Extensible block properties payload",
+    )
+    position: int = Field(description="Zero-based sibling position")
+    children: list["DocumentBlockRead"] = Field(
+        default_factory=list,
+        description="Nested child blocks ordered by position",
+    )
+
+
+class DocumentBlockCreate(BaseSchema):
+    parent_block_id: UUID4 | None = Field(
+        None, description="Optional parent block for nested insertion"
+    )
+    block_type: DocumentBlockType = Field(description="Block kind to create")
+    content: Any | None = Field(None, description="Block content payload")
+    properties: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Extensible block properties payload",
+    )
+    position: int | None = Field(
+        None,
+        ge=0,
+        description="Optional zero-based sibling position; omit to append",
+    )
+
+
+class DocumentBlockUpdate(BaseSchema):
+    block_type: DocumentBlockType | None = Field(None, description="Updated block kind")
+    content: Any = Field(default=None, description="Updated block content payload")
+    properties: dict[str, Any] | None = Field(
+        None,
+        description="Replacement block properties payload; null resets to {}",
+    )
+
+
+class DocumentBlockReorderItem(BaseSchema):
+    block_id: UUID4 = Field(description="Block to reposition")
+    parent_block_id: UUID4 | None = Field(
+        None,
+        description="New parent block identifier; null moves the block to the root",
+    )
+    position: int = Field(description="Zero-based sibling position", ge=0)
+
+
+class DocumentBlockReorderRequest(BaseSchema):
+    items: list[DocumentBlockReorderItem] = Field(
+        min_length=1,
+        description="Batch of block moves to apply atomically",
+    )
+
+
+class DocumentBlockSyncRequest(BaseSchema):
+    tiptap_json: dict[str, Any] = Field(
+        description="TipTap document JSON to sync into document_blocks rows"
+    )
+    preserve_ids: bool = Field(
+        True,
+        description="Reuse existing block UUIDs for matching block paths when possible",
+    )
+
+
+class DocumentMentionCandidateRead(BaseSchema):
+    target_kind: DocumentReferenceTargetKind = Field(
+        description="Reference target type"
+    )
+    target_id: UUID4 = Field(description="Referenced entity identifier")
+    label: str = Field(description="Human-friendly target label")
+    subtitle: str | None = Field(
+        None,
+        description="Optional secondary line shown in mention pickers",
+    )
+    href: str | None = Field(
+        None,
+        description="Canonical frontend route for the resolved target",
+    )
+
+
+class DocumentEmbedCandidateRead(BaseSchema):
+    candidate_kind: DocumentEmbedCandidateKind = Field(
+        description="Whether this candidate represents a source document or source block"
+    )
+    document_id: UUID4 = Field(description="Source cell-doc identifier")
+    document_title: str = Field(description="Source document title")
+    block_id: UUID4 | None = Field(
+        None,
+        description="Source block identifier when the candidate is a block",
+    )
+    source_version_id: UUID4 | None = Field(
+        None,
+        description="Current saved head version for the source document",
+    )
+    label: str = Field(description="Human-friendly label for the candidate")
+    preview_text: str | None = Field(
+        None,
+        description="Saved or computed preview text for the candidate",
+    )
+
+
+class DocumentReferenceResolveItem(BaseSchema):
+    kind: DocumentReferenceKind = Field(description="Reference type to resolve")
+    block_id: UUID4 | None = Field(
+        None,
+        description="Owning block identifier when the caller is resolving a live editor node",
+    )
+    target_kind: DocumentReferenceTargetKind | None = Field(
+        None,
+        description="Mention target type when resolving a mention block",
+    )
+    target_id: UUID4 | None = Field(
+        None,
+        description="Mention target identifier when resolving a mention block",
+    )
+    source_document_id: UUID4 | None = Field(
+        None,
+        description="Source document identifier when resolving an embed block",
+    )
+    source_block_id: UUID4 | None = Field(
+        None,
+        description="Source block identifier when resolving an embed block",
+    )
+    saved_label: str | None = Field(
+        None,
+        description="Saved label snapshot stored on the referencing block",
+    )
+    saved_preview_text: str | None = Field(
+        None,
+        description="Saved preview-text snapshot stored on the referencing block",
+    )
+
+
+class DocumentReferenceResolveRequest(BaseSchema):
+    references: list[DocumentReferenceResolveItem] = Field(
+        min_length=1,
+        description="Reference blocks to resolve in a single request",
+    )
+
+
+class DocumentReferenceResolvedRead(BaseSchema):
+    kind: DocumentReferenceKind = Field(description="Resolved reference type")
+    status: DocumentReferenceResolveStatus = Field(
+        description="Resolution status for the reference"
+    )
+    block_id: UUID4 | None = Field(
+        None,
+        description="Owning block identifier when provided by the caller",
+    )
+    label: str | None = Field(
+        None,
+        description="Best-available current label for the reference",
+    )
+    subtitle: str | None = Field(
+        None,
+        description="Optional secondary descriptive line for the reference",
+    )
+    href: str | None = Field(
+        None,
+        description="Frontend route for the current reference target when accessible",
+    )
+    preview_text: str | None = Field(
+        None,
+        description="Current or saved preview text for embed references",
+    )
+    target_kind: DocumentReferenceTargetKind | None = Field(
+        None,
+        description="Mention target type when applicable",
+    )
+    target_id: UUID4 | None = Field(
+        None,
+        description="Mention target identifier when applicable",
+    )
+    source_document_id: UUID4 | None = Field(
+        None,
+        description="Source document identifier for embed references",
+    )
+    source_block_id: UUID4 | None = Field(
+        None,
+        description="Source block identifier for embed references",
+    )
+    source_version_id: UUID4 | None = Field(
+        None,
+        description="Current saved head version for the source document when resolved",
+    )
+    unavailable_reason: str | None = Field(
+        None,
+        description="Reason the live reference could not be resolved",
+    )
 
 
 class ApplicationDocumentAttach(BaseSchema):
@@ -954,6 +1387,10 @@ class DocumentShareUpdate(BaseSchema):
 
 class DocumentActivityRead(BaseRead):
     document_id: UUID4 = Field(description="Document identifier")
+    block_id: UUID4 | None = Field(
+        None,
+        description="Associated block identifier when the activity targets a block",
+    )
     activity_type: DocumentActivityType = Field(description="Activity event type")
     message: str = Field(description="Human-readable activity summary")
     details: dict[str, Any] = Field(
@@ -972,6 +1409,10 @@ class DocumentActivityRead(BaseRead):
         None,
         description="Actor email address",
     )
+
+
+DocumentBlockSnapshotRead.model_rebuild()
+DocumentBlockRead.model_rebuild()
 
 
 # ---------------------------------------------------------------------------
@@ -1031,15 +1472,72 @@ class LeadEnrichResponse(BaseSchema):
     enrichment: str = Field(description="AI-generated enrichment analysis")
 
 
+class LeadRankInput(BaseSchema):
+    id: UUID4 = Field(description="Lead identifier")
+    title: str = Field(..., min_length=1, description="Lead title")
+    description: str | None = Field(None, description="Lead description")
+
+
+class LeadRankedEntryRead(BaseSchema):
+    lead_id: UUID4 = Field(description="Lead identifier")
+    lead_index: int = Field(..., ge=1, description="1-based lead position from input")
+    title: str = Field(..., min_length=1, description="Lead title")
+    relevance_score: int = Field(..., ge=1, le=10, description="Relevance score")
+    explanation: str = Field(
+        ..., min_length=20, max_length=400, description="Why the lead was ranked here"
+    )
+    aspiration_alignment: str | None = Field(
+        None,
+        description="How the lead aligns to the user's aspirations, if any",
+    )
+
+
 class LeadRankRequest(BaseSchema):
-    leads: list[dict[str, Any]] = Field(
-        ..., min_length=1, description="List of leads with title and description"
+    leads: list[LeadRankInput] = Field(
+        ...,
+        min_length=1,
+        max_length=LEAD_RANK_MAX_LEADS,
+        description="List of typed leads to rank",
     )
     k: int = Field(5, ge=1, le=20, description="Context chunks per lead")
 
 
 class LeadRankResponse(BaseSchema):
     ranking: str = Field(description="AI-generated lead ranking")
+    ranked_leads: list[LeadRankedEntryRead] = Field(
+        default_factory=list,
+        description="Structured ranked lead entries for frontend consumption",
+    )
+
+
+class AspirationMatchRequest(BaseSchema):
+    aspirations: list[AspirationMatchInput] = Field(
+        ..., min_length=1, description="Aspirations to match against the input leads"
+    )
+    leads: list[LeadRankInput] = Field(
+        ...,
+        min_length=1,
+        max_length=MATCH_ASPIRATIONS_MAX_LEADS,
+        description="Typed leads to score for each aspiration",
+    )
+    k: int = Field(5, ge=1, le=20, description="Context chunks to retrieve")
+    page: int | None = Field(
+        None, ge=1, description="Optional page for single-aspiration matching"
+    )
+    page_size: int | None = Field(
+        None,
+        ge=1,
+        le=PAGINATION_MAX_PAGE_SIZE,
+        description="Optional page size for single-aspiration matching",
+    )
+
+    @model_validator(mode="after")
+    def normalize_pagination(self) -> "AspirationMatchRequest":
+        if self.page is None and self.page_size is not None:
+            self.page = 1
+        if self.page is not None and self.page_size is None:
+            self.page_size = 20
+        return self
 
 
 class CompanySummarizeRequest(BaseSchema):
@@ -1192,13 +1690,7 @@ class UserDirectoryRead(BaseSchema):
     )
 
 
-class UserDirectoryPaginatedRead(BaseSchema):
-    items: list[UserDirectoryRead] = Field(
-        default_factory=list, description="Paginated user directory entries"
-    )
-    total: int = Field(0, description="Total matching users")
-    page: int = Field(1, ge=1, description="Current page number")
-    page_size: int = Field(20, ge=1, description="Items per page")
+UserDirectoryPaginatedRead = PaginatedResponse[UserDirectoryRead]
 
 
 class UserPublicProfileRead(BaseSchema):
@@ -1413,13 +1905,7 @@ class ConnectionRead(BaseRead):
     message: str | None = Field(None, description="Optional note from the requester")
 
 
-class ConnectionsPaginatedRead(BaseSchema):
-    items: list[ConnectionRead] = Field(
-        default_factory=list, description="Paginated connection records"
-    )
-    total: int = Field(0, description="Total matching connections")
-    page: int = Field(1, ge=1, description="Current page number")
-    page_size: int = Field(20, ge=1, description="Items per page")
+ConnectionsPaginatedRead = PaginatedResponse[ConnectionRead]
 
 
 # ---------------------------------------------------------------------------
@@ -1533,13 +2019,7 @@ class ConversationDetailRead(BaseRead):
     total_messages: int = Field(0, description="Total message count")
 
 
-class ConversationsPaginatedRead(BaseSchema):
-    items: list[ConversationRead] = Field(
-        default_factory=list, description="Paginated conversations"
-    )
-    total: int = Field(0, description="Total matching conversations")
-    page: int = Field(1, ge=1, description="Current page number")
-    page_size: int = Field(20, ge=1, description="Items per page")
+ConversationsPaginatedRead = PaginatedResponse[ConversationRead]
 
 
 class UnreadCountRead(BaseSchema):
@@ -1589,12 +2069,111 @@ class ProfileExtractResponse(BaseSchema):
 class UserDataOperationResult(BaseSchema):
     user_id: UUID4 = Field(description="User affected by the data-management operation")
     user_deleted: bool = Field(description="Whether the user row was removed")
+    domains: list["DbManagementPurgeDomain"] = Field(
+        default_factory=list,
+        description="Cleanup domains applied to the operation",
+    )
     cleared_profile_fields: int = Field(
         0, description="Number of profile fields cleared from the retained user"
     )
     deleted_records: dict[str, int] = Field(
         default_factory=dict,
         description="Deleted record counts grouped by table or association",
+    )
+
+
+class DbManagementPurgeDomain(str, Enum):
+    PROFILE = "profile"
+    LEADS = "leads"
+    APPLICATIONS = "applications"
+    DOCUMENTS = "documents"
+    AGENTS = "agents"
+    EXTRACTORS = "extractors"
+    ORCHESTRATION = "orchestration"
+
+
+class UserDataOperationPreview(BaseSchema):
+    user_id: UUID4 = Field(description="User affected by the previewed operation")
+    domains: list[DbManagementPurgeDomain] = Field(
+        default_factory=list,
+        description="Cleanup domains represented by the preview",
+    )
+    cleared_profile_fields: int = Field(
+        0, description="Number of profile fields that would be cleared"
+    )
+    deleted_records: dict[str, int] = Field(
+        default_factory=dict,
+        description="Deleted record counts grouped by table or association",
+    )
+    delete_allowed: bool = Field(
+        description="Whether the user can be deleted under the current safeguards"
+    )
+    delete_block_reason: Literal["self_delete", "last_remaining_superuser"] | None = (
+        Field(
+            None,
+            description="Reason deletion is blocked, when applicable",
+        )
+    )
+    purge_allowed: bool = Field(
+        description=("Whether the requested purge can run under the current safeguards")
+    )
+    purge_block_reason: Literal["self_delete", "last_remaining_superuser"] | None = (
+        Field(
+            None,
+            description="Reason the requested purge is blocked, when applicable",
+        )
+    )
+
+
+class DbManagementUserSummaryRead(BaseSchema):
+    user_id: UUID4 = Field(description="User identifier")
+    email: EmailStr = Field(description="User email address")
+    display_name: str = Field(description="Resolved display name for admin workflows")
+    is_active: bool = Field(description="Whether the user is active")
+    is_superuser: bool = Field(description="Whether the user is a Baldin superuser")
+    is_discoverable: bool = Field(
+        description="Whether the user is discoverable in the public directory"
+    )
+    created_at: datetime = Field(description="When the user was created")
+
+
+DbManagementUserPaginatedRead = PaginatedResponse[DbManagementUserSummaryRead]
+
+
+class DbManagementStatusRead(BaseSchema):
+    current_revision: str | None = Field(
+        None, description="Alembic revision currently stamped in the database"
+    )
+    head_revision: str | None = Field(
+        None, description="Latest Alembic revision available in the repo"
+    )
+    is_at_head: bool = Field(
+        description="Whether the current database revision matches the repo head"
+    )
+    public_table_count: int = Field(
+        description="Number of base tables currently in the public schema"
+    )
+
+
+class DbManagementTableSummaryRead(BaseSchema):
+    table_name: str = Field(description="Table name in the public schema")
+    column_count: int = Field(description="Number of columns on the table")
+    row_count: int = Field(description="Exact row count for the table")
+
+
+class DbManagementColumnRead(BaseSchema):
+    name: str = Field(description="Column name")
+    data_type: str = Field(description="Database type name")
+    is_nullable: bool = Field(description="Whether the column accepts null values")
+    default: str | None = Field(None, description="Column default expression")
+
+
+class DbManagementTableDetailRead(BaseSchema):
+    table_name: str = Field(description="Table name in the public schema")
+    row_count: int = Field(description="Exact row count for the table")
+    columns: list[DbManagementColumnRead] = Field(
+        default_factory=list,
+        description="Ordered column metadata for the table",
     )
 
 
@@ -1696,9 +2275,6 @@ class ExtractorRun(BaseSchema):
         return value
 
 
-_TERMINAL_APPLICATION_STATUSES = {status.value for status in ApplicationOutcome}
-
-
 def _normalize_optional_text(value: str | None) -> str | None:
     if value is None:
         return None
@@ -1708,19 +2284,19 @@ def _normalize_optional_text(value: str | None) -> str | None:
 
 
 class ApplicationStatusHistoryEntry(BaseSchema):
-    from_: ApplicationStatus | None = Field(
-        None,
-        alias="from",
-        description="Previous application status, null for the initial creation entry",
+    """Read schema for a row in the application_status_history table."""
+
+    id: UUID4 = Field(description="History entry identifier")
+    application_id: UUID4 = Field(description="Application identifier")
+    stage: ApplicationStage = Field(description="Stage at this point in history")
+    outcome: ApplicationOutcome | None = Field(
+        None, description="Outcome at this point, null while active"
     )
-    to: ApplicationStatus = Field(
-        ...,
-        description="Application status after the transition",
+    changed_by_user_id: UUID4 | None = Field(
+        None, description="User who made the change"
     )
-    changed_at: datetime = Field(
-        ...,
-        description="When the status transition was recorded",
-    )
+    changed_at: datetime = Field(description="When the transition was recorded")
+    note: str | None = Field(None, description="Optional note about the transition")
 
 
 class ApplicationDocumentMetadata(BaseSchema):
@@ -1742,31 +2318,33 @@ class ApplicationDocumentMetadata(BaseSchema):
     )
 
 
-class ApplicationRead(BaseRead):
+class ApplicationSummaryRead(BaseRead):
     lead_id: UUID4
     user_id: UUID4
-    lead: LeadRead
-    user: UserRead
-    status: ApplicationStatus | None = Field(None, description="Application status")
-    stage: ApplicationStage | None = Field(
-        None,
+    lead: LeadSummaryRead
+    stage: ApplicationStage = Field(
         description="Current pipeline stage (registered → applied → screening → interview → offer)",
     )
     outcome: ApplicationOutcome | None = Field(
         None, description="Terminal closure (rejected or withdrawn), null while active"
     )
-    notes: str | None = Field(None, description="Free-form user notes")
     next_step: str | None = Field(None, description="Next action for this application")
     next_step_due: datetime | None = Field(
         None, description="When the next step is due"
     )
-    outcome_reason: str | None = Field(
-        None,
-        description="Why the application was rejected or withdrawn",
-    )
     document_metadata: ApplicationDocumentMetadata = Field(
         default_factory=ApplicationDocumentMetadata,
         description="Summary of attached documents the caller can access",
+    )
+
+
+class ApplicationRead(ApplicationSummaryRead):
+    lead: LeadRead
+    user: UserRead
+    notes: str | None = Field(None, description="Free-form user notes")
+    outcome_reason: str | None = Field(
+        None,
+        description="Why the application was rejected or withdrawn",
     )
     status_history: list[ApplicationStatusHistoryEntry] = Field(
         default_factory=list,
@@ -1779,26 +2357,18 @@ class ApplicationRead(BaseRead):
         return _normalize_optional_text(value)
 
     @model_validator(mode="after")
-    def _derive_stage_outcome(self) -> "ApplicationRead":
-        """Back-fill stage/outcome from legacy status when not stored explicitly."""
-        raw = self.status.value if self.status else None
-        if raw and self.stage is None and self.outcome is None:
-            if raw in {e.value for e in ApplicationOutcome}:
-                self.outcome = ApplicationOutcome(raw)
-                # Keep last known stage from status_history if available
-            elif raw in {e.value for e in ApplicationStage}:
-                self.stage = ApplicationStage(raw)
-        if raw not in _TERMINAL_APPLICATION_STATUSES:
+    def _clear_outcome_reason_when_active(self) -> "ApplicationRead":
+        """Clear outcome_reason when the application is not in a terminal state."""
+        if self.outcome is None:
             self.outcome_reason = None
         return self
 
 
 class ApplicationCreate(BaseSchema):
     lead_id: UUID4
-    status: ApplicationStatus | None = Field(
-        None, description="Legacy status value (prefer stage/outcome)"
+    stage: ApplicationStage = Field(
+        ApplicationStage.REGISTERED, description="Initial pipeline stage"
     )
-    stage: ApplicationStage | None = Field(None, description="Initial pipeline stage")
     outcome: ApplicationOutcome | None = None
     notes: str | None = None
     next_step: str | None = None
@@ -1815,27 +2385,8 @@ class ApplicationCreate(BaseSchema):
         return _normalize_optional_text(value)
 
     @model_validator(mode="after")
-    def _default_status(self) -> "ApplicationCreate":
-        """Reconcile stage/outcome into the legacy status column."""
-        if self.stage is None and self.outcome is None and self.status is None:
-            self.stage = ApplicationStage.REGISTERED
-            self.status = ApplicationStatus.REGISTERED
-        elif self.stage is not None and self.status is None:
-            self.status = ApplicationStatus(self.stage.value)
-        elif self.outcome is not None and self.status is None:
-            self.status = ApplicationStatus(self.outcome.value)
-        elif self.status is not None:
-            v = self.status.value
-            if v in {e.value for e in ApplicationStage} and self.stage is None:
-                self.stage = ApplicationStage(v)
-            elif v in {e.value for e in ApplicationOutcome} and self.outcome is None:
-                self.outcome = ApplicationOutcome(v)
-
-        if (
-            self.outcome_reason is not None
-            and self.status is not None
-            and self.status.value not in _TERMINAL_APPLICATION_STATUSES
-        ):
+    def _validate(self) -> "ApplicationCreate":
+        if self.outcome_reason is not None and self.outcome is None:
             raise ValueError(
                 "outcome_reason can only be set for rejected or withdrawn applications"
             )
@@ -1843,7 +2394,6 @@ class ApplicationCreate(BaseSchema):
 
 
 class ApplicationUpdate(BaseSchema):
-    status: ApplicationStatus | None = None
     stage: ApplicationStage | None = None
     outcome: ApplicationOutcome | None = None
     notes: str | None = None
@@ -1865,32 +2415,590 @@ class ApplicationUpdate(BaseSchema):
     def _normalize_outcome_reason(cls, value: str | None) -> str | None:
         return _normalize_optional_text(value)
 
-    @model_validator(mode="after")
-    def _sync_status(self) -> "ApplicationUpdate":
-        """Keep legacy status in sync when callers use stage/outcome."""
-        if self.stage is not None and self.status is None:
-            self.status = ApplicationStatus(self.stage.value)
-        elif self.outcome is not None and self.status is None:
-            self.status = ApplicationStatus(self.outcome.value)
-        elif self.status is not None:
-            v = self.status.value
-            if v in {e.value for e in ApplicationStage} and self.stage is None:
-                self.stage = ApplicationStage(v)
-            elif v in {e.value for e in ApplicationOutcome} and self.outcome is None:
-                self.outcome = ApplicationOutcome(v)
 
-        if (
-            self.outcome_reason is not None
-            and self.status is not None
-            and self.status.value not in _TERMINAL_APPLICATION_STATUSES
-        ):
-            raise ValueError(
-                "outcome_reason can only be set for rejected or withdrawn applications"
-            )
+ActionItemDetailRead.model_rebuild()
+
+
+class AgentKind(str, Enum):
+    COVER_LETTER = "cover_letter"
+    FOLLOW_UP = "follow_up"
+    OUTREACH = "outreach"
+    CUSTOM = "custom"
+
+
+class AgentRunTriggerKind(str, Enum):
+    MANUAL = "manual"
+    EVENT = "event"
+    SURFACE_MENTION = "surface_mention"
+
+
+class AgentRunStatus(str, Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class AgentRunSourceSurfaceKind(str, Enum):
+    CELL_DOC_EDITOR = "cell_doc_editor"
+    RICH_TEXT_EDITOR = "rich_text_editor"
+    MULTILINE_TEXT_FIELD = "multiline_text_field"
+
+
+class AgentRunApplyStatus(str, Enum):
+    PENDING = "pending"
+    APPLIED = "applied"
+    DISMISSED = "dismissed"
+
+
+class AgentRunApplyMode(str, Enum):
+    INSERT_AFTER_ANCHOR = "insert_after_anchor"
+    REPLACE_SELECTION = "replace_selection"
+    APPEND_TO_SURFACE = "append_to_surface"
+
+
+class AgentChatSessionStatus(str, Enum):
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+
+
+class AgentChatMessageRole(str, Enum):
+    SYSTEM = "system"
+    USER = "user"
+    ASSISTANT = "assistant"
+
+
+class AgentModelOptionRead(BaseSchema):
+    name: str = Field(description="Resolved model identifier")
+    label: str = Field(description="Human-readable model label")
+
+
+class AgentModelListRead(BaseSchema):
+    default_model_name: str = Field(
+        description="Resolved model identifier used when an agent has no model override",
+    )
+    default_model_label: str = Field(
+        description="Human-readable label for the default agent model",
+    )
+    models: list[AgentModelOptionRead] = Field(
+        default_factory=list,
+        description="Available agent models that can be selected per agent",
+    )
+
+
+class AgentSummaryRead(BaseRead):
+    user_id: UUID4 = Field(description="Owner identifier")
+    name: str = Field(description="Agent definition name")
+    description: str | None = Field(None, description="Optional agent summary")
+    kind: AgentKind = Field(description="Workflow family")
+    is_enabled: bool = Field(description="Whether the agent can be launched")
+
+
+class AgentRead(AgentSummaryRead):
+    instructions: str | None = Field(
+        None,
+        description="Optional workflow instructions that guide generated sessions",
+    )
+    configuration: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Workflow-specific configuration payload. Supports optional "
+            "`model_name` to override the default model for this agent."
+        ),
+    )
+
+
+class AgentCreate(BaseSchema):
+    name: str = Field(description="Agent definition name")
+    description: str | None = Field(None, description="Optional agent summary")
+    kind: AgentKind = Field(description="Workflow family")
+    instructions: str | None = Field(
+        None,
+        description="Optional workflow instructions that guide generated sessions",
+    )
+    configuration: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Workflow-specific configuration payload. Supports optional "
+            "`model_name` to override the default model for this agent."
+        ),
+    )
+    is_enabled: bool = Field(True, description="Whether the agent can be launched")
+
+
+class AgentUpdate(BaseSchema):
+    name: str | None = Field(None, description="Agent definition name")
+    description: str | None = Field(None, description="Optional agent summary")
+    instructions: str | None = Field(
+        None,
+        description="Optional workflow instructions that guide generated sessions",
+    )
+    configuration: dict[str, Any] | None = Field(
+        None,
+        description=(
+            "Workflow-specific configuration payload. Supports optional "
+            "`model_name` to override the default model for this agent."
+        ),
+    )
+    is_enabled: bool | None = Field(
+        None,
+        description="Whether the agent can be launched",
+    )
+
+
+class AgentRunSessionDocumentRead(BaseSchema):
+    id: UUID4 = Field(description="Session document identifier")
+    title: str = Field(description="Session document title")
+    kind: DocumentKind = Field(description="Document kind discriminator")
+    status: DocumentStatus = Field(description="Document lifecycle status")
+
+
+class AgentRunSessionVersionRead(BaseRead):
+    version_number: int = Field(description="Produced session version number")
+    name: str | None = Field(None, description="Snapshot title")
+    content_format: str | None = Field(
+        None,
+        description="Content format: plain_text or tiptap_json",
+    )
+
+
+class AgentSurfaceEntityRef(BaseSchema):
+    kind: str = Field(description="Explicit host-provided entity kind")
+    id: str = Field(description="Explicit host-provided entity identifier")
+    label: str | None = Field(
+        None,
+        description="Optional display label for the referenced entity",
+    )
+
+
+class AgentSuggestedEditWrite(BaseSchema):
+    operation: AgentRunApplyMode = Field(
+        description="Requested surface apply operation for the suggestion",
+    )
+    content_format: ContentFormat = Field(
+        description="Suggested edit content format",
+    )
+    content: str = Field(description="Suggested plain-text edit content")
+    summary: str | None = Field(
+        None,
+        description="Compact preview summary for the suggested edit",
+    )
+
+
+class AgentSuggestedEditRead(AgentSuggestedEditWrite):
+    pass
+
+
+class AgentRunSummaryRead(BaseRead):
+    agent_id: UUID4 = Field(description="Owning agent definition")
+    user_id: UUID4 = Field(description="Owner identifier")
+    application_id: UUID4 | None = Field(
+        None,
+        description="Optional source application identifier",
+    )
+    chat_session_id: UUID4 | None = Field(
+        None,
+        description="Source agent chat session identifier when the run came from a chat export",
+    )
+    parent_run_id: UUID4 | None = Field(
+        None,
+        description="Optional prior run in the same session lineage",
+    )
+    trigger_kind: AgentRunTriggerKind = Field(description="How the run was started")
+    status: AgentRunStatus = Field(description="Current execution status")
+    source_surface_kind: AgentRunSourceSurfaceKind | None = Field(
+        None,
+        description="Surface type that originated the run",
+    )
+    source_document_id: UUID4 | None = Field(
+        None,
+        description="Source document identifier when the run came from a document surface",
+    )
+    source_field_key: str | None = Field(
+        None,
+        description="Host-defined surface field key for non-document surfaces",
+    )
+    source_route: str | None = Field(
+        None,
+        description="Host route where the run was requested",
+    )
+    source_anchor_id: str | None = Field(
+        None,
+        description="Optional source anchor or block identifier within the surface",
+    )
+    apply_status: AgentRunApplyStatus = Field(
+        description="Whether the suggestion is pending, applied, or dismissed",
+    )
+    applied_at: datetime | None = Field(
+        None,
+        description="When the suggestion was marked applied",
+    )
+    suggested_edit: AgentSuggestedEditRead | None = Field(
+        None,
+        description="Previewable suggested edit payload returned by the backend",
+    )
+    session_document_id: UUID4 | None = Field(
+        None,
+        description="Session document created or updated by the run",
+    )
+    session_version_id: UUID4 | None = Field(
+        None,
+        description="Exact document version produced by the run",
+    )
+    session_document: AgentRunSessionDocumentRead | None = Field(
+        None,
+        description="Session document summary when available",
+    )
+    session_version: AgentRunSessionVersionRead | None = Field(
+        None,
+        description="Produced version summary when available",
+    )
+    error_summary: str | None = Field(
+        None,
+        description="Compact error message when a run fails",
+    )
+    completed_at: datetime | None = Field(
+        None,
+        description="When the run finished successfully or failed",
+    )
+
+
+class AgentRunRead(AgentRunSummaryRead):
+    input_context: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Structured context payload captured for the run",
+    )
+
+
+class AgentRunExecuteRequest(BaseSchema):
+    application_id: UUID4 = Field(description="Application context used for the run")
+    session_document_id: UUID4 | None = Field(
+        None,
+        description="Existing cell-doc session to append a new version to",
+    )
+
+
+class AgentSurfaceRunRequest(BaseSchema):
+    surface_kind: AgentRunSourceSurfaceKind = Field(
+        description="Frontend surface type that originated the mention task",
+    )
+    source_route: str = Field(description="Frontend route where the run was requested")
+    source_document_id: UUID4 | None = Field(
+        None,
+        description="Source document identifier for persisted document surfaces",
+    )
+    source_field_key: str | None = Field(
+        None,
+        description="Host-defined field key for the originating surface",
+    )
+    anchor_id: str | None = Field(
+        None,
+        description="Optional block or anchor identifier within the originating surface",
+    )
+    content_format: ContentFormat = Field(
+        description="Format of the provided surface snapshot",
+    )
+    surface_content: str = Field(description="Full current surface snapshot")
+    selection_text: str | None = Field(
+        None,
+        description="Optional selected text inside the surface",
+    )
+    selection_start: int | None = Field(
+        None,
+        ge=0,
+        description="Optional selection start offset for plain-text surfaces",
+    )
+    selection_end: int | None = Field(
+        None,
+        ge=0,
+        description="Optional selection end offset for plain-text surfaces",
+    )
+    entity_refs: list[AgentSurfaceEntityRef] = Field(
+        default_factory=list,
+        description="Explicit host-provided entity references for the surface context",
+    )
+    application_id: UUID4 | None = Field(
+        None,
+        description="Optional application context when the host already has one",
+    )
+    prompt_text: str = Field(description="Explicit user instructions for the task")
+    requested_apply_mode: AgentRunApplyMode = Field(
+        description="Requested frontend apply behavior for the suggestion",
+    )
+
+
+class AgentSurfaceRunApplyRequest(BaseSchema):
+    session_document_id: UUID4 | None = Field(
+        None,
+        description="Document identifier to link when a document surface apply creates a new version",
+    )
+    session_version_id: UUID4 | None = Field(
+        None,
+        description="Version identifier to link when a document surface apply creates a new version",
+    )
+
+
+class AgentRunCreate(BaseSchema):
+    """Internal schema — not user-facing."""
+
+    agent_id: UUID4 = Field(description="Owning agent definition")
+    user_id: UUID4 = Field(description="Owner identifier")
+    application_id: UUID4 | None = Field(
+        None,
+        description="Optional source application identifier",
+    )
+    parent_run_id: UUID4 | None = Field(
+        None,
+        description="Optional prior run in the same session lineage",
+    )
+    trigger_kind: AgentRunTriggerKind = Field(
+        AgentRunTriggerKind.MANUAL,
+        description="How the run was started",
+    )
+    status: AgentRunStatus = Field(
+        AgentRunStatus.PENDING,
+        description="Current execution status",
+    )
+    input_context: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Structured context payload captured for the run",
+    )
+    source_surface_kind: AgentRunSourceSurfaceKind | None = Field(
+        None,
+        description="Source surface kind for mention-driven runs",
+    )
+    source_document_id: UUID4 | None = Field(
+        None,
+        description="Source document identifier for mention-driven runs",
+    )
+    source_field_key: str | None = Field(
+        None,
+        description="Host-defined source field key for mention-driven runs",
+    )
+    source_route: str | None = Field(
+        None,
+        description="Source route where the run was requested",
+    )
+    source_anchor_id: str | None = Field(
+        None,
+        description="Source anchor identifier inside the surface",
+    )
+    apply_status: AgentRunApplyStatus = Field(
+        AgentRunApplyStatus.PENDING,
+        description="Whether the suggested edit has been applied or dismissed",
+    )
+    applied_at: datetime | None = Field(
+        None,
+        description="When the suggested edit was applied",
+    )
+    suggested_edit: AgentSuggestedEditWrite | None = Field(
+        None,
+        description="Suggested edit payload produced for the run",
+    )
+    session_document_id: UUID4 | None = Field(
+        None,
+        description="Session document created or updated by the run",
+    )
+    session_version_id: UUID4 | None = Field(
+        None,
+        description="Exact document version produced by the run",
+    )
+    error_summary: str | None = Field(
+        None,
+        description="Compact error message when a run fails",
+    )
+    completed_at: datetime | None = Field(
+        None,
+        description="When the run finished successfully or failed",
+    )
+
+
+class AgentChatMessageRead(BaseSchema):
+    id: UUID4 = Field(description="Chat message identifier")
+    role: AgentChatMessageRole = Field(description="LLM chat role for this message")
+    content: str = Field(description="Persisted message content")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        validation_alias="metadata_",
+        description="Structured metadata such as token usage or model version",
+    )
+    created_at: datetime = Field(description="When the message was created")
+
+
+class AgentChatMessageHistoryRead(BaseSchema):
+    has_more_before: bool = Field(
+        False,
+        description="Whether older messages exist before the current oldest message",
+    )
+    next_before: str | None = Field(
+        None,
+        description="Opaque cursor for loading older messages before the current slice",
+    )
+
+
+class AgentChatHistoryPageRead(BaseSchema):
+    items: list[AgentChatMessageRead] = Field(
+        default_factory=list,
+        description="Chronologically ascending chat messages for this history slice",
+    )
+    has_more_before: bool = Field(
+        False,
+        description="Whether another older history slice exists before this page",
+    )
+    next_before: str | None = Field(
+        None,
+        description="Opaque cursor for loading the next older history slice",
+    )
+
+
+class AgentChatRetrievalRequest(BaseSchema):
+    document_ids: list[UUID4] = Field(
+        default_factory=list,
+        max_length=5,
+        description="Optional document identifiers to search for this message",
+    )
+    lookup_url: str | None = Field(
+        None,
+        description="Optional explicit URL to fetch and use as ephemeral context",
+    )
+    k: int = Field(
+        5,
+        ge=1,
+        le=8,
+        description="Maximum number of document chunks to retrieve",
+    )
+
+    @field_validator("document_ids", mode="after")
+    @classmethod
+    def dedupe_document_ids(cls, value: list[UUID4]) -> list[UUID4]:
+        deduped: list[UUID4] = []
+        seen: set[UUID4] = set()
+        for document_id in value:
+            if document_id in seen:
+                continue
+            seen.add(document_id)
+            deduped.append(document_id)
+        return deduped
+
+    @field_validator("lookup_url", mode="before")
+    @classmethod
+    def normalize_lookup_url(cls, value: str | None) -> str | None:
+        if isinstance(value, str):
+            stripped = value.strip()
+            return stripped or None
+        return value
+
+    @field_validator("lookup_url", mode="after")
+    @classmethod
+    def validate_lookup_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return validate_url_safe_for_fetch(value)
+
+    @model_validator(mode="after")
+    def require_at_least_one_source(self) -> "AgentChatRetrievalRequest":
+        if self.document_ids or self.lookup_url:
+            return self
+        raise ValueError("retrieval must include document_ids or lookup_url")
+
+
+class AgentChatMessageCreate(BaseSchema):
+    content: str = Field(description="User-authored message content")
+    retrieval: AgentChatRetrievalRequest | None = Field(
+        None,
+        description="Optional retrieval inputs used only for this message",
+    )
+
+    @field_validator("content")
+    @classmethod
+    def clean_content(cls, value: str) -> str:
+        cleaned = _clean_optional_wrapped_text(value)
+        if not cleaned:
+            raise ValueError("Chat message content cannot be empty")
+        return cleaned
+
+
+class AgentChatSessionSummaryRead(BaseRead):
+    agent_id: UUID4 = Field(description="Owning agent definition")
+    title: str | None = Field(
+        None,
+        description="Optional session title, typically derived from the first prompt",
+    )
+    model_name: str | None = Field(
+        None,
+        description="Snapshot of the model configured for the session",
+    )
+    status: AgentChatSessionStatus = Field(description="Session lifecycle status")
+    message_count: int = Field(description="Denormalized total number of messages")
+    last_message_at: datetime | None = Field(
+        None,
+        description="Timestamp of the most recent message in the session",
+    )
+    application_id: UUID4 | None = Field(
+        None,
+        description="Optional application context associated with the session",
+    )
+
+
+class AgentChatSessionRead(AgentChatSessionSummaryRead):
+    user_id: UUID4 = Field(description="Owner identifier")
+    messages: list[AgentChatMessageRead] = Field(
+        default_factory=list,
+        description="Recent messages loaded alongside the session",
+    )
+    message_history: AgentChatMessageHistoryRead | None = Field(
+        None,
+        description="Cursor metadata for paging older chat history",
+    )
+
+
+class AgentChatSessionCreate(BaseSchema):
+    application_id: UUID4 | None = Field(
+        None,
+        description="Optional application context used to seed the chat session",
+    )
+    title: str | None = Field(
+        None,
+        description="Optional session title. When omitted, the server may derive one.",
+    )
+
+
+class AgentChatSessionUpdate(BaseSchema):
+    title: str | None = Field(
+        None,
+        description="Optional session title override. Set to null to clear it.",
+    )
+    status: AgentChatSessionStatus | None = Field(
+        None,
+        description="Updated session lifecycle status",
+    )
+
+    @model_validator(mode="after")
+    def reject_null_status(self) -> "AgentChatSessionUpdate":
+        if "status" in self.model_fields_set and self.status is None:
+            raise ValueError("status cannot be null")
         return self
 
 
-ActionItemDetailRead.model_rebuild()
+class AgentChatSaveToDocumentRequest(BaseSchema):
+    title: str | None = Field(
+        None,
+        description="Optional document title override for the exported chat transcript",
+    )
+    application_id: UUID4 | None = Field(
+        None,
+        description="Optional application context to attach to the saved document",
+    )
+
+    @field_validator("title")
+    @classmethod
+    def clean_title(cls, value: str | None) -> str | None:
+        return _clean_optional_wrapped_text(value)
+
+
+class AgentChatSaveToDocumentRead(BaseSchema):
+    document_id: UUID4 = Field(description="Newly created cell-doc document identifier")
+    version_id: UUID4 = Field(description="Version identifier created for the export")
 
 
 # Crawler schemas
@@ -2028,13 +3136,7 @@ class CrawlerRunRead(BaseRead):
     )
 
 
-class CrawlerRunsPaginatedRead(BaseSchema):
-    items: list[CrawlerRunRead] = Field(
-        default_factory=list, description="Paginated crawler runs"
-    )
-    total: int = Field(0, description="Total matching crawler runs")
-    page: int = Field(1, ge=1, description="Current page number")
-    page_size: int = Field(10, ge=1, description="Items per page")
+CrawlerRunsPaginatedRead = PaginatedResponse[CrawlerRunRead]
 
 
 class CrawlerRunCreate(BaseSchema):
@@ -2063,6 +3165,47 @@ class CrawlerRunDetailRead(CrawlerRunRead):
 
     events: list[OrchestrationEventSummary] = Field(
         [], description="Linked orchestration events"
+    )
+
+
+class CrawlerRuntimeDependencyRead(BaseSchema):
+    configured: bool = Field(description="Whether the dependency is configured")
+    reachable: bool = Field(description="Whether the dependency is reachable now")
+    detail: str | None = Field(None, description="Optional diagnostic detail")
+
+
+class CrawlerEnqueueFailureSampleRead(BaseSchema):
+    run_id: UUID4 | None = Field(None, description="Crawler run ID when known")
+    created_at: datetime = Field(description="When the failure was recorded")
+    fallback_mode: str = Field(
+        description="How execution recovered after enqueue failure"
+    )
+    error_summary: str = Field(description="Short enqueue failure summary")
+
+
+class CrawlerRuntimeStatusRead(BaseSchema):
+    execution_mode: Literal["inline", "worker"] = Field(
+        description="Current crawler execution mode"
+    )
+    scheduler_enabled: bool = Field(description="Whether the scheduler loop is enabled")
+    reaper_enabled: bool = Field(description="Whether the reaper loop is enabled")
+    redis: CrawlerRuntimeDependencyRead = Field(description="Redis queue health")
+    etl_service: CrawlerRuntimeDependencyRead = Field(description="ETL service health")
+    queue_backlog: int | None = Field(
+        None, description="Pending Redis jobs when worker mode is enabled"
+    )
+    stale_run_count: int = Field(
+        description="Crawler runs older than the stale threshold"
+    )
+    stale_event_count: int = Field(
+        description="Orchestration events older than the stale threshold"
+    )
+    enqueue_failure_count: int = Field(
+        description="Recent crawler queue handoff failures captured in orchestration events"
+    )
+    recent_enqueue_failures: list[CrawlerEnqueueFailureSampleRead] = Field(
+        default_factory=list,
+        description="Most recent enqueue failure samples",
     )
 
 
